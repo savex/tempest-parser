@@ -1,5 +1,4 @@
 import os
-import six
 
 
 def remove_file(filename):
@@ -7,19 +6,19 @@ def remove_file(filename):
     # open('filename', 'w').close()
 
 
-def write_str_to_file(filename, str):
+def write_str_to_file(filename, _str):
     with open(filename, 'w') as fo:
-        fo.write(str)
+        fo.write(_str)
 
 
-def append_str_to_file(filename, str):
+def append_str_to_file(filename, _str):
     with open(filename, 'a') as fa:
-        fa.write(str)
+        fa.write(_str)
 
 
-def append_line_to_file(filename, str):
+def append_line_to_file(filename, _str):
     with open(filename, 'a') as fa:
-        fa.write(str+'\n')
+        fa.write(_str+'\n')
 
 
 def read_file(filename):

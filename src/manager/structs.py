@@ -13,7 +13,7 @@ _template_test_result = {
 }
 
 _template_test_item = {
-    #class names will be as a key
+    # class names will be as a key
     # "class_name": "",
     "test_name": "",
     "test_options": "",
@@ -44,8 +44,8 @@ _execution_item_template = {
 }
 
 _tests_template = {
-    #class names
-    "tests" : {},
-    #parsed execution names
+    # class names
+    "tests": {},
+    # parsed execution names
     "executions": {}
 }

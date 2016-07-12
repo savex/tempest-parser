@@ -1,7 +1,4 @@
-__author__ = 'savex'
-
 from src.utils.file import *
-from datetime import date
 from copy import copy
 
 
@@ -24,10 +21,10 @@ class CSVReporter:
         except OSError as e:
             pass
 
-        ## header
+        # header
         csv_header = ", class/test name,"
         _result_columns = 0
-        ## execution names for header
+        # execution names for header
         for _execution in self._total_executions:
             # execution name
             # csv_header += _execution + ','
@@ -40,7 +37,7 @@ class CSVReporter:
         append_line_to_file(filename, csv_header)
         _tests_counter = 0
 
-        ## lines
+        # lines
         for class_name in sorted(self._tests['tests'].keys()):
             # printing out class line
             _class_line = 'Class' + \
@@ -60,7 +57,7 @@ class CSVReporter:
                 _results = ""
 
                 # Add a Required/Added mark to results
-                if _test['results'].has_key('required'):
+                if 'required' in _test['results']:
                     _results += _test['results']['required']['result'] + ','
                 else:
                     _results += 'A' + ','

@@ -1,10 +1,7 @@
-__author__ = 'savex'
-
 import src.manager.structs as structs
-
-import os, time
+import os
+import time
 from copy import deepcopy
-
 
 
 class TestsManager:
@@ -45,14 +42,14 @@ class TestsManager:
 
         _folder_content = os.listdir(folder)
 
-        for file in _folder_content:
+        for _file in _folder_content:
             _tests_in_file = {}
             # check extension
-            if file.endswith(".list"):
+            if _file.endswith(".list"):
                 _tests_in_file = self._all_tests_file_preload(
                     os.path.join(
                         folder,
-                        file
+                        _file
                     )
                 )
             _tests = dict(_tests.items() + _tests_in_file.items())
@@ -75,21 +72,20 @@ class TestsManager:
 
                 self._test_item = deepcopy(structs._template_test_item)
                 self._test_item["test_name"] = _test_name
-                self._test_item["set_name"] = _search_res[1].replace("\n",
-                                                                     "") + \
-                                              _search_res[2].partition(']')[
-                                                  0].replace("\n", "") + "]"
+                self._test_item["set_name"] = _search_res[1].replace("\n", "") + \
+                    _search_res[2].partition(']')[0].replace("\n", "") + "]"
                 self._test_item["results"][
                     self.required_execution_name] = dict(result="R", time='0s')
 
                 self._test_item["test_options"] = _test_options
 
-                if not _tests.has_key(_class_name):
+                if _class_name not in _tests:
                     _tests[_class_name] = []
                 _tests[_class_name].append(self._test_item)
         return _tests
 
-    def split_test_name(self, full_test_name):
+    @staticmethod
+    def split_test_name(full_test_name):
         if full_test_name.startswith("setUpClass") or \
                 full_test_name.startswith("tearDownClass"):
             return (
@@ -113,7 +109,8 @@ class TestsManager:
             )
         return None, None, None
 
-    def split_test_name_from_speed(self, full_test_name):
+    @staticmethod
+    def split_test_name_from_speed(full_test_name):
         _class = full_test_name.rsplit(".", 2)[0]
         _test = full_test_name.rsplit(".", 2)[1].split('[')[0]
         _tmp = full_test_name.split(" ")[0].rsplit(".", 1)[1].split(']')
@@ -131,7 +128,7 @@ class TestsManager:
         _index = -1
         _tests = self.tests_list["tests"]
 
-        if _tests.has_key(class_name):
+        if class_name in _tests:
             for _test_index in range(0, _tests[class_name].__len__()):
                 if test_name == 'test_slaac_from_os':
                     pass
@@ -158,13 +155,13 @@ class TestsManager:
 
         return _index
 
-    def partial_class_name_lookup(self, class_name_short, test_name):
+    def partial_class_name_lookup(self, class_name_short, test_name, set_name=None, test_options=None):
         _list = []
         _full_class_name = ""
         _class_names = self.tests_list["tests"].keys()
         for _class_name in _class_names:
             if _class_name.endswith(class_name_short):
-                _index = self.test_name_lookup(_class_name, test_name)
+                _index = self.test_name_lookup(_class_name, test_name, set_name, test_options)
                 if _index > -1:
                     _full_class_name = _class_name
                     _list.append(_full_class_name)
@@ -180,9 +177,9 @@ class TestsManager:
         self.tests_list["executions"][_name] = date
 
     def mark_slowest_test_in_execution_by_name(self, execution_name,
-                                               class_name, test_name,
-                                               test_options):
-        _index = self.test_name_lookup(class_name, test_name, test_options)
+                                               class_name, test_name, set_name=None,
+                                               test_options=None):
+        _index = self.test_name_lookup(class_name, test_name, set_name, test_options)
         if _index > -1:
             # mark slowest tests
             self.tests_list["tests"][class_name][_index]["results"][
@@ -197,12 +194,12 @@ class TestsManager:
 
     def add_fail_data_for_test(self, execution_name, class_name, test_name,
                                test_options, trace, message,
-                               class_name_short=False):
+                               class_name_short=False, set_name=None):
         if class_name == "setUpClass" or \
                         class_name == "tearDownClass":
             # if this is a setUpClass situation, mark all tests with this result
             _tests = self.tests_list["tests"]
-            if _tests.has_key(test_name):
+            if test_name in _tests:
                 for _test_index in range(0, _tests[test_name].__len__()):
                     _tests[test_name][_test_index]["results"][execution_name][
                         "trace"] = trace
@@ -218,8 +215,12 @@ class TestsManager:
                     _full_class_name = class_name
             else:
                 _full_class_name = class_name
-            _index = self.test_name_lookup(_full_class_name, test_name,
-                                           test_options)
+            _index = self.test_name_lookup(
+                _full_class_name,
+                test_name,
+                set_name,
+                test_options
+            )
             if _index > -1:
                 # this matches one already in the list, copy
                 self.tests_list["tests"][_full_class_name][_index]["results"][
@@ -227,23 +228,21 @@ class TestsManager:
                 self.tests_list["tests"][_full_class_name][_index]["results"][
                     execution_name]["message"] = message
             else:
-                print("WARNING: Not found test {0}, {1}\n"
-                      "for message: {2}".format(
+                print("WARNING: Test NOT found: {0}, {1}\nfor message: {2}".format(
                     _full_class_name,
                     test_name,
                     message
                 ))
 
     def add_result_for_test(self, execution_name, class_name, test_name, tags,
-                            test_options, result, time,
+                            test_options, result, running_time,
                             message='', trace='', class_name_short=False, test_name_bare=False):
         _result = deepcopy(structs._template_test_result)
         _result["result"] = result
-        _result["time"] = time
+        _result["time"] = running_time
         _result["message"] = message
         _result["trace"] = trace
-        if class_name == "setUpClass" or \
-                class_name == "tearDownClass":
+        if class_name == "setUpClass" or class_name == "tearDownClass":
             # if this is a setUpClass situation,
             # mark all tests with this result
             _tests = self.tests_list["tests"]
@@ -288,13 +287,13 @@ class TestsManager:
                 _test_item["test_name"] = test_name
                 _test_item["results"][execution_name] = _result
 
-                if not self.tests_list["tests"].has_key(_full_class_name):
+                if _full_class_name not in self.tests_list["tests"]:
                     # there is no class name key, add it
                     self.tests_list["tests"][_full_class_name] = []
                 self.tests_list["tests"][_full_class_name].append(_test_item)
 
     def get_tests_for_class(self, class_name):
-        if self.tests_list["tests"].has_key(class_name):
+        if class_name in self.tests_list["tests"]:
             return self.tests_list["tests"][class_name]
         else:
             return []
@@ -303,7 +302,7 @@ class TestsManager:
         return self.tests_list
 
     def is_class_has_errors(self, class_name):
-        if self.tests_list["tests"].has_key(class_name):
+        if class_name in self.tests_list["tests"]:
             for test in self.tests_list["tests"][class_name]:
                 _executions = test["results"].keys()
                 for _execution in _executions:
@@ -313,7 +312,7 @@ class TestsManager:
             return False
 
     def is_test_has_errors(self, class_name, test_name):
-        if self.tests_list["tests"].has_key(class_name):
+        if class_name in self.tests_list["tests"]:
             for test in self.tests_list["tests"][class_name]:
                 _executions = test["results"].keys()
                 for _execution in _executions:
@@ -331,26 +330,26 @@ class TestsManager:
     def get_time_for_class(self, class_name):
         _time_str = ""
         _executions = self.tests_list["executions"].keys()
-        if self.tests_list["tests"].has_key(class_name):
+        if class_name in self.tests_list["tests"]:
             for _execution in _executions:
-                time = 0
+                running_time = 0
                 for test in self.tests_list["tests"][class_name]:
-                    if test["results"].has_key(_execution):
+                    if _execution in test["results"]:
                         if test["results"][_execution]["time"].__len__() > 0:
-                            time += float(
+                            running_time += float(
                                 test["results"][_execution]["time"][:-1])
-                _time_str += "{0}s ".format(time)
+                _time_str += "{0}s ".format(running_time)
         return _time_str
 
     def get_totals_as_string_for_class(self, class_name):
         _totals_str = ""
         _executions = self.tests_list["executions"].keys()
-        if self.tests_list["tests"].has_key(class_name):
+        if class_name in self.tests_list["tests"]:
             for _execution in _executions:
                 total = 0
                 fail = 0
                 for test in self.tests_list["tests"][class_name]:
-                    if test["results"].has_key(_execution):
+                    if _execution in test["results"]:
                         if test["results"][_execution]["result"] == "FAIL":
                             fail += 1
                         total += 1
@@ -359,7 +358,7 @@ class TestsManager:
 
     def get_summary_for_execution(self, execution_name):
         # calculate summary
-        time = 0
+        running_time = 0
         total = 0
         ok = 0
         fail = 0
@@ -368,10 +367,10 @@ class TestsManager:
         _classes = self.tests_list["tests"].keys()
         for _class in _classes:
             for test in self.tests_list["tests"][_class]:
-                if test["results"].has_key(execution_name):
+                if execution_name in test["results"]:
                     total += 1
                     if test["results"][execution_name]["time"].__len__() > 0:
-                        time += float(
+                        running_time += float(
                             test["results"][execution_name]["time"][:-1])
                     if test["results"][execution_name]["result"] == "OK":
                         ok += 1
@@ -380,11 +379,11 @@ class TestsManager:
                     elif test["results"][execution_name]["result"] == "SKIP":
                         skip += 1
 
-        return time, total, ok, fail, skip
+        return running_time, total, ok, fail, skip
 
     def print_summary_for_execution(self, _execution_name):
         # throw a quick summary
-        time, total, ok, fail, skip = self.get_summary_for_execution(
+        running_time, total, ok, fail, skip = self.get_summary_for_execution(
             _execution_name)
 
         print(
