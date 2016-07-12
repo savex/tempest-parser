@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tempest Trending Report</title>
+    <style>
+        table {
+            font-family: Verdana, "Helvetica Neue", Arial, Helvetica, Geneva, sans-serif;
+            font-size: x-small;
+        }
+
+        .tracemessage {
+            font-size: xx-small;
+            color: #550000;
+            max-width: 200px;
+            overflow: scroll;
+        }
+
+        .textlabel {
+            text-align: center;
+        }
+
+        .parameters {
+            font-size: xx-small;
+            color: #777777;
+        }
+        .test_name {
+            font-weight: normal;
+            min-width: 600px;
+            text-align: left;
+            color: black;
+        }
+
+        table.labels {
+            border: 0 hidden;
+            margin: 0;
+            width: 100%;
+        }
+
+        table.labels td {
+            border: 0 hidden;
+        }
+
+        table.report table.labels {
+            border: 0 hidden;
+        }
+
+        table.report {
+            border-collapse: collapse;
+            border: 1px solid #777;
+            margin: 10px 0;
+        }
+        table.report th,
+        table.report td {
+            border: 1px solid #777;
+        }
+        table.report th.date {
+            vertical-align: top;
+            padding: 5px 0;
+            height: 145px;
+            font-weight: normal;
+        }
+        table.report th.date > .payload {
+            white-space: nowrap;
+            transform: rotate(90deg);
+            width: 20px;
+        }
+
+        table > caption { text-align: left; }
+        table.report tr.legend > td { height: 1ex; }
+
+        tr.headers {
+            background: #105a10;
+            color: white;
+            font-size: smaller;
+            text-align: center;
+        }
+
+        tr.group > td.name {
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        td > div.test_name {
+            padding-left: 5px;
+        }
+
+        td > div.parameters {
+            padding-left: 10px;
+            white-space: normal;
+        }
+
+        td.status {
+            font-size: xx-small;
+            text-align: center;
+            vertical-align: middle;
+            color: black;
+            width: auto;
+            min-height: 20px;
+        }
+
+        td.labels {
+            border: 0 hidden;
+            padding: 0;
+            margin: 0;
+            width: 80px;
+        }
+
+        td.resultcolumn {
+            width: 45px;
+        }
+
+        td.status.pass { background: #6c6; }
+        td.status.ok { background: #6c6; }
+        td.status.fail { background: #a50000; color: white; }
+        td.status.skip { background: #ccb226; }
+        td.status.na { background: #777777; }
+        td.status.error { background: #e585a2; }
+        td.status.total { background: white; }
+        td.status.required { background: #aaa; }
+        td.status.added { background: #faa; }
+
+        td > div.label {
+            font-size: xx-small;
+            text-align: center;
+            vertical-align: middle;
+            color: black;
+            width: auto;
+            min-height: 20px;
+            line-height: 20px;
+        }
+
+        td > div.label.pass { background: #6c6; }
+        td > div.label.fail { background: #a50000; color: white; }
+        td > div.label.skip { background: #ccb226; }
+        td > div.label.na { background: #777777; }
+        td > div.label.error { background: #e585a2; }
+        td > div.label.total { background: white; }
+
+        th.separator,
+        td.separator { background: #777; }
+    </style>
+</head>
+<body>
+
+{% macro cells_legend() -%}
+<table class="report">
+    <caption>Legend</caption>
+    <tbody>
+    <tr>
+        <td>Passed</td>
+        <td>Skipped</td>
+        <td>Setup Errors</td>
+        <td>Failed</td>
+        <td>NA</td>
+    </tr>
+    <tr class="legend">
+        <td class="status {{ status_description[STATUS_PASS] | lower }}"></td>
+        <td class="status {{ status_description[STATUS_SKIP] | lower }}"></td>
+        <td class="status {{ status_description[STATUS_ERROR] | lower }}"></td>
+        <td class="status {{ status_description[STATUS_FAIL] | lower }}"></td>
+        <td class="status {{ status_description[STATUS_NA] | lower }}"></td>
+    </tr>
+    </tbody>
+</table>
+{%- endmacro %}
+
+
+{{ cells_legend() }}
+<table class="report">
+    <tbody>
+    <tr>
+        <!-- Headers with summary -->
+        <td colspan="2" class="textlabel">
+            Tempest results for '01/07/2016'
+        </td>
+        <td class="labels">
+            <!-- Labels for summary -->
+            <div class="label total">total</div>
+            <div class="label {{ status_description[STATUS_PASS] | lower }}">pass</div>
+            <div class="label {{ status_description[STATUS_FAIL] | lower }}">fail</div>
+            <div class="label {{ status_description[STATUS_SKIP] | lower }}">skip</div>
+            <div class="label {{ status_description[STATUS_NA] | lower }}">n/a</div>
+        </td>
+        <!-- Repeatable -->
+    {% for execution in executions if execution != 'required' %}
+        <td class="resultcolumn">
+            <!-- SUM -->
+            <div class="label total">{{ totals[execution].total }}</div>
+            <div class="label {{ status_description[STATUS_PASS] | lower }}">{{ totals[execution][STATUS_PASS] }}</div>
+            <div class="label {{ status_description[STATUS_FAIL] | lower }}">{{ totals[execution][STATUS_FAIL] }}</div>
+            <div class="label {{ status_description[STATUS_SKIP] | lower }}">{{ totals[execution][STATUS_SKIP] }}</div>
+            <div class="label {{ status_description[STATUS_NA] | lower }}">{{ totals[execution][STATUS_NA] }}</div>
+        </td>
+        <td class="textlabel">
+            Notes
+        </td>
+    {%- endfor -%}
+    </tr>
+    <tr class="headers">
+        <td>#</td>
+        <td>Test name and parameters</td>
+        <td>Required vs Added</td>
+    {% for execution in executions if execution != 'required' %}
+        <td>{{ executions[execution] }}</td>
+        <td>Message</td>
+    {%- endfor -%}
+    {% set counter = 1 %}
+    </tr>
+    {% for test_class in tests | sort %}
+    <tr class="group">
+        <td colspan="2" class="name">Class {{ test_class }}</td>
+        <td colspan="{{ executions|length }}" class="blank"></td>
+    </tr>
+        {% for test in tests[test_class] %}
+    <tr>
+        <td>{{ counter + loop.index0 }}</td>
+        <td>
+            <div class="test_name">{{ test.test_name }}</div>
+            <div class="parameters">{{ test.set_name }} {{ test.test_options }}</div>
+        </td>
+        {% if test['results'].has_key('required') %}
+            {% if test['results']['required']['result'] == 'R' -%}
+            <td class="status required">R</td>
+            {%- endif %}
+        {% else %}
+            <td class="status added">A</td>
+        {% endif %}
+            {% for execution in executions if execution != 'required' %}
+            {% if test['results'].has_key(execution) %}
+        <td class="status {{ test['results'][execution]['result'] | lower }}">{{ test['results'][execution]['result'] }}</td>
+        <td class="tracemessage">{{ test['results'][execution]['message'] }}<br>{{ test['results'][execution]['trace'] }}</td>
+            {% else %}
+        <td class="status blank"></td>
+        <td class="status blank"></td>
+            {% endif %}
+            {%- endfor -%}
+    </tr>
+        {%- endfor -%}
+        {% set counter = counter + tests[test_class]|length %}
+    {%- endfor -%}
+    </tbody>
+</table>
+{{ cells_legend() }}
+
+</body>
+</html>
