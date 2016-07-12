@@ -1,5 +1,1 @@
-httplib2
-oauth2client
-gdata
-xmlbuilder
 jinja2

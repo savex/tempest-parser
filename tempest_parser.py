@@ -7,7 +7,6 @@ from src.reports.csv_reporter import CSVReporter
 from src.manager.test_manager import TestsManager
 from src.parser.tempest_log_parser import TempestLogParser
 from src.manager.importers import XMLImporter, JSONImporter, CSVImporter
-from src.reports.google_reporter import GoogleReporter
 
 
 class MyParser(argparse.ArgumentParser):
@@ -124,7 +123,7 @@ def tempest_cli_parser_main():
             args.html_trending_filename
         )
         # call-n-render report
-        print("Generating HTML report...")
+        print("Generating HTML Trending report...")
         trending_report(tests_manager.get_tests_list())
 
     if args.csv_file is not None:
