@@ -6,8 +6,9 @@ import os, time
 from copy import deepcopy
 
 
+
 class TestsManager:
-    def __init__(self, path=None):
+    def __init__(self, all_tests_filepath, path=None):
         # structure
         self.tests_list = deepcopy(structs._tests_template)
 
@@ -15,7 +16,7 @@ class TestsManager:
         # ... or load supplied ones
         self._source = None
         self.required_execution_name = "required"
-        _tests_list_filename = os.path.join("res", "all_tests_tag_5.list")
+        _tests_list_filename = os.path.join("res", all_tests_filepath)
         _date = time.strftime("%d/%m/%Y %H:%M", time.gmtime(
             os.path.getctime(_tests_list_filename)))
 

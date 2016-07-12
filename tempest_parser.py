@@ -7,6 +7,10 @@ from src.reports.csv_reporter import CSVReporter
 from src.manager.test_manager import TestsManager
 from src.parser.tempest_log_parser import TempestLogParser
 from src.manager.importers import XMLImporter, JSONImporter, CSVImporter
+from src.utils.config import ParserConfigFile
+
+pkg_dir = os.path.dirname(__file__)
+pkg_dir = os.path.normpath(pkg_dir)
 
 
 class MyParser(argparse.ArgumentParser):
@@ -75,21 +79,27 @@ def tempest_cli_parser_main():
 
     parser.add_argument(
         "--config-file",
-        help="Use specific configuration file instead of standard."
+        help="Use specific configuration file instead of standard. Use absolute path, please."
     )
 
     parser.add_argument(
-        "-h",
+        "-r",
         "--html-trending-filename",
         help="When set, creates HTML Trending Report"
     )
 
     args = parser.parse_args()
 
+    # Init Config
+    _config_file_path = os.path.join(pkg_dir, 'etc')
+    if args.config_file:
+        _config_file_path = args.config_file
+    config = ParserConfigFile(_config_file_path)
+
     # At this point we must load tests to combine executions with
     # for now it will be all tests
     print("Pre-loading tests...")
-    tests_manager = TestsManager()
+    tests_manager = TestsManager(config.get_all_tests_list_filepath())
     log_parser = TempestLogParser(tests_manager)
 
     # # Parse objects from raw file
