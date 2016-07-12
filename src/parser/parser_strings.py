@@ -1,6 +1,3 @@
-__author__ = 'savex'
-
-
 # Object type strings
 TEMPEST_CLASS = "Tempest Class String"
 TEMPEST_CLASS_TEST_ITEM = "Tempest test method string"

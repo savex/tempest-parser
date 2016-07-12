@@ -1,5 +1,3 @@
-__author__ = 'savex'
-
 # test_template
 # result item list here consists of dicts with
 # execution_name as a key and result
