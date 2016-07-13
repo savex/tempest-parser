@@ -91,10 +91,15 @@ def tempest_cli_parser_main():
     args = parser.parse_args()
 
     # Init Config
-    _config_file_path = os.path.join(pkg_dir, 'etc')
+    _config_file_path = os.path.join(pkg_dir, 'etc', 'tempest-parser.conf')
     if args.config_file:
         _config_file_path = args.config_file
     config = ParserConfigFile(_config_file_path)
+
+    # Check for supplied folder/file to be exists
+    if not os._exists(args.filepath):
+        print("Error: Supplied path/file not exists, '{}'".format(args.filepath))
+        sys.exit(1)
 
     # At this point we must load tests to combine executions with
     # for now it will be all tests
@@ -144,4 +149,4 @@ def tempest_cli_parser_main():
 
 if __name__ == '__main__':
     tempest_cli_parser_main()
-    # sys.exit(0)
+    sys.exit(0)
