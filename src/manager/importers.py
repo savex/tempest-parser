@@ -2,6 +2,9 @@ from xml.etree.ElementTree import parse
 import json
 import csv
 
+CSV_OWN = 1
+CSV_XUNIT = 2
+
 
 class ImporterBase(object):
     def __init__(self, test_manager, filename):
@@ -52,7 +55,7 @@ class XMLImporter(ImporterBase):
             _symbol_index = _class_name.find('%')
             if _symbol_index > 0:
                 _class_name = _class_name[:_symbol_index] + \
-                              _class_name[_symbol_index+2:]
+                              _class_name[_symbol_index + 2:]
 
             for _test_node in _class_node.findall('test'):
                 # get all attributes from xml
@@ -110,7 +113,7 @@ class JSONImporter(ImporterBase):
                 execution_name=name,
                 execution_date=date,
                 summary=dict(
-                    time=duration+"s"
+                    time=duration + "s"
                 )
             )
         )
@@ -141,7 +144,8 @@ class JSONImporter(ImporterBase):
             _status = self._parse_status(_test_value['status'])
             _duration = _test_value['time'] + 's'
             _message = _test_value['reason'] if 'reason' in _test_value else ''
-            _trace = _test_value['traceback'] if 'traceback' in _test_value else ''
+            _trace = _test_value[
+                'traceback'] if 'traceback' in _test_value else ''
 
             # parsing tags
             if _test_value['tags'][0].find('(') > -1:
@@ -170,13 +174,37 @@ class JSONImporter(ImporterBase):
 
 
 class CSVImporter(ImporterBase):
+    subtype = None
+
+    @staticmethod
+    def _fix_message(string):
+        _string = string.replace('"', '\'')
+        _string = _string.replace(',', ' ')
+        return _string
+
+    def __init__(self, test_manager, filename):
+        super(CSVImporter, self).__init__(test_manager, filename)
+
+        # detect file sub-type
+        with open(self.filename, 'rt') as csvfile:
+            csvdata = csv.reader(csvfile, delimiter=',')
+
+            for row in csvdata:
+                # detect if line starts with 'Class'
+                if row[0] == 'Class':
+                    self.subtype = CSV_OWN
+                    break
+                if row[0].startswith("tempest."):
+                    self.subtype = CSV_XUNIT
+                    break
+
     def _add_execution(self, name, date, duration):
         self.tm.add_execution(
             dict(
                 execution_name=name,
                 execution_date=date,
                 summary=dict(
-                    time=duration+"s"
+                    time=duration + "s"
                 )
             )
         )
@@ -192,6 +220,59 @@ class CSVImporter(ImporterBase):
         }[status]
 
     def parse(self):
+        if self.subtype == CSV_OWN:
+            self.parse_own_csv()
+        elif self.subtype == CSV_XUNIT:
+            self.parse_xunit_csv()
+
+    def parse_own_csv(self):
+        _execution_name = self.filename
+        _execution_date = '20/12/2015'
+
+        with open(self.filename, 'rt') as csvfile:
+            csvdata = csv.reader(csvfile, delimiter=',')
+            _class_name = ''
+
+            _status_index = 2
+            for row in csvdata:
+                # parse the data
+                if csvdata.line_num == 1:
+                    continue
+                elif row[0].lower() == 'class':
+                    _class_name = row[1]
+                    continue
+                elif int(row[0].lower()) > 0:
+                    _test_name = row[1]
+                    if row[2] in ['R', 'A']:
+                        _status_index = 3
+                    _status = row[_status_index]
+                    _message = self._fix_message(row[_status_index+1])
+                    self.tm.add_result_for_test(
+                        _execution_name,
+                        _class_name,
+                        _test_name,
+                        '',
+                        '',
+                        _status,
+                        '',
+                        message=_message,
+                        test_name_bare=True
+                    )
+
+                    continue
+                else:
+                    raise (
+                        Exception(
+                            "ERROR: Invalid CSV structure. \n"
+                            "\tPlease, follow format:\n"
+                            "\t\tClass,<class name>,,"
+                            "\t\t<number>,<test_name>,<status>,<message>")
+                    )
+
+            self._add_execution(_execution_name, _execution_date, 'n/a')
+            return _execution_name
+
+    def parse_xunit_csv(self):
         _execution_name = self.filename
         _execution_date = '20/12/2015'
 

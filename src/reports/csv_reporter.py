@@ -25,14 +25,23 @@ class CSVReporter:
         csv_header = ", class/test name,"
         _result_columns = 0
         # execution names for header
-        for _execution in self._total_executions:
-            # execution name
-            # csv_header += _execution + ','
-            _date_prepared = self._tests['executions'][_execution]
+        if 'required' in self._total_executions:
+            _date_prepared = self._tests['executions']['required']
             _date_prepared = _date_prepared.replace('/', '\n')
             _date_prepared = _date_prepared.replace(' ', '\n')
             csv_header += '"' + _date_prepared + '",'
             _result_columns += 1
+
+        for _execution in self._total_executions:
+            if _execution != 'required':
+                # execution name
+                # csv_header += _execution + ','
+                _date_prepared = self._tests['executions'][_execution]
+                _date_prepared = _date_prepared.replace('/', '\n')
+                _date_prepared = _date_prepared.replace(' ', '\n')
+                csv_header += '"' + _date_prepared + '",'
+                csv_header += '"' + os.path.basename(_execution) + '",'
+                _result_columns += 2
 
         append_line_to_file(filename, csv_header)
         _tests_counter = 0

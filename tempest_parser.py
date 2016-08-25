@@ -97,7 +97,7 @@ def tempest_cli_parser_main():
     config = ParserConfigFile(_config_file_path)
 
     # Check for supplied folder/file to be exists
-    if not os._exists(args.filepath):
+    if not os.path.exists(args.filepath):
         print("Error: Supplied path/file not exists, '{}'".format(args.filepath))
         sys.exit(1)
 

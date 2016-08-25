@@ -35,9 +35,15 @@ class _TMPLBase(_Base):
     def __call__(self, results):
         data = self.common_data()
         data.update({
-            'executions': results['executions'],
-            'tests': results['tests'],
+            "executions": {},
+            "tests": results['tests']
         })
+
+        for _execution in results['executions']:
+            data['executions'][_execution] = {
+                "date": results['executions'][_execution],
+                "filename": os.path.basename(_execution)
+            }
         self._extend_data(data)
 
         tmpl = self.jinja2_env.get_template(self.tmpl)

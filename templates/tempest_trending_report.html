@@ -197,8 +197,8 @@
         <td>Test name and parameters</td>
         <td>Required vs Added</td>
     {% for execution in executions if execution != 'required' %}
-        <td>{{ executions[execution] }}</td>
-        <td>Message</td>
+        <td>{{ executions[execution]['date'] }}</td>
+        <td>{{ executions[execution]['filename'] }}</td>
     {%- endfor -%}
     {% set counter = 1 %}
     </tr>
