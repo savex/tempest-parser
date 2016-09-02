@@ -72,6 +72,13 @@ def tempest_cli_parser_main():
     )
 
     parser.add_argument(
+        "-i",
+        "--include-required",
+        action="store_true", default=False,
+        help="initialise first column as baseline test list. I.e. required"
+    )
+
+    parser.add_argument(
         "-c",
         "--csv-file",
         help="Force output to CSV"
@@ -104,7 +111,9 @@ def tempest_cli_parser_main():
     # At this point we must load tests to combine executions with
     # for now it will be all tests
     print("Pre-loading tests...")
-    tests_manager = TestsManager(config.get_all_tests_list_filepath())
+    tests_manager = TestsManager()
+    if args.include_required:
+        tests_manager.add_required(config.get_all_tests_list_filepath())
     log_parser = TempestLogParser(tests_manager)
 
     # # Parse objects from raw file

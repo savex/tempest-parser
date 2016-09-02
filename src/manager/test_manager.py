@@ -5,25 +5,23 @@ from copy import deepcopy
 
 
 class TestsManager:
-    def __init__(self, all_tests_filepath, path=None):
+    def __init__(self):
         # structure
         self.tests_list = deepcopy(structs._tests_template)
+        self.required_execution_name = "required"
 
+    def add_required(self, all_tests_filepath, path=None):
         # on init we should either load the full set of tests
         # ... or load supplied ones
-        self._source = None
-        self.required_execution_name = "required"
         _tests_list_filename = os.path.join("res", all_tests_filepath)
         _date = time.strftime("%d/%m/%Y %H:%M", time.gmtime(
             os.path.getctime(_tests_list_filename)))
 
         if path is not None and not os.path.isfile(path):
             # if this is a folder, load files into sections
-            self._source = "folder"
             self.tests_list["tests"] = self._load_from_folder(path)
         elif path is not None and os.path.isfile(path):
             # if file, load contents to just one section
-            self._source = "file"
             self.tests_list["tests"] = self._all_tests_file_preload(path)
         elif path is None:
             # if there is no tests supplied, use save all tests set
@@ -34,8 +32,6 @@ class TestsManager:
         self.add_execution(
             dict(execution_name=self.required_execution_name,
                  execution_date=_date, summary=dict(time="0s")))
-
-        return
 
     def _load_from_folder(self, folder):
         _tests = {}
@@ -130,8 +126,6 @@ class TestsManager:
 
         if class_name in _tests:
             for _test_index in range(0, _tests[class_name].__len__()):
-                if test_name == 'test_slaac_from_os':
-                    pass
                 if _tests[class_name][_test_index]["test_name"] == test_name \
                         and _tests[class_name][_test_index]["test_options"] == test_options:
                     if set_name == '' or _tests[class_name][_test_index]["set_name"] == '':

@@ -1,6 +1,8 @@
 from xml.etree.ElementTree import parse
 import json
 import csv
+import os
+import time
 
 CSV_OWN = 1
 CSV_XUNIT = 2
@@ -134,7 +136,18 @@ class JSONImporter(ImporterBase):
 
         # Use filename as name for the execution
         _execution_name = self.filename
-        _execution_date = '1/06/2016'
+        (mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime) = os.stat(
+            self.filename
+        )
+        # we need to be closer to creation, so ctime is for us.
+        # Just leaving those here, in case needed
+        # _atime = time.strftime("%d/%m/%Y %H:%M", time.gmtime(atime))
+        # _mtime = time.strftime("%d/%m/%Y %H:%M", time.gmtime(mtime))
+        # _ctime = time.strftime("%d/%m/%Y %H:%M", time.gmtime(ctime))
+        _execution_date = time.strftime(
+            "%d/%m/%Y %H:%M GMT",
+            time.gmtime(ctime)
+        )
 
         # iterate through test cases and add up results
         for _test_key, _test_value in data['test_cases'].iteritems():
