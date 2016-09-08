@@ -9,6 +9,7 @@ setup(
         "console_scripts":
             ["tparser = tempest_parser.tparser:main"]
     },
+    url="https://github.com/osavatieiev/tempest-parser",
     packages=['tempest_parser',],
     license="Apache Licence, version 2",
     description="Parser of tempest results.",
