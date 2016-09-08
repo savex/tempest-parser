@@ -3,8 +3,8 @@ import os.path
 import time
 from copy import deepcopy
 
-import src.manager.structs as structs
-from src.parser.parser_strings import *
+import tempest_parser.manager.structs as structs
+from tempest_parser.parser.parser_strings import *
 
 
 class TempestLogParser:

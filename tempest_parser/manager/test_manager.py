@@ -1,4 +1,4 @@
-import src.manager.structs as structs
+import tempest_parser.manager.structs as structs
 import os
 import time
 from copy import deepcopy

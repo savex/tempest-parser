@@ -2,12 +2,12 @@ import os
 import sys
 import argparse
 
-from src.reports import reporter
-from src.reports.csv_reporter import CSVReporter
-from src.manager.test_manager import TestsManager
-from src.parser.tempest_log_parser import TempestLogParser
-from src.manager.importers import XMLImporter, JSONImporter, CSVImporter
-from src.utils.config import ParserConfigFile
+from tempest_parser.reports import reporter
+from tempest_parser.reports.csv_reporter import CSVReporter
+from tempest_parser.manager.test_manager import TestsManager
+from tempest_parser.parser.tempest_log_parser import TempestLogParser
+from tempest_parser.manager.importers import XMLImporter, JSONImporter, CSVImporter
+from tempest_parser.utils.config import ParserConfigFile
 
 pkg_dir = os.path.dirname(__file__)
 pkg_dir = os.path.normpath(pkg_dir)

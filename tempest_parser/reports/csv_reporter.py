@@ -1,4 +1,4 @@
-from src.utils.file import *
+from tempest_parser.utils.file import *
 from copy import copy
 
 

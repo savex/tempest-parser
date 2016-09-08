@@ -2,7 +2,7 @@ import jinja2
 import six
 import abc
 import os
-from src import const
+from tempest_parser import const
 
 
 pkg_dir = os.path.dirname(__file__)
