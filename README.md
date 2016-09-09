@@ -16,19 +16,19 @@ So, there is a need to:
 
 This util is originally intended for 'import-match-export' flow to produce CSV with tests matched by Class and name against the list of tests that was originally executed.
 
-```python tempest_parser.py -c matched.csv tempest.log```
+```tparser -c matched.csv tempest.log```
 
 Folder also can be used:
 
-```python tempest_parser.py -c matched.csv folder1```
+```tparser -c matched.csv folder1```
 
 And finally, here is HTML report
 
-```python tempest_parser.py -r trending.html tempest.xml```
+```tparser -r trending.html tempest.xml```
 
 or
 
-```python tempest_parser.py -r trending.html folder1```
+```tparser -r trending.html folder1```
 
 ## Imported Formats
 
@@ -43,3 +43,8 @@ Files exported from PyCharm UnitTests engine.
 [Rally](https://github.com/openstack/rally) tool export: 
 
 ```rally verify results --json --output-file result1.json```
+
+## Credits
+
+Thanks to Dmitry Bogun, Alexey Diyan and Dmitriy Zapeka.
+
