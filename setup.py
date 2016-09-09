@@ -36,6 +36,9 @@ setup(
     url="https://github.com/osavatieiev/tempest-parser",
     packages=find_packages(),
     include_package_data=True,
+    package_data={
+        '': ['*.conf', '*.list', '*.html']
+    },
     zip_safe=False,
     install_requires=dependencies,
     data_files=DATA,

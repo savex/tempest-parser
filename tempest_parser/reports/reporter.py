@@ -6,7 +6,7 @@ from tempest_parser import const
 
 
 pkg_dir = os.path.dirname(__file__)
-pkg_dir = os.path.join(pkg_dir, os.pardir, os.pardir)
+pkg_dir = os.path.join(pkg_dir, os.pardir)
 pkg_dir = os.path.normpath(pkg_dir)
 
 

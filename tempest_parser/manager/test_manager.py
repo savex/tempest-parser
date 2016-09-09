@@ -3,6 +3,10 @@ import os
 import time
 from copy import deepcopy
 
+pkg_dir = os.path.dirname(__file__)
+pkg_dir = os.path.join(pkg_dir, os.pardir)
+pkg_dir = os.path.normpath(pkg_dir)
+
 
 class TestsManager:
     def __init__(self):
@@ -13,7 +17,7 @@ class TestsManager:
     def add_required(self, all_tests_filepath, path=None):
         # on init we should either load the full set of tests
         # ... or load supplied ones
-        _tests_list_filename = os.path.join("res", all_tests_filepath)
+        _tests_list_filename = os.path.join(pkg_dir, "res", all_tests_filepath)
         _date = time.strftime("%d/%m/%Y %H:%M", time.gmtime(
             os.path.getctime(_tests_list_filename)))
 

@@ -2,7 +2,7 @@ import ConfigParser
 import os
 
 pkg_dir = os.path.dirname(__file__)
-pkg_dir = os.path.join(pkg_dir, os.path.pardir, os.path.pardir)
+pkg_dir = os.path.join(pkg_dir, os.path.pardir)
 pkg_dir = os.path.normpath(pkg_dir)
 
 
