@@ -7,6 +7,9 @@ pkg_dir = os.path.normpath(pkg_dir)
 
 
 class ParserConfigFile:
+    _truth = ['true', '1', 't', 'y', 'yes', 'yeah', 'yup',
+              'certainly', 'uh-huh']
+
     def __init__(self, filepath):
         self.config_file_path = filepath
 
@@ -24,3 +27,12 @@ class ParserConfigFile:
             return os.path.join(pkg_dir, _path)
         else:
             return _path
+
+    def get_detailed_column_default_value(self):
+        # value
+        _value = self.config.get(self.section_name, 'default_detailed')
+        # parse if
+        if _value.lower() in self._truth:
+            return True
+        else:
+            return False

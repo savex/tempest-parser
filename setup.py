@@ -4,7 +4,7 @@ import os
 from setuptools import setup, find_packages
 
 here = os.path.abspath(os.path.dirname(__file__))
-README = open(os.path.join(here, 'README.md')).read()
+README = open(os.path.join(here, 'README')).read()
 
 DATA = [
     ('etc', [f for f in glob.glob(os.path.join('etc', '*'))]),
@@ -18,13 +18,14 @@ dependencies = [
 ]
 
 entry_points = {
-    "console_scripts": "tparser = tempest_parser.tparser:main"
+    "console_scripts":
+        "tparser = tempest_parser.tparser:tempest_cli_parser_main"
 }
 
 
 setup(
     name="TempestParser",
-    version="0.1.2",
+    version="0.2",
     author="Alex Savatieiev",
     author_email="a.savex@gmail.com",
     classifiers=[

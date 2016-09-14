@@ -72,6 +72,14 @@ def tempest_cli_parser_main():
     )
 
     parser.add_argument(
+        "-d",
+        "--detailed",
+        action="store_true",
+        help="Include messages column with tracebacks and other messages. "
+             "Default comes from config"
+    )
+
+    parser.add_argument(
         "-i",
         "--include-required",
         action="store_true", default=False,
@@ -102,6 +110,13 @@ def tempest_cli_parser_main():
     if args.config_file:
         _config_file_path = args.config_file
     config = ParserConfigFile(_config_file_path)
+
+    # use config to set value for 'detailed' option
+    _config_detailed_default = config.get_detailed_column_default_value()
+    _args_detailed = args.detailed
+
+    do_detailed = _args_detailed if _args_detailed \
+        else _config_detailed_default
 
     # Check for supplied folder/file to be exists
     if not os.path.exists(args.filepath):
@@ -148,12 +163,12 @@ def tempest_cli_parser_main():
         )
         # call-n-render report
         print("Generating HTML Trending report...")
-        trending_report(tests_manager.get_tests_list())
+        trending_report(tests_manager.get_tests_list(), detailed=do_detailed)
 
     if args.csv_file is not None:
         print("Generating CSV report...")
         csv_reporter = CSVReporter(tests_manager)
-        csv_reporter.generate_to_file(args.csv_file)
+        csv_reporter.generate_to_file(args.csv_file, detailed=do_detailed)
 
 
 if __name__ == '__main__':

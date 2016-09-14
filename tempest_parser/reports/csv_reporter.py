@@ -14,7 +14,7 @@ class CSVReporter:
         self._total_executions = sorted(self._tests["executions"].keys())
         return
 
-    def generate_to_file(self, filename):
+    def generate_to_file(self, filename, detailed=False):
         # clear file content if any
         try:
             remove_file(filename)
@@ -40,8 +40,11 @@ class CSVReporter:
                 _date_prepared = _date_prepared.replace('/', '\n')
                 _date_prepared = _date_prepared.replace(' ', '\n')
                 csv_header += '"' + _date_prepared + '",'
-                csv_header += '"' + os.path.basename(_execution) + '",'
-                _result_columns += 2
+                if detailed:
+                    csv_header += '"' + os.path.basename(_execution) + '",'
+                    _result_columns += 2
+                else:
+                    _result_columns += 1
 
         append_line_to_file(filename, csv_header)
         _tests_counter = 0
@@ -61,7 +64,11 @@ class CSVReporter:
             # iterate tests
             for _test in self._tests['tests'][class_name]:
                 _tests_counter += 1
-                _test_line = str(_tests_counter) + ',' + _test['test_name'] + _test['test_options'] + ','
+                _test_line = str(_tests_counter) + \
+                             ',' + \
+                             _test['test_name'] + \
+                             _test['test_options'] + \
+                             ','
                 # iterate results
                 _results = ""
 
@@ -75,23 +82,35 @@ class CSVReporter:
                 for _execution in self._total_executions:
                     if _execution != 'required':
                         if _execution in _test['results']:
-                            _results += _test['results'][_execution]['result'] + ','
-                            # new template has no 'time' mark, just comment it out
-                            # _results += _test['results'][_execution]['time'] + ','
+                            _results += _test['results'][_execution][
+                                            'result'] + ','
+                            if detailed:
+                                # new template has no 'time' mark,
+                                # just comment it out
+                                # _results += _
+                                #   test['results'][_execution]['time'] + ','
 
-                            # check if there is a fail
-                            _tmp_result = _test['results'][_execution]['result']
-                            if _tmp_result == 'FAIL':
-                                _trace = copy(_test['results'][_execution]['trace'])
-                                _trace = _trace.replace('"', '\'')
-                                _results += '\"' + _test['results'][_execution]['message'] + '\x0a' \
-                                            + _trace + '\"' + ','
-                            elif _tmp_result == 'SKIP':
-                                _message = copy(_test['results'][_execution]['message']).replace("\'", '\'')
-                                _results += '\"' + _message + '\"' + ','
+                                # check if there is a fail
+                                _tmp_result = _test['results'][_execution][
+                                    'result']
+                                if _tmp_result == 'FAIL':
+                                    _trace = copy(
+                                        _test['results'][_execution]['trace'])
+                                    _trace = _trace.replace('"', '\'')
+                                    _results += \
+                                        '\"' + _test['results'][_execution][
+                                            'message'] + '\x0a' + _trace + \
+                                        '\"' + ','
+                                elif _tmp_result == 'SKIP':
+                                    _message = \
+                                        copy(_test['results'][_execution]
+                                             ['message']).replace("\'", '\'')
+                                    _results += '\"' + _message + '\"' + ','
+                                else:
+                                    _results += ','
+                        else:
+                            if detailed:
+                                _results += ',' + ','
                             else:
                                 _results += ','
-                        else:
-                            _results += ',' + ','
-                            # _results += ','
                 append_line_to_file(filename, _test_line + _results)

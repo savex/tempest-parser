@@ -32,10 +32,11 @@ class _TMPLBase(_Base):
     def tmpl(self):
         pass
 
-    def __call__(self, results):
+    def __call__(self, results, detailed=False):
         data = self.common_data()
         data.update({
             "executions": {},
+            "detailed": detailed,
             "tests": results['tests']
         })
 
@@ -108,8 +109,8 @@ class ReportToFile(object):
         self.report = report
         self.target = target
 
-    def __call__(self, payload):
-        payload = self.report(payload)
+    def __call__(self, payload, detailed=False):
+        payload = self.report(payload, detailed)
 
         if isinstance(self.target, six.string_types):
             self._wrapped_dump(payload)

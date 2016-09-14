@@ -187,9 +187,11 @@
             <div class="label {{ status_description[STATUS_SKIP] | lower }}">{{ totals[execution][STATUS_SKIP] }}</div>
             <div class="label {{ status_description[STATUS_NA] | lower }}">{{ totals[execution][STATUS_NA] }}</div>
         </td>
+        {% if detailed %}
         <td class="textlabel">
             Notes
         </td>
+        {% endif %}
     {%- endfor -%}
     </tr>
     <tr class="headers">
@@ -198,7 +200,9 @@
         <td>Required vs Added</td>
     {% for execution in executions if execution != 'required' %}
         <td>{{ executions[execution]['date'] }}</td>
+        {% if detailed %}
         <td>{{ executions[execution]['filename'] }}</td>
+        {% endif %}
     {%- endfor -%}
     {% set counter = 1 %}
     </tr>
@@ -224,7 +228,9 @@
             {% for execution in executions if execution != 'required' %}
             {% if test['results'].has_key(execution) %}
         <td class="status {{ test['results'][execution]['result'] | lower }}">{{ test['results'][execution]['result'] }}</td>
+                {%  if detailed %}
         <td class="tracemessage">{{ test['results'][execution]['message'] }}<br>{{ test['results'][execution]['trace'] }}</td>
+                {% endif %}
             {% else %}
         <td class="status blank"></td>
         <td class="status blank"></td>
