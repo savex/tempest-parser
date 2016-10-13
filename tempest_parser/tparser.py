@@ -103,6 +103,12 @@ def tempest_cli_parser_main():
         help="When set, creates HTML Trending Report"
     )
 
+    parser.add_argument(
+        "-e",
+        "--html-errors-filename",
+        help="When set, creates HTML Errors Report"
+    )
+
     args = parser.parse_args()
 
     # Init Config
@@ -122,6 +128,13 @@ def tempest_cli_parser_main():
     if not os.path.exists(args.filepath):
         print("Error: Supplied path/file not exists, '{}'".format(args.filepath))
         sys.exit(1)
+
+    # Check if errors report is set and file is supplied
+    if not os.path.isfile(args.filepath):
+        if args.html_errors_filename:
+            print("Error: Errors report require single file, "
+                  "folder given: '{}'".format(args.filepath))
+            sys.exit(1)
 
     # At this point we must load tests to combine executions with
     # for now it will be all tests
@@ -165,6 +178,15 @@ def tempest_cli_parser_main():
         print("Generating HTML Trending report...")
         trending_report(tests_manager.get_tests_list(), detailed=do_detailed)
 
+    if args.html_errors_filename:
+        errors_report = reporter.ReportToFile(
+            reporter.HTMLErrorsReport(),
+            args.html_errors_filename
+        )
+        # call-n-render report
+        print("Generating HTML Errors report...")
+        errors_report(tests_manager.get_tests_list())
+
     if args.csv_file is not None:
         print("Generating CSV report...")
         csv_reporter = CSVReporter(tests_manager)
@@ -174,3 +196,4 @@ def tempest_cli_parser_main():
 if __name__ == '__main__':
     tempest_cli_parser_main()
     sys.exit(0)
+        # prepare the reporting subsystem

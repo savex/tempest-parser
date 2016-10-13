@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tempest Trending Report</title>
+    <style>
+        table {
+            font-family: Verdana, "Helvetica Neue", Arial, Helvetica, Geneva, sans-serif;
+            font-size: x-small;
+        }
+
+        .tracemessage {
+            font-size: xx-small;
+            color: #550000;
+            max-width: 200px;
+            overflow: scroll;
+        }
+
+        .textlabel {
+            text-align: center;
+        }
+
+        .parameters {
+            font-size: xx-small;
+            color: #777777;
+        }
+        .test_name {
+            font-weight: normal;
+            min-width: 600px;
+            text-align: left;
+            color: black;
+        }
+
+        table.labels {
+            border: 0 hidden;
+            margin: 0;
+            width: 100%;
+        }
+
+        table.labels td {
+            border: 0 hidden;
+        }
+
+        table.report table.labels {
+            border: 0 hidden;
+        }
+
+        table.report {
+            border-collapse: collapse;
+            border: 1px solid #777;
+            margin: 10px 0;
+        }
+        table.report th,
+        table.report td {
+            border: 1px solid #777;
+        }
+        table.report th.date {
+            vertical-align: top;
+            padding: 5px 0;
+            height: 145px;
+            font-weight: normal;
+        }
+
+        table > caption { text-align: left; }
+        table.report tr.legend > td { height: 1ex; }
+
+        tr.headers {
+            background: #105a10;
+            color: white;
+            font-size: smaller;
+            text-align: center;
+        }
+
+        tr.group > td.name {
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        td > div.test_name {
+            padding-left: 5px;
+            white-space: normal;
+        }
+
+        td > div.error_name {
+            padding-left: 5px;
+            font-size: small;
+            color: white;
+            background-color: #922;
+            white-space: normal;
+        }
+
+        td > div.skip_name {
+            padding-left: 5px;
+            font-size: small;
+            color: black;
+            background-color: #ccb226;
+            white-space: normal;
+        }
+
+        td > div.parameters {
+            padding-left: 10px;
+            white-space: normal;
+        }
+
+        td.status {
+            font-size: xx-small;
+            text-align: center;
+            vertical-align: middle;
+            color: black;
+            width: auto;
+            min-height: 20px;
+        }
+
+        td.labels {
+            border: 0 hidden;
+            padding: 0;
+            margin: 0;
+            width: 80px;
+        }
+
+        td.resultcolumn {
+            width: 45px;
+        }
+
+        td.status.pass { background: #6c6; }
+        td.status.ok { background: #6c6; }
+        td.status.fail { background: #a50000; color: white; }
+        td.status.skip { background: #ccb226; }
+        td.status.na { background: #777777; }
+        td.status.error { background: #e585a2; }
+        td.status.total { background: white; }
+        td.status.required { background: #aaa; }
+        td.status.added { background: #faa; }
+
+        td > div.label {
+            font-size: xx-small;
+            text-align: center;
+            vertical-align: middle;
+            color: black;
+            width: auto;
+            min-height: 20px;
+            line-height: 20px;
+        }
+
+        td > div.label.pass { background: #6c6; }
+        td > div.label.fail { background: #a50000; color: white; }
+        td > div.label.skip { background: #ccb226; }
+        td > div.label.na { background: #777777; }
+        td > div.label.error { background: #e585a2; }
+        td > div.label.total { background: white; }
+
+        th.separator,
+        td.separator { background: #777; }
+    </style>
+</head>
+<body>
+
+{% macro cells_legend() -%}
+<table class="report">
+    <caption>Legend</caption>
+    <tbody>
+    <tr>
+        <td>Passed</td>
+        <td>Skipped</td>
+        <td>Setup Errors</td>
+        <td>Failed</td>
+        <td>NA</td>
+    </tr>
+    <tr class="legend">
+        <td class="status {{ status_description[STATUS_PASS] | lower }}"></td>
+        <td class="status {{ status_description[STATUS_SKIP] | lower }}"></td>
+        <td class="status {{ status_description[STATUS_ERROR] | lower }}"></td>
+        <td class="status {{ status_description[STATUS_FAIL] | lower }}"></td>
+        <td class="status {{ status_description[STATUS_NA] | lower }}"></td>
+    </tr>
+    </tbody>
+</table>
+{%- endmacro %}
+
+
+{{ cells_legend() }}
+
+<table class="report">
+    <tbody>
+    <tr>
+        <td colspan="3" class="textlabel">
+            Unique fails: {{ uniqie_fails.__len__() }}
+        </td>
+    </tr>
+
+    <tr class="headers">
+        <td>#</td>
+        <td>Fail message</td>
+        <td class="textlabel">
+            Tests count
+        </td>
+        {% set counter = 1 %}
+    </tr>
+    {% for failed_message in uniqie_fails %}
+
+    <tr class="group">
+        <td colspan="2">
+            <div class="error_name">{{ failed_message }}</div>
+        </td>
+        <td class="label">{{ uniqie_fails[failed_message].__len__() }}</td>
+    </tr>
+
+        {% for test in uniqie_fails[failed_message] %}
+    <tr>
+        <td>{{ counter + loop.index0 }}</td>
+        <td colspan="2">
+            <div class="test_name">
+                {{ test.test_class }}.{{ test.test_name }}
+            </div>
+            <div class="parameters">
+                {{ test['trace_details'] }}
+            </div>
+            <div class="parameters">
+                {{ test['trace_additional'] }}
+            </div>
+        </td>
+    </tr>
+        {% endfor %}
+    {% endfor %}
+    </tbody>
+</table>
+
+<table class="report">
+    <tbody>
+    <tr>
+        <td colspan="3" class="textlabel">
+            Unique skips: {{ unique_skips.__len__() }}
+        </td>
+    </tr>
+
+    <tr class="headers">
+        <td>#</td>
+        <td>Skip message</td>
+        <td class="textlabel">
+            Tests count
+        </td>
+        {% set counter = 1 %}
+    </tr>
+    {% for skip_message in unique_skips %}
+
+    <tr class="group">
+        <td colspan="2">
+            <div class="skip_name">{{ skip_message }}</div>
+        </td>
+        <td class="label">{{ unique_skips[skip_message].__len__() }}</td>
+    </tr>
+
+        {% for test in unique_skips[skip_message] %}
+    <tr>
+        <td>{{ counter + loop.index0 }}</td>
+        <td colspan="2">
+            <div class="test_name">
+                {{ test.test_class }}.{{ test.test_name }}
+            </div>
+            <div class="parameters">
+                {{ test['trace_details'] }}
+            </div>
+            <div class="parameters">
+                {{ test['trace_additional'] }}
+            </div>
+        </td>
+    </tr>
+        {% endfor %}
+
+    {% endfor %}
+    </tbody>
+</table>
+{{ cells_legend() }}
+
+</body>
+</html>
