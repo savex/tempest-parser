@@ -20,6 +20,10 @@
             text-align: center;
         }
 
+        .header_text {
+            font-size: small;
+        }
+
         .parameters {
             font-size: xx-small;
             color: #777777;
@@ -49,6 +53,7 @@
             border-collapse: collapse;
             border: 1px solid #777;
             margin: 10px 0;
+            width: 100%;
         }
         table.report th,
         table.report td {
@@ -76,21 +81,31 @@
             white-space: nowrap;
         }
 
+        .collapsable {
+            visibility: collapse;
+        }
+
+        .collapsable.in {
+            visibility: visible;
+        }
+
+
+
         td > div.test_name {
             padding-left: 5px;
             white-space: normal;
         }
 
         td > div.error_name {
-            padding-left: 5px;
-            font-size: small;
+            padding: 5px;
+            font-size: x-small;
             color: white;
             background-color: #922;
             white-space: normal;
         }
 
         td > div.skip_name {
-            padding-left: 5px;
+            padding: 5px;
             font-size: small;
             color: black;
             background-color: #ccb226;
@@ -100,6 +115,22 @@
         td > div.parameters {
             padding-left: 10px;
             white-space: normal;
+        }
+
+        td > div.container {
+            align-content: center;
+            display: table;
+        }
+        div.container > div.counter {
+            font-size: small;
+            vertical-align: middle;
+            text-align: center;
+            width: 80%;
+            display: table-cell;
+        }
+        div.container > div.button {
+            width: 20%;
+            display: table-cell;
         }
 
         td.status {
@@ -152,62 +183,62 @@
         th.separator,
         td.separator { background: #777; }
     </style>
+    <script language="JavaScript">
+        function toggleClassByID(type, number) {
+            var elements = document.querySelectorAll("#"+type+"_group_"+number);
+            var ii = elements.length;
+            var button = document.querySelector("#"+type+"_group_button"+number);
+
+            while (ii--) {
+                if( elements[ii].className && elements[ii].className.indexOf("in") > -1 ) {
+                    elements[ii].classList.remove("in");
+                    button.innerHTML = "&uarr;"
+                }
+                else {
+                    elements[ii].classList.add("in");
+                    button.innerHTML = "&darr;"
+                }
+            }
+
+
+        }
+    </script>
 </head>
 <body>
 
-{% macro cells_legend() -%}
-<table class="report">
-    <caption>Legend</caption>
-    <tbody>
-    <tr>
-        <td>Passed</td>
-        <td>Skipped</td>
-        <td>Setup Errors</td>
-        <td>Failed</td>
-        <td>NA</td>
-    </tr>
-    <tr class="legend">
-        <td class="status {{ status_description[STATUS_PASS] | lower }}"></td>
-        <td class="status {{ status_description[STATUS_SKIP] | lower }}"></td>
-        <td class="status {{ status_description[STATUS_ERROR] | lower }}"></td>
-        <td class="status {{ status_description[STATUS_FAIL] | lower }}"></td>
-        <td class="status {{ status_description[STATUS_NA] | lower }}"></td>
-    </tr>
-    </tbody>
-</table>
-{%- endmacro %}
-
-
-{{ cells_legend() }}
-
 <table class="report">
     <tbody>
     <tr>
-        <td colspan="3" class="textlabel">
+        <td colspan="3" class="header_text">
             Unique fails: {{ uniqie_fails.__len__() }}
         </td>
     </tr>
 
     <tr class="headers">
-        <td>#</td>
-        <td>Fail message</td>
-        <td class="textlabel">
+        <td width="3%">#</td>
+        <td width="85%">Fail message</td>
+        <td width="12%" class="textlabel">
             Tests count
         </td>
-        {% set counter = 1 %}
     </tr>
     {% for failed_message in uniqie_fails %}
-
+        {% set test_group_counter = 1 + loop.index0 %}
     <tr class="group">
         <td colspan="2">
             <div class="error_name">{{ failed_message }}</div>
         </td>
-        <td class="label">{{ uniqie_fails[failed_message].__len__() }}</td>
+        <td align="center">
+            <div class="container">
+                <div class="counter">{{ uniqie_fails[failed_message].__len__() }}</div>
+                <div class="button">
+                    <a href="#" onclick="toggleClassByID('fail', '{{ test_group_counter }}')" id="fail_group_button{{ test_group_counter }}">&uarr;</a>
+                </div>
+            </div>
+        </td>
     </tr>
-
         {% for test in uniqie_fails[failed_message] %}
-    <tr>
-        <td>{{ counter + loop.index0 }}</td>
+    <tr class="collapsable" id="fail_group_{{ test_group_counter }}">
+        <td>{{ 1 + loop.index0 }}</td>
         <td colspan="2">
             <div class="test_name">
                 {{ test.test_class }}.{{ test.test_name }}
@@ -228,31 +259,38 @@
 <table class="report">
     <tbody>
     <tr>
-        <td colspan="3" class="textlabel">
+        <td colspan="3" class="header_text">
             Unique skips: {{ unique_skips.__len__() }}
         </td>
     </tr>
 
     <tr class="headers">
-        <td>#</td>
-        <td>Skip message</td>
-        <td class="textlabel">
+        <td width="3%">#</td>
+        <td width="85%">Skip message</td>
+        <td width="12%" class="textlabel">
             Tests count
         </td>
-        {% set counter = 1 %}
     </tr>
     {% for skip_message in unique_skips %}
-
+        {% set test_group_counter = 1 + loop.index0 %}
     <tr class="group">
         <td colspan="2">
             <div class="skip_name">{{ skip_message }}</div>
         </td>
-        <td class="label">{{ unique_skips[skip_message].__len__() }}</td>
+        <td align="center">
+            <div class="container">
+                <div class="counter">{{ unique_skips[skip_message].__len__() }}</div>
+                <div class="button">
+                    <a href="#skip_group_button{{ test_group_counter }}" onclick="toggleClassByID('skip', '{{ test_group_counter }}')" id="skip_group_button{{ test_group_counter }}">&uarr;</a>
+                </div>
+            </div>
+        </td>
     </tr>
 
+        {% set test_group_counter = 1 + loop.index0 %}
         {% for test in unique_skips[skip_message] %}
-    <tr>
-        <td>{{ counter + loop.index0 }}</td>
+    <tr class="collapsable" id="skip_group_{{ test_group_counter }}">
+        <td>{{ 1 + loop.index0 }}</td>
         <td colspan="2">
             <div class="test_name">
                 {{ test.test_class }}.{{ test.test_name }}
@@ -270,7 +308,6 @@
     {% endfor %}
     </tbody>
 </table>
-{{ cells_legend() }}
 
 </body>
 </html>
