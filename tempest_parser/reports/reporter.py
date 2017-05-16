@@ -123,9 +123,15 @@ class HTMLErrorsReport(_TMPLBase):
             for test_class in data['tests']:
                 for test in data['tests'][test_class]:
 
-                    main_message = test['results'][execution]['message']
+                    _message = test['results'][execution]['message']
+                    main_message = "" if _message is None else _message
 
-                    _trace = test['results'][execution]['trace']
+                    if main_message.startswith("Trace"):
+                        _trace = main_message
+                        main_message = ""
+                    else:
+                        _trace = test['results'][execution]['trace']
+
                     _trace_details = ""
                     _trace_additional = []
                     for line in _trace.split('\n'):

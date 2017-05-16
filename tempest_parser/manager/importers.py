@@ -149,16 +149,19 @@ class JSONImporter(ImporterBase):
             time.gmtime(ctime)
         )
 
+        verification = data['verifications'].keys()[0]
+
         # iterate through test cases and add up results
-        for _test_key, _test_value in data['test_cases'].iteritems():
+        for _test_value in data['tests'].values():
             _splitted_test_name = _test_value['name'].rsplit('.', 1)
             _class_name = _splitted_test_name[0]
             _test_name = _splitted_test_name[1]
-            _status = self._parse_status(_test_value['status'])
-            _duration = _test_value['time'] + 's'
-            _message = _test_value['reason'] if 'reason' in _test_value else ''
-            _trace = _test_value[
-                'traceback'] if 'traceback' in _test_value else ''
+            _test_value_results = _test_value['by_verification'][verification]
+            _status = self._parse_status(_test_value_results['status'])
+            _duration = _test_value_results['duration'] + 's'
+            _message = _test_value_results['details'] if 'details' in _test_value_results else ''
+            _trace = _test_value_results[
+                'traceback'] if 'traceback' in _test_value_results else ''
 
             # parsing tags
             if _test_value['tags'][0].find('(') > -1:
@@ -182,7 +185,7 @@ class JSONImporter(ImporterBase):
                 trace=_trace
             )
 
-        self._add_execution(_execution_name, _execution_date, data['time'])
+        self._add_execution(_execution_name, _execution_date, '0s')
         return _execution_name
 
 
