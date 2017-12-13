@@ -3,6 +3,8 @@ import six
 import abc
 import os
 import re
+import cgi
+
 from tempest_parser import const
 
 pkg_dir = os.path.dirname(__file__)
@@ -147,6 +149,10 @@ class HTMLErrorsReport(_TMPLBase):
                         main_message = "Fail message can't be extracted"
                     elif main_message.__len__() == 0:
                         main_message = _trace_details
+
+                    main_message = cgi.escape(main_message)
+                    _trace_details = cgi.escape(_trace_details)
+                    _trace_messages = cgi.escape(_trace_messages)
 
                     _dict = {
                         'test_class': test_class,

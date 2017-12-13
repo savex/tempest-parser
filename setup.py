@@ -25,7 +25,7 @@ entry_points = {
 
 setup(
     name="TempestParser",
-    version="0.2.1",
+    version="0.2.3",
     author="Alex Savatieiev",
     author_email="a.savex@gmail.com",
     classifiers=[
@@ -34,7 +34,7 @@ setup(
     ],
     keywords="QA, tempest, openstack, html, report",
     entry_points=entry_points,
-    url="https://github.com/osavatieiev/tempest-parser",
+    url="https://github.com/savex/tempest-parser",
     packages=find_packages(),
     include_package_data=True,
     package_data={
