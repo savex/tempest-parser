@@ -137,8 +137,9 @@ class HTMLErrorsReport(_TMPLBase):
                     for line in _trace.split('\n'):
                         if line.startswith("Details:"):
                             _trace_details = line[9:]
-                        elif not line.startswith("Trace") \
-                                and not re.match(r'\s', line):
+                        elif "exception" in line:
+                            _trace_details = line.split(":")[0]
+                        elif not line.startswith("Trace") and not re.match(r'\s', line):
                             _trace_additional.append(line)
                     _trace_messages = ", ".join(_trace_additional)
 
