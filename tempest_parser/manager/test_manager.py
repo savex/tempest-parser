@@ -94,6 +94,8 @@ class TestsManager:
                         return raw_options[1]
                 return raw_options
 
+        _first_name = full_test_name.split('.', 1)[0]
+
         if full_test_name.startswith("setUpClass") or \
                 full_test_name.startswith("tearDownClass"):
             return (
@@ -101,16 +103,15 @@ class TestsManager:
                 full_test_name.split("(")[1][:-1],
                 ""
             )
-        elif full_test_name.startswith("unittest2."):
+        elif _first_name is "unittest2":
             # parse unittest fail
             _name = full_test_name.split(".", 3)[3]
             _class = _name.rsplit(".", 1)[0]
             _test = _name.rsplit(".", 1)[1].split('[')[0]
             _tmp = _name.rsplit(".", 1)[1].split(']')
             return _class, _test, _dig_options(_tmp)
-        elif full_test_name.startswith("tempest.") or \
-                full_test_name.startswith("barbican_tempest_plugin.") or \
-                full_test_name.startswith("heat_tempest_plugin."):
+        elif _first_name.startswith("tempest") or \
+                _first_name.endswith("_tempest_plugin"):
             _class = full_test_name.rsplit(".", 1)[0]
             _test = full_test_name.rsplit(".", 1)[1].split('[')[0]
             _tmp = full_test_name.rsplit(".", 1)[1].split(']')

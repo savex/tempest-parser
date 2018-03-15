@@ -168,14 +168,18 @@ def tempest_cli_parser_main():
 
     pipe_fmt = None
     # Detect pipe input, prior to handle args
-    if S_ISFIFO(os.fstat(0).st_mode) and sys.stdin.isatty():
+    # print("istty?={}, fifo?={}".format(
+    #     sys.stdin.isatty(),
+    #     S_ISFIFO(os.fstat(0).st_mode)
+    # ))
+    if S_ISFIFO(os.fstat(0).st_mode) and args.inputfile is "<stdin>":
         # TODO: handle pipe input here
         # if isinstance(argparse.inputfile, file):
         #     print("Error: No input file given")
         #     sys.exit(1)
         if args.input_format is None:
             pipe_fmt = const.FMT_SUBUNIT
-        pass
+
     else:
         # Check for supplied folder/file to be exists
         if not os.path.exists(args.inputfile):
