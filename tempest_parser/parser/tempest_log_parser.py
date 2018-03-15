@@ -8,8 +8,9 @@ from tempest_parser.parser.parser_strings import *
 
 
 class TempestLogParser:
-    def __init__(self, test_manager):
+    def __init__(self, test_manager, source):
         self.test_mgr = test_manager
+        self.source = source
 
         pass
 
@@ -45,99 +46,103 @@ class TempestLogParser:
 
     # method to do the first parsing of the cli log
     # divide it into objects
-    def cli_parser(self, _source_filename):
-        print("Trying to parse cli log file: {0}".format(_source_filename))
+    def cli_parser(self):
         cli_objects_list = []
-        _file_m_date = time.strftime("%d/%m/%Y %H:%M", time.gmtime(os.path.getmtime(_source_filename)))
-        _file_c_date = time.strftime("%d/%m/%Y %H:%M", time.gmtime(os.path.getctime(_source_filename)))
+        _file_m_date = time.strftime(
+            "%d/%m/%Y %H:%M",
+            time.gmtime(os.path.getmtime(self.source.name))
+        )
+        _file_c_date = time.strftime(
+            "%d/%m/%Y %H:%M",
+            time.gmtime(os.path.getctime(self.source.name))
+        )
         print("\tcreated: {0}".format(_file_c_date))
         print("\tlast modified: {0}".format(_file_m_date))
 
         # load lines into list and pre-parse it by dividing into sections
         # each section is between double next line character: '\n'
-        with open(_source_filename) as source_file:
-            _raw_data = source_file.read()
-            _search_criteria = "\n\n"
+        _raw_data = self.source.read()
+        _search_criteria = "\n\n"
 
-            # Search for criteria and split
-            _data_list = _raw_data.split(_search_criteria)
+        # Search for criteria and split
+        _data_list = _raw_data.split(_search_criteria)
 
-            _index = 0
-            # remove heading newlines
-            while _index < _data_list.__len__():
-                if _data_list[_index].__len__() > 0:
-                    while _data_list[_index][0] == '\n':
-                        _data_list[_index] = _data_list[_index].replace("\n", "", 1)
+        _index = 0
+        # remove heading newlines
+        while _index < _data_list.__len__():
+            if _data_list[_index].__len__() > 0:
+                while _data_list[_index][0] == '\n':
+                    _data_list[_index] = _data_list[_index].replace("\n", "", 1)
+            _index += 1
+
+        # Cut to separate lines or combine them
+        _fail_count = 0
+        _unknown_count = 0
+        _summary_count = 0
+        # _data = ""
+        _index = 0
+        while _index < _data_list.__len__():
+            # safety first, clear out and load data
+            _data = " "
+            _type = "empty"
+            _section = _data_list[_index]
+
+            # Detect what is it
+
+            # For summary we must cut OK\FAIL to previous line
+            if _section.startswith(tempest_summary_ran_section_start_string):
+                # this is Summary, combine this with next one
+                # load test result in next section
+                _cutted_result = _data_list[_index + 1][:_data_list[_index + 1].find("\n") + 1]
+                # cut it from there
+                _data_list[_index + 1] = _data_list[_index + 1].replace(_cutted_result, "")
+                # form summary section
+                _data = _section + "\n" + _cutted_result
+                # set type
+                _type = TEMPEST_EXECUTION_SUMMARY
+
+                _summary_count += 1
+                # print("{0} summary sections found".format(_count))
+            elif _section.startswith(tempest_summary_ok_section_start_string) or \
+                    _section.startswith(tempest_summary_fail_section_start_string):
+                # this one was combined with previous one
+                # should not be entering here actually :)
+                pass
+            # Fail section
+            elif _section.startswith(tempest_fail_head_section_start_string):
+                # this is a fail reporting section
+                # search for next fail or end of section
+                (_fail_sec, _index) = self._fail_section_end_lookup(_index, _data_list)
+                _data = _section + '\n\n' + _fail_sec
+
+                # _data = _section
+                _type = TEMPEST_FAIL_MESSAGE
+
+                _fail_count += 1
+            # execution section
+            elif _section.startswith(tempest_execution_setup_section_start_string) or \
+                    _section.startswith(tempest_execution_tempest_section_start_string):
+                _data = _section
+                _type = TEMPEST_EXECUTION_FLOW
+            elif _section.startswith(tempest_speed_summary_section_start_string):
+                _data = _section
+                _type = TEMPEST_SPEED_SUMMARY
+            else:
+                # this is an unknown section, we should add it to previous one as a trace
+                cli_objects_list[cli_objects_list.__len__() - 1]["data"] += _section
                 _index += 1
+                continue
 
-            # Cut to separate lines or combine them
-            _fail_count = 0
-            _unknown_count = 0
-            _summary_count = 0
-            # _data = ""
-            _index = 0
-            while _index < _data_list.__len__():
-                # safety first, clear out and load data
-                _data = " "
-                _type = "empty"
-                _section = _data_list[_index]
-
-                # Detect what is it
-
-                # For summary we must cut OK\FAIL to previous line
-                if _section.startswith(tempest_summary_ran_section_start_string):
-                    # this is Summary, combine this with next one
-                    # load test result in next section
-                    _cutted_result = _data_list[_index + 1][:_data_list[_index + 1].find("\n") + 1]
-                    # cut it from there
-                    _data_list[_index + 1] = _data_list[_index + 1].replace(_cutted_result, "")
-                    # form summary section
-                    _data = _section + "\n" + _cutted_result
-                    # set type
-                    _type = TEMPEST_EXECUTION_SUMMARY
-
-                    _summary_count += 1
-                    # print("{0} summary sections found".format(_count))
-                elif _section.startswith(tempest_summary_ok_section_start_string) or \
-                        _section.startswith(tempest_summary_fail_section_start_string):
-                    # this one was combined with previous one
-                    # should not be entering here actually :)
-                    pass
-                # Fail section
-                elif _section.startswith(tempest_fail_head_section_start_string):
-                    # this is a fail reporting section
-                    # search for next fail or end of section
-                    (_fail_sec, _index) = self._fail_section_end_lookup(_index, _data_list)
-                    _data = _section + '\n\n' + _fail_sec
-
-                    # _data = _section
-                    _type = TEMPEST_FAIL_MESSAGE
-
-                    _fail_count += 1
-                # execution section
-                elif _section.startswith(tempest_execution_setup_section_start_string) or \
-                        _section.startswith(tempest_execution_tempest_section_start_string):
-                    _data = _section
-                    _type = TEMPEST_EXECUTION_FLOW
-                elif _section.startswith(tempest_speed_summary_section_start_string):
-                    _data = _section
-                    _type = TEMPEST_SPEED_SUMMARY
-                else:
-                    # this is an unknown section, we should add it to previous one as a trace
-                    cli_objects_list[cli_objects_list.__len__() - 1]["data"] += _section
-                    _index += 1
-                    continue
-
-                # Add to dictionary
-                cli_objects_list.append(
-                    {
-                        "source": _source_filename,
-                        "created_date": _file_c_date,
-                        "data": _data,
-                        "type": _type,
-                    }
-                )
-                _index += 1
+            # Add to dictionary
+            cli_objects_list.append(
+                {
+                    "source": self.source.name,
+                    "created_date": _file_c_date,
+                    "data": _data,
+                    "type": _type,
+                }
+            )
+            _index += 1
         # debug
         # for object in cli_objects_list:
         # if object["type"] == TEMPEST_EXECUTION_SUMMARY:
@@ -414,7 +419,8 @@ class TempestLogParser:
         return _fail_section, _local_index
 
     # apply parsing per object type
-    # On return, we should have scenario or scenarios dict with: execution, speed, fail and summary sections
+    # On return, we should have scenario
+    # or scenarios dict with: execution, speed, fail and summary sections
     def object_parser(self, executions_list_raw):
         print("Performing per-object parsing")
 
@@ -425,19 +431,27 @@ class TempestLogParser:
         executions = self.test_mgr.get_executions()
         executions.sort()
 
-        print("Current executions sets list:\n--------------------------------------------------")
+        print("""
+Current executions sets list:\n
+--------------------------------------------------
+""")
         for execution in executions:
             # throw a quick summary
             running_time, total, ok, fail, skip = self.test_mgr.get_summary_for_execution(execution)
 
-            print("Tempest testrun {0}: {1} executed: {2} passed, {3} failed, {4} skipped".format(
+            print("""
+Tempest testrun {0}: {1} executed: {2} passed, {3} failed, {4} skipped
+""".format(
                 execution,
                 total,
                 ok,
                 fail,
                 skip
-            )
-            )
+            ))
         print("--------------------------------------------------")
 
         return self.test_mgr.get_tests_list()
+
+    def parse(self):
+        self.object_parser(self.cli_parser())
+

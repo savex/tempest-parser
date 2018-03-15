@@ -72,8 +72,10 @@ class TestsManager:
 
                 self._test_item = deepcopy(structs._template_test_item)
                 self._test_item["test_name"] = _test_name
-                self._test_item["set_name"] = _search_res[1].replace("\n", "") + \
-                    _search_res[2].partition(']')[0].replace("\n", "") + "]"
+                self._test_item["set_name"] = _search_res[1].replace("\n",
+                                                                     "") + \
+                                              _search_res[2].partition(']')[
+                                                  0].replace("\n", "") + "]"
                 self._test_item["results"][
                     self.required_execution_name] = dict(result="R", time='0s')
 
@@ -86,6 +88,12 @@ class TestsManager:
 
     @staticmethod
     def split_test_name(full_test_name):
+        def _dig_options(raw_options):
+                if len(raw_options) >= 2:
+                    if len(raw_options[1]) > 0:
+                        return raw_options[1]
+                return raw_options
+
         if full_test_name.startswith("setUpClass") or \
                 full_test_name.startswith("tearDownClass"):
             return (
@@ -93,20 +101,21 @@ class TestsManager:
                 full_test_name.split("(")[1][:-1],
                 ""
             )
-
-        elif full_test_name.startswith("tempest."):
+        elif full_test_name.startswith("unittest2."):
+            # parse unittest fail
+            _name = full_test_name.split(".", 3)[3]
+            _class = _name.rsplit(".", 1)[0]
+            _test = _name.rsplit(".", 1)[1].split('[')[0]
+            _tmp = _name.rsplit(".", 1)[1].split(']')
+            return _class, _test, _dig_options(_tmp)
+        elif full_test_name.startswith("tempest.") or \
+                full_test_name.startswith("barbican_tempest_plugin.") or \
+                full_test_name.startswith("heat_tempest_plugin."):
             _class = full_test_name.rsplit(".", 1)[0]
             _test = full_test_name.rsplit(".", 1)[1].split('[')[0]
             _tmp = full_test_name.rsplit(".", 1)[1].split(']')
-            _options = ""
-            if _tmp.__len__() >= 2:
-                if _tmp[1].__len__() > 0:
-                    _options = _tmp[1]
-            return (
-                _class,
-                _test,
-                _options
-            )
+
+            return _class, _test, _dig_options(_tmp)
         return None, None, None
 
     @staticmethod
@@ -131,11 +140,14 @@ class TestsManager:
         if class_name in _tests:
             for _test_index in range(0, _tests[class_name].__len__()):
                 if _tests[class_name][_test_index]["test_name"] == test_name \
-                        and _tests[class_name][_test_index]["test_options"] == test_options:
-                    if set_name == '' or _tests[class_name][_test_index]["set_name"] == '':
+                        and _tests[class_name][_test_index][
+                            "test_options"] == test_options:
+                    if set_name == '' or _tests[class_name][_test_index][
+                        "set_name"] == '':
                         _index = _test_index
                         break
-                    elif _tests[class_name][_test_index]["set_name"] == set_name:
+                    elif _tests[class_name][_test_index][
+                        "set_name"] == set_name:
                         _index = _test_index
                         break
 
@@ -153,13 +165,15 @@ class TestsManager:
 
         return _index
 
-    def partial_class_name_lookup(self, class_name_short, test_name, set_name=None, test_options=None):
+    def partial_class_name_lookup(self, class_name_short, test_name,
+                                  set_name=None, test_options=None):
         _list = []
         _full_class_name = ""
         _class_names = self.tests_list["tests"].keys()
         for _class_name in _class_names:
             if _class_name.endswith(class_name_short):
-                _index = self.test_name_lookup(_class_name, test_name, set_name, test_options)
+                _index = self.test_name_lookup(_class_name, test_name,
+                                               set_name, test_options)
                 if _index > -1:
                     _full_class_name = _class_name
                     _list.append(_full_class_name)
@@ -175,9 +189,11 @@ class TestsManager:
         self.tests_list["executions"][_name] = date
 
     def mark_slowest_test_in_execution_by_name(self, execution_name,
-                                               class_name, test_name, set_name=None,
+                                               class_name, test_name,
+                                               set_name=None,
                                                test_options=None):
-        _index = self.test_name_lookup(class_name, test_name, set_name, test_options)
+        _index = self.test_name_lookup(class_name, test_name, set_name,
+                                       test_options)
         if _index > -1:
             # mark slowest tests
             self.tests_list["tests"][class_name][_index]["results"][
@@ -226,7 +242,8 @@ class TestsManager:
                 self.tests_list["tests"][_full_class_name][_index]["results"][
                     execution_name]["message"] = message
             else:
-                print("WARNING: Test NOT found: {0}, {1}\nfor message: {2}".format(
+                print(
+                "WARNING: Test NOT found: {0}, {1}\nfor message: {2}".format(
                     _full_class_name,
                     test_name,
                     message
@@ -234,7 +251,8 @@ class TestsManager:
 
     def add_result_for_test(self, execution_name, class_name, test_name, tags,
                             test_options, result, running_time,
-                            message='', trace='', class_name_short=False, test_name_bare=False):
+                            message='', trace='', class_name_short=False,
+                            test_name_bare=False):
         _result = deepcopy(structs._template_test_result)
         _result["result"] = result
         _result["time"] = running_time
@@ -243,12 +261,13 @@ class TestsManager:
         if class_name == "setUpClass" or class_name == "tearDownClass":
             # if this is a setUpClass situation,
             # mark all tests with this result
+            _class_name = test_name
             _tests = self.tests_list["tests"]
 
             if test_name in _tests:
-                for _test_index in range(0, _tests[test_name].__len__()):
+                for _test_index in range(0, len(_tests[_class_name])):
                     _result["setup_fail"] = True
-                    _tests[test_name][_test_index]["results"][
+                    _tests[_class_name][_test_index]["results"][
                         execution_name] = _result
                     break
         else:

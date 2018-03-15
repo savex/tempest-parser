@@ -1,17 +1,55 @@
+from __future__ import print_function
+
 from xml.etree.ElementTree import parse
 import json
 import csv
 import os
 import time
 
+from subunit import make_stream_binary
+from subunit.test_results import TestByTestResult
+from subunit.filters import run_tests_from_stream
+from testtools import StreamToExtendedDecorator
+from testtools import PlaceHolder
+
 CSV_OWN = 1
 CSV_XUNIT = 2
 
 
+def get_date_from_source(source):
+    # filename handling
+    _fd = source
+    _stat = os.stat
+    # opened already, get descriptor
+    if hasattr(source, 'read'):
+        _stat = os.fstat
+        _fd = source.fileno()
+
+    (mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime) = _stat(_fd)
+    # we need to be closer to creation, so ctime is for us.
+    # Just leaving those here, in case needed
+    # _atime = time.strftime("%d/%m/%Y %H:%M", time.gmtime(atime))
+    # _mtime = time.strftime("%d/%m/%Y %H:%M", time.gmtime(mtime))
+    # _ctime = time.strftime("%d/%m/%Y %H:%M", time.gmtime(ctime))
+    return time.strftime(
+        "%d/%m/%Y %H:%M GMT",
+        time.gmtime(ctime)
+    )
+
+
 class ImporterBase(object):
-    def __init__(self, test_manager, filename):
-        self.filename = filename
+    def __init__(self, test_manager, source):
+        self.source = source
         self.tm = test_manager
+
+    def add_execution(self, name, date, duration):
+        self.tm.add_execution(
+            dict(
+                execution_name=name,
+                execution_date=date,
+                summary={'time': duration}
+            )
+        )
 
 
 class XMLImporter(ImporterBase):
@@ -19,19 +57,6 @@ class XMLImporter(ImporterBase):
     def _parse_duration(duration):
         _time_in_sec = float(duration) / 1000.0
         return str(_time_in_sec) + 's'
-
-    def _add_execution(self, name, duration):
-        self.tm.add_execution(
-            dict(
-                execution_name=name,
-                execution_date='',
-                summary=dict(
-                    time=self._parse_duration(duration)
-                )
-            )
-        )
-
-        # time = 0
 
     @staticmethod
     def _parse_status(status):
@@ -43,7 +68,7 @@ class XMLImporter(ImporterBase):
         }[status]
 
     def parse(self):
-        tree = parse(self.filename)
+        tree = parse(self.source)
         root = tree.getroot()
 
         _execution_name = root.attrib['name'].lower()
@@ -103,23 +128,16 @@ class XMLImporter(ImporterBase):
                         class_name_short=True
                     )
 
-        self._add_execution(_execution_name, root.attrib['duration'])
+        self.add_execution(
+            _execution_name,
+            '',
+            self._parse_duration(root.attrib['duration'])
+        )
 
         return _execution_name
 
 
 class JSONImporter(ImporterBase):
-    def _add_execution(self, name, date, duration):
-        self.tm.add_execution(
-            dict(
-                execution_name=name,
-                execution_date=date,
-                summary=dict(
-                    time=duration + "s"
-                )
-            )
-        )
-
     @staticmethod
     def _parse_status(status):
         return {
@@ -131,23 +149,11 @@ class JSONImporter(ImporterBase):
         }[status]
 
     def parse(self):
-        with open(self.filename, 'rt') as datafile:
-            data = json.load(datafile)
+        data = json.load(self.source)
 
         # Use filename as name for the execution
-        _execution_name = self.filename
-        (mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime) = os.stat(
-            self.filename
-        )
-        # we need to be closer to creation, so ctime is for us.
-        # Just leaving those here, in case needed
-        # _atime = time.strftime("%d/%m/%Y %H:%M", time.gmtime(atime))
-        # _mtime = time.strftime("%d/%m/%Y %H:%M", time.gmtime(mtime))
-        # _ctime = time.strftime("%d/%m/%Y %H:%M", time.gmtime(ctime))
-        _execution_date = time.strftime(
-            "%d/%m/%Y %H:%M GMT",
-            time.gmtime(ctime)
-        )
+        _execution_name = self.source.name
+        _execution_date = get_date_from_source(self.source)
 
         verification = data['verifications'].keys()[0]
 
@@ -185,7 +191,11 @@ class JSONImporter(ImporterBase):
                 trace=_trace
             )
 
-        self._add_execution(_execution_name, _execution_date, '0s')
+        self.add_execution(
+            _execution_name,
+            _execution_date,
+            '0s'
+        )
         return _execution_name
 
 
@@ -198,32 +208,20 @@ class CSVImporter(ImporterBase):
         _string = _string.replace(',', ' ')
         return _string
 
-    def __init__(self, test_manager, filename):
-        super(CSVImporter, self).__init__(test_manager, filename)
+    def __init__(self, test_manager, source):
+        super(CSVImporter, self).__init__(test_manager, source)
 
         # detect file sub-type
-        with open(self.filename, 'rt') as csvfile:
-            csvdata = csv.reader(csvfile, delimiter=',')
+        self.csvdata = csv.reader(self.source, delimiter=',')
 
-            for row in csvdata:
-                # detect if line starts with 'Class'
-                if row[0] == 'Class':
-                    self.subtype = CSV_OWN
-                    break
-                if row[0].startswith("tempest."):
-                    self.subtype = CSV_XUNIT
-                    break
-
-    def _add_execution(self, name, date, duration):
-        self.tm.add_execution(
-            dict(
-                execution_name=name,
-                execution_date=date,
-                summary=dict(
-                    time=duration + "s"
-                )
-            )
-        )
+        for row in self.csvdata:
+            # detect if line starts with 'Class'
+            if row[0] == 'Class':
+                self.subtype = CSV_OWN
+                break
+            if row[0].startswith("tempest."):
+                self.subtype = CSV_XUNIT
+                break
 
     @staticmethod
     def _parse_status(status):
@@ -242,69 +240,25 @@ class CSVImporter(ImporterBase):
             self.parse_xunit_csv()
 
     def parse_own_csv(self):
-        _execution_name = self.filename
-        _execution_date = '20/12/2015'
+        _execution_name = self.source.name
+        _execution_date = get_date_from_source(self.source)
 
-        with open(self.filename, 'rt') as csvfile:
-            csvdata = csv.reader(csvfile, delimiter=',')
-            _class_name = ''
+        _class_name = ''
 
-            _status_index = 2
-            for row in csvdata:
-                # parse the data
-                if csvdata.line_num == 1:
-                    continue
-                elif row[0].lower() == 'class':
-                    _class_name = row[1]
-                    continue
-                elif int(row[0].lower()) > 0:
-                    _test_name = row[1]
-                    if row[2] in ['R', 'A']:
-                        _status_index = 3
-                    _status = row[_status_index]
-                    _message = self._fix_message(row[_status_index+1])
-                    self.tm.add_result_for_test(
-                        _execution_name,
-                        _class_name,
-                        _test_name,
-                        '',
-                        '',
-                        _status,
-                        '',
-                        message=_message,
-                        test_name_bare=True
-                    )
-
-                    continue
-                else:
-                    raise (
-                        Exception(
-                            "ERROR: Invalid CSV structure. \n"
-                            "\tPlease, follow format:\n"
-                            "\t\tClass,<class name>,,"
-                            "\t\t<number>,<test_name>,<status>,<message>")
-                    )
-
-            self._add_execution(_execution_name, _execution_date, 'n/a')
-            return _execution_name
-
-    def parse_xunit_csv(self):
-        _execution_name = self.filename
-        _execution_date = '20/12/2015'
-
-        with open(self.filename, 'rt') as csvfile:
-            csvdata = csv.reader(csvfile, delimiter=',')
-
-            for row in csvdata:
-                # parse the data
-                if csvdata.line_num == 1:
-                    continue
-                _splitted_test_name = row[0].rsplit('.', 1)
-                _class_name = _splitted_test_name[0]
-                _test_name = _splitted_test_name[1]
-                _status = self._parse_status(row[1])
-                _message = row[2]
-
+        _status_index = 2
+        for row in self.csvdata:
+            # parse the data
+            if self.csvdata.line_num == 1:
+                continue
+            elif row[0].lower() == 'class':
+                _class_name = row[1]
+                continue
+            elif int(row[0].lower()) > 0:
+                _test_name = row[1]
+                if row[2] in ['R', 'A']:
+                    _status_index = 3
+                _status = row[_status_index]
+                _message = self._fix_message(row[_status_index+1])
                 self.tm.add_result_for_test(
                     _execution_name,
                     _class_name,
@@ -317,5 +271,134 @@ class CSVImporter(ImporterBase):
                     test_name_bare=True
                 )
 
-            self._add_execution(_execution_name, _execution_date, 'n/a')
-            return _execution_name
+                continue
+            else:
+                raise (
+                    Exception(
+                        "ERROR: Invalid CSV structure. \n"
+                        "\tPlease, follow format:\n"
+                        "\t\tClass,<class name>,,"
+                        "\t\t<number>,<test_name>,<status>,<message>")
+                )
+
+        self.add_execution(
+            _execution_name,
+            _execution_date,
+            'n/a'
+        )
+        return _execution_name
+
+    def parse_xunit_csv(self):
+        _execution_name = self.source.name
+        _execution_date = get_date_from_source(self.source)
+
+        for row in self.csvdata:
+            # parse the data
+            if self.csvdata.line_num == 1:
+                continue
+            _splitted_test_name = row[0].rsplit('.', 1)
+            _class_name = _splitted_test_name[0]
+            _test_name = _splitted_test_name[1]
+            _status = self._parse_status(row[1])
+            _message = row[2]
+
+            self.tm.add_result_for_test(
+                _execution_name,
+                _class_name,
+                _test_name,
+                '',
+                '',
+                _status,
+                '',
+                message=_message,
+                test_name_bare=True
+            )
+
+        self.add_execution(
+            _execution_name,
+            _execution_date,
+            'n/a'
+        )
+        return _execution_name
+
+
+class TParserResult(TestByTestResult):
+    @staticmethod
+    def _parse_status(status):
+        return {
+            'success': 'OK',
+            'failure': 'FAIL',
+            'skip': 'SKIP',
+            'xfail': 'X_FAIL',
+            'usuccess': 'X_OK'
+        }[status]
+
+    def __init__(self, name, tm):
+        super(TParserResult, self).__init__(self._on_test)
+        self._execution_name = name
+        self.tm = tm
+        self.counter = 0
+
+    def _on_test(self, test, status, start_time, stop_time, tags, details):
+        print(' '*6, end='\r')
+        _test_name = "none"
+        _test_options = ""
+        _id = test.id()
+        if _id.startswith("setUpClass"):
+            _, _class_name, _ = self.tm.split_test_name(_id)
+        else:
+            _class_name, _test_name, _test_options = self.tm.split_test_name(
+                _id
+            )
+
+        _status = self._parse_status(status)
+
+        _message = ''
+        _tb = ''
+
+        if _status is 'FAIL':
+            _tb = details['traceback'].as_text()
+        elif _status is 'SKIP':
+            _message = details['reason'].as_text()
+
+        self.tm.add_result_for_test(
+            self._execution_name,
+            _class_name,
+            _test_name,
+            tags,
+            _test_options,
+            _status,
+            stop_time - start_time,
+            message=_message,
+            trace=_tb
+        )
+
+        print("{:>5}".format(self.counter), end='')
+        self.counter += 1
+
+
+class SubunitImporter(ImporterBase):
+
+    def __init__(self, test_manager, source):
+        super(SubunitImporter, self).__init__(test_manager, source)
+        self.source = make_stream_binary(source)
+
+    def parse(self):
+        _execution_date = get_date_from_source(self.source)
+        _execution_name = self.source.name + _execution_date
+
+        run_tests_from_stream(
+            self.source,
+            StreamToExtendedDecorator(TParserResult(_execution_name, self.tm)),
+            protocol_version=2,
+            passthrough_subunit=False
+        )
+        print("\n...done")
+
+        self.add_execution(
+            _execution_name,
+            _execution_date,
+            'n/a'
+        )
+
+        return

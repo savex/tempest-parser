@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import jinja2
 import six
 import abc
@@ -132,7 +134,7 @@ class HTMLErrorsReport(_TMPLBase):
                         _trace = main_message
                         main_message = ""
                     else:
-                        _trace = test['results'][execution]['trace']
+                        _trace = test['results'][execution]['trace'].rstrip()
 
                     _trace_details = ""
                     _trace_additional = []
@@ -146,9 +148,12 @@ class HTMLErrorsReport(_TMPLBase):
 
                     if _trace_details.__len__() == 0 \
                             and main_message.__len__() == 0:
-                        main_message = "Fail message can't be extracted"
+                        if len(_trace_messages) > 0:
+                            main_message = _trace_messages.split(':')[0]
+                        else:
+                            main_message = "Fail message can't be extracted"
                     elif main_message.__len__() == 0:
-                        main_message = _trace_details
+                        main_message = _trace_messages.split(':')[0]
 
                     main_message = cgi.escape(main_message)
                     _trace_details = cgi.escape(_trace_details)

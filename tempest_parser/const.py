@@ -17,11 +17,27 @@ ALL_KNOWN_STATUSES = {
     STATUS_FAIL,
     STATUS_ERROR,
     STATUS_SKIP,
-    STATUS_NA}
+    STATUS_NA
+}
 
 _cnt = itertools.count()
 VERBOSE_GENERIC = next(_cnt)
 VERBOSE_SHORT = next(_cnt)
 VERBOSE_DETAILS = next(_cnt)
+
+_cnt = itertools.count()
+FMT_SUBUNIT = next(_cnt)
+FMT_CSV = next(_cnt)
+FMT_RALLY_JSON = next(_cnt)
+FMT_PYCHARM_XML = next(_cnt)
+FMT_PYTEST = next(_cnt)
+
+ALL_INPUT_FORMATS = {
+    "subunit": FMT_SUBUNIT,
+    "csv": FMT_CSV,
+    "json": FMT_RALLY_JSON,
+    "xml": FMT_PYCHARM_XML,
+    "log": FMT_PYTEST
+}
 
 del _cnt
