@@ -14,8 +14,9 @@ _template_test_item = {
     # class names will be as a key
     # "class_name": "",
     "test_name": "",
+    "uuid": "",
     "test_options": "",
-    "set_name": "",
+    "tags": "",
     "results": {}
 }
 

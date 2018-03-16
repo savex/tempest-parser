@@ -56,26 +56,21 @@ class TestsManager:
 
         return _tests
 
-    # In case we'll need to list all of the tests in tempest and mark which ones was executed,
-    # we have this list of all tests
-    # It produced by ./run_tempest.sh -- --list >tests.list
+    # In case we'll need to list all of the tests in tempest
+    # and mark which ones was executed, we have list of all tests
+    # It produced by ./tempest run --list-tests >all_tests_tag_<N>.list
     def _all_tests_file_preload(self, resource_file):
         _tests = {}
 
         # load all tests file
         with open(resource_file) as tests_file:
             for line in tests_file:
-                _search_res = line.partition('[')
-
-                _class_name, _test_name, _test_options = self.split_test_name(
-                    line.replace("\n", ""))
+                _class_name, _test_name, _uuid, _test_options = \
+                    self.split_test_name(line.replace("\n", ""))
 
                 self._test_item = deepcopy(structs._template_test_item)
                 self._test_item["test_name"] = _test_name
-                self._test_item["set_name"] = _search_res[1].replace("\n",
-                                                                     "") + \
-                                              _search_res[2].partition(']')[
-                                                  0].replace("\n", "") + "]"
+                self._test_item["uuid"] = _uuid
                 self._test_item["results"][
                     self.required_execution_name] = dict(result="R", time='0s')
 
@@ -88,36 +83,43 @@ class TestsManager:
 
     @staticmethod
     def split_test_name(full_test_name):
+        def _dig_guid(raw_trailing):
+            return raw_trailing.split(']')[0]
+
         def _dig_options(raw_options):
-                if len(raw_options) >= 2:
-                    if len(raw_options[1]) > 0:
-                        return raw_options[1]
-                return raw_options
+            __options = raw_options.split(']')[1:]
+            if len(__options) >= 2:
+                if len(__options[1]) > 0:
+                    return __options[1]
+            return "".join(__options)
 
         _first_name = full_test_name.split('.', 1)[0]
-
+        _class = ""
+        _test = ""
+        _guid = ""
+        _options = ""
         if full_test_name.startswith("setUpClass") or \
                 full_test_name.startswith("tearDownClass"):
-            return (
-                full_test_name.split(" ")[0],
-                full_test_name.split("(")[1][:-1],
-                ""
-            )
-        elif _first_name is "unittest2":
+            _class = full_test_name.split("(")[1][:-1]
+        elif _first_name.startswith("unittest2"):
             # parse unittest fail
-            _name = full_test_name.split(".", 3)[3]
-            _class = _name.rsplit(".", 1)[0]
-            _test = _name.rsplit(".", 1)[1].split('[')[0]
-            _tmp = _name.rsplit(".", 1)[1].split(']')
-            return _class, _test, _dig_options(_tmp)
+            _name = full_test_name.split(".", 3)[3].rsplit(".", 1)
+            _tmp = _name[1]
+            _class = _name[0]
+            _test = _tmp.split('[')[0]
+            if ']' in _tmp:
+                _guid = _dig_guid(_tmp)
+                _options = _dig_options(_tmp)
         elif _first_name.startswith("tempest") or \
-                _first_name.endswith("_tempest_plugin"):
+                _first_name.endswith("_tempest_plugin") or \
+                _first_name.endswith("_tempest_tests"):
             _class = full_test_name.rsplit(".", 1)[0]
             _test = full_test_name.rsplit(".", 1)[1].split('[')[0]
-            _tmp = full_test_name.rsplit(".", 1)[1].split(']')
+            _trailing = full_test_name.rsplit(".", 1)[1].split('[')[1]
+            _guid = _dig_guid(_trailing)
+            _options = _dig_options(_trailing)
 
-            return _class, _test, _dig_options(_tmp)
-        return None, None, None
+        return _class, _test, _guid, _options
 
     @staticmethod
     def split_test_name_from_speed(full_test_name):
@@ -134,21 +136,19 @@ class TestsManager:
             _options
         )
 
-    def test_name_lookup(self, class_name, test_name, set_name, test_options):
+    def test_name_lookup(self, class_name, test_name, uuid, test_options):
         _index = -1
         _tests = self.tests_list["tests"]
 
         if class_name in _tests:
             for _test_index in range(0, _tests[class_name].__len__()):
-                if _tests[class_name][_test_index]["test_name"] == test_name \
-                        and _tests[class_name][_test_index][
-                            "test_options"] == test_options:
-                    if set_name == '' or _tests[class_name][_test_index][
-                        "set_name"] == '':
+                _indexed_test = _tests[class_name][_test_index]
+                if _indexed_test["test_name"] == test_name \
+                        and _indexed_test["test_options"] == test_options:
+                    if uuid == '' or _indexed_test["uuid"] == '':
                         _index = _test_index
                         break
-                    elif _tests[class_name][_test_index][
-                        "set_name"] == set_name:
+                    elif _indexed_test["uuid"] == uuid:
                         _index = _test_index
                         break
 
@@ -167,14 +167,13 @@ class TestsManager:
         return _index
 
     def partial_class_name_lookup(self, class_name_short, test_name,
-                                  set_name=None, test_options=None):
+                                  uuid=None, test_options=None):
         _list = []
-        _full_class_name = ""
         _class_names = self.tests_list["tests"].keys()
         for _class_name in _class_names:
             if _class_name.endswith(class_name_short):
                 _index = self.test_name_lookup(_class_name, test_name,
-                                               set_name, test_options)
+                                               uuid, test_options)
                 if _index > -1:
                     _full_class_name = _class_name
                     _list.append(_full_class_name)
@@ -191,28 +190,25 @@ class TestsManager:
 
     def mark_slowest_test_in_execution_by_name(self, execution_name,
                                                class_name, test_name,
-                                               set_name=None,
+                                               uuid=None,
                                                test_options=None):
-        _index = self.test_name_lookup(class_name, test_name, set_name,
+        _index = self.test_name_lookup(class_name, test_name, uuid,
                                        test_options)
         if _index > -1:
             # mark slowest tests
             self.tests_list["tests"][class_name][_index]["results"][
                 execution_name]["slowest"] = True
         else:
-            print(
-                "WARNING: Parsed slowest test not found in list: {0}, {1}, {2}".format(
-                    execution_name,
-                    class_name,
-                    test_name
-                ))
+            print("""
+        WARNING: Parsed slowest test not found in list: {0}, {1}, {2}
+        """.format(execution_name, class_name, test_name))
 
     def add_fail_data_for_test(self, execution_name, class_name, test_name,
                                test_options, trace, message,
-                               class_name_short=False, set_name=None):
-        if class_name == "setUpClass" or \
-                        class_name == "tearDownClass":
-            # if this is a setUpClass situation, mark all tests with this result
+                               class_name_short=False, uuid=None):
+        if class_name == "setUpClass" or class_name == "tearDownClass":
+            # if this is a setUpClass situation,
+            # mark all tests with this result
             _tests = self.tests_list["tests"]
             if test_name in _tests:
                 for _test_index in range(0, _tests[test_name].__len__()):
@@ -233,7 +229,7 @@ class TestsManager:
             _index = self.test_name_lookup(
                 _full_class_name,
                 test_name,
-                set_name,
+                uuid,
                 test_options
             )
             if _index > -1:
@@ -250,7 +246,7 @@ class TestsManager:
                     message
                 ))
 
-    def add_result_for_test(self, execution_name, class_name, test_name, tags,
+    def add_result_for_test(self, execution_name, class_name, test_name, uuid,
                             test_options, result, running_time,
                             message='', trace='', class_name_short=False,
                             test_name_bare=False):
@@ -290,7 +286,7 @@ class TestsManager:
                 _index = self.test_name_lookup(
                     _full_class_name,
                     test_name,
-                    tags,
+                    uuid,
                     test_options
                 )
             if _index > -1:

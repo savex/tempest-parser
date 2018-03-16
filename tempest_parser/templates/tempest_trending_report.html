@@ -167,7 +167,7 @@
     <tr>
         <!-- Headers with summary -->
         <td colspan="2" class="textlabel">
-            Tempest results for '01/07/2016'
+            Tempest results
         </td>
         <td class="labels">
             <!-- Labels for summary -->
@@ -204,19 +204,27 @@
         <td>{{ executions[execution]['filename'] }}</td>
         {% endif %}
     {%- endfor -%}
-    {% set counter = 1 %}
+{#    {% set counter = 1 %}#}
     </tr>
     {% for test_class in tests | sort %}
     <tr class="group">
         <td colspan="2" class="name">Class {{ test_class }}</td>
-        <td colspan="{{ executions|length }}" class="blank"></td>
+        <td colspan="1" class="blank"></td>
+        {% for execution in executions if execution != 'required' %}
+            {% if detailed %}
+        <td colspan="2" class="blank"></td>
+            {% else %}
+        <td colspan="1" class="blank"></td>
+            {% endif %}
+        {% endfor %}
+
     </tr>
         {% for test in tests[test_class] %}
     <tr>
-        <td>{{ counter + loop.index0 }}</td>
+        <td>{{ counters.all_count + loop.index0 }}</td>
         <td>
             <div class="test_name">{{ test.test_name }}</div>
-            <div class="parameters">{{ test.set_name }} {{ test.test_options }}</div>
+            <div class="parameters">{{ test.uuid }} {{ test.test_options }}</div>
         </td>
         {% if test['results'].has_key('required') %}
             {% if test['results']['required']['result'] == 'R' -%}
@@ -233,12 +241,14 @@
                 {% endif %}
             {% else %}
         <td class="status blank"></td>
+                {%  if detailed %}
         <td class="status blank"></td>
+                {% endif %}
             {% endif %}
             {%- endfor -%}
     </tr>
         {%- endfor -%}
-        {% set counter = counter + tests[test_class]|length %}
+        {% set _ = counters.update({'all_count': counters.all_count + tests[test_class] | length}) %}
     {%- endfor -%}
     </tbody>
 </table>

@@ -13,8 +13,9 @@ DATA = [
 ]
 
 dependencies = [
-    'six',
     'jinja2',
+    'six',
+    'python-subunit',
     'testtools'
 ]
 

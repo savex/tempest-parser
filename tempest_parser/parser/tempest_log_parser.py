@@ -315,7 +315,8 @@ class TempestLogParser:
                         except IndexError as e:
                             _full_name = _line_s
 
-                        (_class_name, _test_name, _test_options) = self.test_mgr.split_test_name(_full_name)
+                        (_class_name, _test_name, _uuid, _test_options) = \
+                            self.test_mgr.split_test_name(_full_name)
                         _test_fail_head_found = True
                     elif _line_s.startswith("Details: "):
                         _line_s = _line_s.replace('"', '\'')

@@ -90,7 +90,7 @@ class _TMPLBase(_Base):
     def common_data(self):
         return {
             'report': self,
-
+            'counters': {'all_count': 1},
             'STATUS_PASS': const.STATUS_PASS,
             'STATUS_FAIL': const.STATUS_FAIL,
             'STATUS_ERROR': const.STATUS_ERROR,
@@ -162,7 +162,7 @@ class HTMLErrorsReport(_TMPLBase):
                     _dict = {
                         'test_class': test_class,
                         'test_name': test['test_name'],
-                        'set_name': test['set_name'],
+                        'uuid': test['uuid'],
                         'test_options': test['test_options'],
                         'trace_details': _trace_details,
                         'trace_additional': _trace_messages

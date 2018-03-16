@@ -10,7 +10,6 @@ from subunit import make_stream_binary
 from subunit.test_results import TestByTestResult
 from subunit.filters import run_tests_from_stream
 from testtools import StreamToExtendedDecorator
-from testtools import PlaceHolder
 
 CSV_OWN = 1
 CSV_XUNIT = 2
@@ -158,10 +157,10 @@ class JSONImporter(ImporterBase):
         verification = data['verifications'].keys()[0]
 
         # iterate through test cases and add up results
-        for _test_value in data['tests'].values():
-            _splitted_test_name = _test_value['name'].rsplit('.', 1)
-            _class_name = _splitted_test_name[0]
-            _test_name = _splitted_test_name[1]
+        for _test_name, _test_value in data['tests'].items():
+            _class_name, _test_name, _uuid, _options = \
+                self.tm.split_test_name(_test_name)
+
             _test_value_results = _test_value['by_verification'][verification]
             _status = self._parse_status(_test_value_results['status'])
             _duration = _test_value_results['duration'] + 's'
@@ -170,20 +169,20 @@ class JSONImporter(ImporterBase):
                 'traceback'] if 'traceback' in _test_value_results else ''
 
             # parsing tags
-            if _test_value['tags'][0].find('(') > -1:
-                _tag = _test_value['tags'][0].split(']')[0]
-                _tags = '[{}]'.format(_tag)
-                _option = _test_value['tags'][0].split('(')[1]
-                _options = '({})'.format(_option)
-            else:
-                _tags = '[{}]'.format(','.join(_test_value['tags']))
-                _options = ''
+            # if _test_value['tags'][0].find('(') > -1:
+            #     _tag = _test_value['tags'][0].split(']')[0]
+            #     _tags = '[{}]'.format(_tag)
+            #     _option = _test_value['tags'][0].split('(')[1]
+            #     _options = '({})'.format(_option)
+            # else:
+            #     _tags = '[{}]'.format(','.join(_test_value['tags']))
+            #     _options = ''
 
             self.tm.add_result_for_test(
                 _execution_name,
                 _class_name,
                 _test_name,
-                _tags,
+                _uuid,
                 _options,
                 _status,
                 _duration,
@@ -342,14 +341,14 @@ class TParserResult(TestByTestResult):
     def _on_test(self, test, status, start_time, stop_time, tags, details):
         print(' '*6, end='\r')
         _test_name = "none"
+        _uuid = ""
         _test_options = ""
         _id = test.id()
         if _id.startswith("setUpClass"):
-            _, _class_name, _ = self.tm.split_test_name(_id)
+            _class_name, _, _, _ = self.tm.split_test_name(_id)
         else:
-            _class_name, _test_name, _test_options = self.tm.split_test_name(
-                _id
-            )
+            _class_name, _test_name, _uuid, _test_options = \
+                self.tm.split_test_name(_id)
 
         _status = self._parse_status(status)
 
@@ -365,7 +364,7 @@ class TParserResult(TestByTestResult):
             self._execution_name,
             _class_name,
             _test_name,
-            tags,
+            _uuid,
             _test_options,
             _status,
             stop_time - start_time,
