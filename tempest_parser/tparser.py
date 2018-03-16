@@ -198,7 +198,7 @@ def tempest_cli_parser_main():
     # At this point we must load tests to combine executions with
     # for now it will be all tests
     tests_manager = TestsManager()
-    if args.include_required:
+    if args.include_required and args.html_errors_filename is None:
         tests_manager.add_required(config.get_all_tests_list_filepath())
 
     # # Parse objects from raw file

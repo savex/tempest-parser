@@ -14,7 +14,8 @@ DATA = [
 
 dependencies = [
     'six',
-    'jinja2'
+    'jinja2',
+    'testtools'
 ]
 
 entry_points = {
@@ -25,7 +26,7 @@ entry_points = {
 
 setup(
     name="TempestParser",
-    version="0.2.3",
+    version="0.2.4",
     author="Alex Savatieiev",
     author_email="a.savex@gmail.com",
     classifiers=[
@@ -46,7 +47,8 @@ setup(
     license="Apache Licence, version 2",
     description="Tempest Parser tool used to generate trending reports "
                 "out of various result formats openstack/tempest "
-                "produces: CLI, JSON from Rally, XML from PyCharm, CSV",
+                "produces: pytest's CLI, JSON from Rally, "
+                " XML from PyCharm, CSV (two types) and Subunit.",
     long_description=README
 )
 
