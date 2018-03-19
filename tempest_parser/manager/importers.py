@@ -4,6 +4,7 @@ from xml.etree.ElementTree import parse
 import json
 import csv
 import os
+import six
 import time
 
 from subunit import make_stream_binary
@@ -158,9 +159,10 @@ class JSONImporter(ImporterBase):
 
         # iterate through test cases and add up results
         for _test_name, _test_value in data['tests'].items():
+            if isinstance(_test_name, six.text_type):
+                _test_name = _test_name.encode("utf-8")
             _class_name, _test_name, _uuid, _options = \
                 self.tm.split_test_name(_test_name)
-
             _test_value_results = _test_value['by_verification'][verification]
             _status = self._parse_status(_test_value_results['status'])
             _duration = _test_value_results['duration'] + 's'

@@ -43,10 +43,11 @@ class _TMPLBase(_Base):
         for execution in data['executions']:
             _total = _pass = _fail = _error = _na = _skip = 0
             # classes = data['tests'].keys()
+            _added = 0
             for test_class in data['tests']:
                 for test in data['tests'][test_class]:
-                    _total += 1
                     if execution in test['results']:
+                        _total += 1
                         if test['results'][execution][
                             'result'].lower() == 'ok':
                             _pass += 1
@@ -56,6 +57,8 @@ class _TMPLBase(_Base):
                         elif test['results'][execution][
                             'result'].lower() == 'skip':
                             _skip += 1
+                        if 'required' not in test['results']:
+                            _added += 1
                     else:
                         _na += 1
 
@@ -65,6 +68,7 @@ class _TMPLBase(_Base):
                 const.STATUS_FAIL: _fail,
                 const.STATUS_ERROR: _error,
                 const.STATUS_NA: _na,
+                const.STATUS_ADDED: _added,
                 const.STATUS_SKIP: _skip
             }
 
@@ -96,13 +100,15 @@ class _TMPLBase(_Base):
             'STATUS_ERROR': const.STATUS_ERROR,
             'STATUS_NA': const.STATUS_NA,
             'STATUS_SKIP': const.STATUS_SKIP,
+            'STATUS_ADDED': const.STATUS_ADDED,
 
             'status_description': {
                 const.STATUS_PASS: 'Pass',
                 const.STATUS_FAIL: 'Fail',
                 const.STATUS_ERROR: 'Error',
                 const.STATUS_NA: 'NA',
-                const.STATUS_SKIP: 'Skip'}}
+                const.STATUS_SKIP: 'Skip',
+                const.STATUS_ADDED: 'Added'}}
 
     def _extend_data(self, data):
         pass

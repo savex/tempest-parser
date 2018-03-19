@@ -84,7 +84,15 @@ class TestsManager:
     @staticmethod
     def split_test_name(full_test_name):
         def _dig_guid(raw_trailing):
-            return raw_trailing.split(']')[0]
+            _all_items = raw_trailing.split(']')[0].split(",")
+            _guid = ""
+            _tags = []
+            for _tag in _all_items:
+                if _tag.startswith("id-"):
+                    _guid = _tag
+                else:
+                    _tags.append(_tag)
+            return _guid, _tags
 
         def _dig_options(raw_options):
             __options = raw_options.split(']')[1:]
@@ -97,6 +105,7 @@ class TestsManager:
         _class = ""
         _test = ""
         _guid = ""
+        _tags = []
         _options = ""
         if full_test_name.startswith("setUpClass") or \
                 full_test_name.startswith("tearDownClass"):
@@ -116,7 +125,7 @@ class TestsManager:
             _class = full_test_name.rsplit(".", 1)[0]
             _test = full_test_name.rsplit(".", 1)[1].split('[')[0]
             _trailing = full_test_name.rsplit(".", 1)[1].split('[')[1]
-            _guid = _dig_guid(_trailing)
+            _guid, _tags = _dig_guid(_trailing)
             _options = _dig_options(_trailing)
 
         return _class, _test, _guid, _options

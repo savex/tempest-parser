@@ -219,8 +219,11 @@ def tempest_cli_parser_main():
     # for now it will be all tests
     tests_manager = TestsManager()
     if args.include_required and args.html_errors_filename is None:
-        tests_manager.add_required(config.get_all_tests_list_filepath())
-
+        _all_tests_filename = config.get_all_tests_list_filepath()
+        print("Preloading all tests from '{}'".format(
+            _all_tests_filename
+        ))
+        tests_manager.add_required(_all_tests_filename)
     # # Parse objects from raw file
     # # and Collect / sort objects into executions and parse them
     if pipe_fmt is not None:
@@ -231,7 +234,6 @@ def tempest_cli_parser_main():
             fmt=pipe_fmt
         )
     elif os.path.isfile(args.inputfile):
-        print("Preloading tests from '{}'".format(args.inputfile))
         # this is a file, parse it using supplied input format
         do_parse_file(
             args.inputfile,
@@ -239,7 +241,7 @@ def tempest_cli_parser_main():
             fmt=args.input_format
         )
     else:
-        print("Preloading tests from '{}'".format(args.inputfile))
+        print("Importing tests from folder '{}'".format(args.inputfile))
         # this is a folder, get files one by one
         _folder_content = os.listdir(args.inputfile)
 

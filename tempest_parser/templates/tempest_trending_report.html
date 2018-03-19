@@ -113,7 +113,7 @@
         td.status.error { background: #e585a2; }
         td.status.total { background: white; }
         td.status.required { background: #aaa; }
-        td.status.added { background: #faa; }
+        td.status.added { background: #fcc; }
 
         td > div.label {
             font-size: xx-small;
@@ -129,6 +129,7 @@
         td > div.label.fail { background: #a50000; color: white; }
         td > div.label.skip { background: #ccb226; }
         td > div.label.na { background: #777777; }
+        td > div.label.added { background: #fcc; }
         td > div.label.error { background: #e585a2; }
         td > div.label.total { background: white; }
 
@@ -148,6 +149,7 @@
         <td>Setup Errors</td>
         <td>Failed</td>
         <td>NA</td>
+        <td>Added</td>
     </tr>
     <tr class="legend">
         <td class="status {{ status_description[STATUS_PASS] | lower }}"></td>
@@ -155,6 +157,7 @@
         <td class="status {{ status_description[STATUS_ERROR] | lower }}"></td>
         <td class="status {{ status_description[STATUS_FAIL] | lower }}"></td>
         <td class="status {{ status_description[STATUS_NA] | lower }}"></td>
+        <td class="status {{ status_description[STATUS_ADDED] | lower }}"></td>
     </tr>
     </tbody>
 </table>
@@ -176,6 +179,7 @@
             <div class="label {{ status_description[STATUS_FAIL] | lower }}">fail</div>
             <div class="label {{ status_description[STATUS_SKIP] | lower }}">skip</div>
             <div class="label {{ status_description[STATUS_NA] | lower }}">n/a</div>
+            <div class="label {{ status_description[STATUS_ADDED] | lower }}">added</div>
         </td>
         <!-- Repeatable -->
     {% for execution in executions if execution != 'required' %}
@@ -186,6 +190,7 @@
             <div class="label {{ status_description[STATUS_FAIL] | lower }}">{{ totals[execution][STATUS_FAIL] }}</div>
             <div class="label {{ status_description[STATUS_SKIP] | lower }}">{{ totals[execution][STATUS_SKIP] }}</div>
             <div class="label {{ status_description[STATUS_NA] | lower }}">{{ totals[execution][STATUS_NA] }}</div>
+            <div class="label {{ status_description[STATUS_ADDED] | lower }}">{{ totals[execution][STATUS_ADDED] }}</div>
         </td>
         {% if detailed %}
         <td class="textlabel">

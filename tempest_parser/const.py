@@ -11,13 +11,15 @@ STATUS_FAIL = next(_cnt)
 STATUS_ERROR = next(_cnt)
 STATUS_SKIP = next(_cnt)
 STATUS_NA = next(_cnt)
+STATUS_ADDED = next(_cnt)
 
 ALL_KNOWN_STATUSES = {
     STATUS_PASS,
     STATUS_FAIL,
     STATUS_ERROR,
     STATUS_SKIP,
-    STATUS_NA
+    STATUS_NA,
+    STATUS_ADDED
 }
 
 _cnt = itertools.count()
