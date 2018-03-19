@@ -168,18 +168,32 @@ def tempest_cli_parser_main():
 
     pipe_fmt = None
     # Detect pipe input, prior to handle args
-    # print("istty?={}, fifo?={}".format(
+    # print("istty?={}, fifo?={}, fd?={}".format(
     #     sys.stdin.isatty(),
-    #     S_ISFIFO(os.fstat(0).st_mode)
+    #     S_ISFIFO(os.fstat(0).st_mode),
+    #     args.inputfile
     # ))
-    if S_ISFIFO(os.fstat(0).st_mode) and args.inputfile is "<stdin>":
-        # TODO: handle pipe input here
-        # if isinstance(argparse.inputfile, file):
-        #     print("Error: No input file given")
-        #     sys.exit(1)
-        if args.input_format is None:
-            pipe_fmt = const.FMT_SUBUNIT
-
+    if S_ISFIFO(
+            os.fstat(0).st_mode
+    ) and hasattr(args.inputfile, "name"):
+        if args.inputfile.name == "<stdin>":
+            if args.input_format is None:
+                pipe_fmt = const.FMT_SUBUNIT
+                print("No PIPE format set, defaulted to: '{}'".format(
+                    const.FORMAT_LABELS[pipe_fmt]
+                ))
+            else:
+                if args.input_format in const.ALL_INPUT_FORMATS:
+                    pipe_fmt = const.ALL_INPUT_FORMATS[args.input_format]
+                else:
+                    print("Supplied format is not supported: '{}'".format(
+                        args.input_format
+                    ))
+        else:
+            print("Error: Unknown PIPE: '{}', '<stdin>' expected".format(
+                args.inputfile.name
+            ))
+            sys.exit(1)
     else:
         # Check for supplied folder/file to be exists
         if not os.path.exists(args.inputfile):
@@ -195,6 +209,12 @@ def tempest_cli_parser_main():
                       "folder given: '{}'".format(args.inputfile))
                 sys.exit(1)
 
+    if hasattr(args.inputfile, "name"):
+        print("Reading '{}' from '{}'".format(
+            const.FORMAT_LABELS[pipe_fmt],
+            args.inputfile.name
+        ))
+
     # At this point we must load tests to combine executions with
     # for now it will be all tests
     tests_manager = TestsManager()
@@ -205,7 +225,6 @@ def tempest_cli_parser_main():
     # # and Collect / sort objects into executions and parse them
     if pipe_fmt is not None:
         # this is a pipe input, pass file descriptor and format
-        print("...waiting for tests ({})".format(args.inputfile.name))
         do_parse_file(
             args.inputfile,
             tests_manager,

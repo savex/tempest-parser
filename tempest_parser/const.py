@@ -40,4 +40,12 @@ ALL_INPUT_FORMATS = {
     "log": FMT_PYTEST
 }
 
+FORMAT_LABELS = {
+    FMT_SUBUNIT: "subunit",
+    FMT_CSV: "csv",
+    FMT_RALLY_JSON: "json",
+    FMT_PYCHARM_XML: "xml",
+    FMT_PYTEST: "log"
+}
+
 del _cnt
