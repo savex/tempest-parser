@@ -8,7 +8,8 @@ from tempest_parser.reports import reporter
 from tempest_parser.reports.csv_reporter import CSVReporter
 from tempest_parser.manager.test_manager import TestsManager
 from tempest_parser.parser.tempest_log_parser import TempestLogParser
-from tempest_parser.manager.importers import XMLImporter, JSONImporter, CSVImporter, SubunitImporter
+from tempest_parser.manager.importers import XMLImporter, JSONImporter, \
+    CSVImporter, SubunitImporter
 from tempest_parser.utils.config import ParserConfigFile
 
 pkg_dir = os.path.dirname(__file__)

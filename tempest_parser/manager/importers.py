@@ -166,7 +166,10 @@ class JSONImporter(ImporterBase):
             _test_value_results = _test_value['by_verification'][verification]
             _status = self._parse_status(_test_value_results['status'])
             _duration = _test_value_results['duration'] + 's'
-            _message = _test_value_results['details'] if 'details' in _test_value_results else ''
+            if 'details' in _test_value_results:
+                _message = _test_value_results['details']
+            else:
+                _message = ''
             _trace = _test_value_results[
                 'traceback'] if 'traceback' in _test_value_results else ''
 
@@ -370,6 +373,7 @@ class TParserResult(TestByTestResult):
             _test_options,
             _status,
             stop_time - start_time,
+            tags=tags,
             message=_message,
             trace=_tb
         )

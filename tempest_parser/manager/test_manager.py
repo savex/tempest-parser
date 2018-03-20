@@ -11,7 +11,7 @@ pkg_dir = os.path.normpath(pkg_dir)
 class TestsManager:
     def __init__(self):
         # structure
-        self.tests_list = deepcopy(structs._tests_template)
+        self.tests_list = deepcopy(structs.tests_template)
         self.required_execution_name = "required"
 
     def add_required(self, all_tests_filepath, path=None):
@@ -68,7 +68,7 @@ class TestsManager:
                 _class_name, _test_name, _uuid, _test_options = \
                     self.split_test_name(line.replace("\n", ""))
 
-                self._test_item = deepcopy(structs._template_test_item)
+                self._test_item = deepcopy(structs.template_test_item)
                 self._test_item["test_name"] = _test_name
                 self._test_item["uuid"] = _uuid
                 self._test_item["results"][
@@ -85,14 +85,14 @@ class TestsManager:
     def split_test_name(full_test_name):
         def _dig_guid(raw_trailing):
             _all_items = raw_trailing.split(']')[0].split(",")
-            _guid = ""
-            _tags = []
+            __guid = ""
+            __tags = []
             for _tag in _all_items:
                 if _tag.startswith("id-"):
-                    _guid = _tag
+                    __guid = _tag
                 else:
-                    _tags.append(_tag)
-            return _guid, _tags
+                    __tags.append(_tag)
+            return __guid, _tags
 
         def _dig_options(raw_options):
             __options = raw_options.split(']')[1:]
@@ -248,18 +248,16 @@ class TestsManager:
                 self.tests_list["tests"][_full_class_name][_index]["results"][
                     execution_name]["message"] = message
             else:
-                print(
-                "WARNING: Test NOT found: {0}, {1}\nfor message: {2}".format(
-                    _full_class_name,
-                    test_name,
-                    message
-                ))
+                print("""
+WARNING: Test NOT found: {0}, {1}
+for message: {2}
+""".format(_full_class_name, test_name, message))
 
     def add_result_for_test(self, execution_name, class_name, test_name, uuid,
                             test_options, result, running_time,
-                            message='', trace='', class_name_short=False,
-                            test_name_bare=False):
-        _result = deepcopy(structs._template_test_result)
+                            message='', trace='', tags=list(),
+                            class_name_short=False, test_name_bare=False):
+        _result = deepcopy(structs.template_test_result)
         _result["result"] = result
         _result["time"] = running_time
         _result["message"] = message
@@ -306,8 +304,9 @@ class TestsManager:
                 pass
             else:
                 # the test is not there, add it
-                _test_item = deepcopy(structs._template_test_item)
+                _test_item = deepcopy(structs.template_test_item)
                 _test_item["test_name"] = test_name
+                _test_item["tags"] = tags
                 _test_item["results"][execution_name] = _result
 
                 if _full_class_name not in self.tests_list["tests"]:
@@ -334,7 +333,7 @@ class TestsManager:
         else:
             return False
 
-    def is_test_has_errors(self, class_name, test_name):
+    def is_test_has_errors(self, class_name):
         if class_name in self.tests_list["tests"]:
             for test in self.tests_list["tests"][class_name]:
                 _executions = test["results"].keys()
@@ -410,7 +409,8 @@ class TestsManager:
             _execution_name)
 
         print(
-            "Tempest testrun {0}: {1} executed: {2} passed, {3} failed, {4} skipped\n".format(
+            "Tempest testrun {0}:"
+            " {1} executed: {2} passed, {3} failed, {4} skipped\n".format(
                 _execution_name,
                 total,
                 ok,

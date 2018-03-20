@@ -22,7 +22,6 @@ def append_line_to_file(filename, _str):
 
 
 def read_file(filename):
-    _buf = None
     with open(filename, 'rb') as fr:
         _buf = fr.read()
     return _buf

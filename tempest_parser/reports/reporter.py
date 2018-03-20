@@ -48,14 +48,12 @@ class _TMPLBase(_Base):
                 for test in data['tests'][test_class]:
                     if execution in test['results']:
                         _total += 1
-                        if test['results'][execution][
-                            'result'].lower() == 'ok':
+                        _result = test['results'][execution]['result'].lower()
+                        if _result == 'ok':
                             _pass += 1
-                        elif test['results'][execution][
-                            'result'].lower() == 'fail':
+                        elif _result == 'fail':
                             _fail += 1
-                        elif test['results'][execution][
-                            'result'].lower() == 'skip':
+                        elif _result == 'skip':
                             _skip += 1
                         if 'required' not in test['results']:
                             _added += 1

@@ -1,4 +1,5 @@
-from tempest_parser.utils.file import *
+import os
+import tempest_parser.utils.file as futils
 from copy import copy
 
 
@@ -17,8 +18,8 @@ class CSVReporter:
     def generate_to_file(self, filename, detailed=False):
         # clear file content if any
         try:
-            remove_file(filename)
-        except OSError as e:
+            futils.remove_file(filename)
+        except OSError:
             pass
 
         # header
@@ -46,7 +47,7 @@ class CSVReporter:
                 else:
                     _result_columns += 1
 
-        append_line_to_file(filename, csv_header)
+        futils.append_line_to_file(filename, csv_header)
         _tests_counter = 0
 
         # lines
@@ -59,16 +60,16 @@ class CSVReporter:
             for i in range(0, _result_columns):
                 _class_line += ',' + ','
             # write class line
-            append_line_to_file(filename, _class_line)
+            futils.append_line_to_file(filename, _class_line)
 
             # iterate tests
             for _test in self._tests['tests'][class_name]:
                 _tests_counter += 1
                 _test_line = str(_tests_counter) + \
-                             ',' + \
-                             _test['test_name'] + \
-                             _test['test_options'] + \
-                             ','
+                    ',' + \
+                    _test['test_name'] + \
+                    _test['test_options'] + \
+                    ','
                 # iterate results
                 _results = ""
 
@@ -113,4 +114,4 @@ class CSVReporter:
                                 _results += ',' + ','
                             else:
                                 _results += ','
-                append_line_to_file(filename, _test_line + _results)
+                futils.append_line_to_file(filename, _test_line + _results)

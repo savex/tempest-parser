@@ -4,7 +4,7 @@ import time
 from copy import deepcopy
 
 import tempest_parser.manager.structs as structs
-from tempest_parser.parser.parser_strings import *
+import tempest_parser.parser.parser_strings as strings
 
 
 class TempestLogParser:
@@ -18,7 +18,6 @@ class TempestLogParser:
     def _split_options_from_test_name(_test_name_with_options):
         # sample: "_test_some_func[gate,smoke](options)"
         _options = ""
-        _test_name = ""
 
         if _test_name_with_options.find("(") != -1:
             # There is an option present
@@ -35,7 +34,6 @@ class TempestLogParser:
         # sample: "(options)OK"
         # detect if there is an option present
         _optons = ""
-        _result = ""
         if _options_with_result.find(")") != -1:
             _tmp = _options_with_result.partition(')')
             _optons = _tmp[0] + _tmp[1]
@@ -72,7 +70,11 @@ class TempestLogParser:
         while _index < _data_list.__len__():
             if _data_list[_index].__len__() > 0:
                 while _data_list[_index][0] == '\n':
-                    _data_list[_index] = _data_list[_index].replace("\n", "", 1)
+                    _data_list[_index] = _data_list[_index].replace(
+                        "\n",
+                        "",
+                        1
+                    )
             _index += 1
 
         # Cut to separate lines or combine them
@@ -90,46 +92,56 @@ class TempestLogParser:
             # Detect what is it
 
             # For summary we must cut OK\FAIL to previous line
-            if _section.startswith(tempest_summary_ran_section_start_string):
+            if _section.startswith(strings.summary_ran_string):
                 # this is Summary, combine this with next one
                 # load test result in next section
-                _cutted_result = _data_list[_index + 1][:_data_list[_index + 1].find("\n") + 1]
+                _cutted_result = \
+                    _data_list[_index + 1][
+                        :_data_list[_index + 1].find("\n") + 1
+                    ]
                 # cut it from there
-                _data_list[_index + 1] = _data_list[_index + 1].replace(_cutted_result, "")
+                _data_list[_index + 1] = _data_list[_index + 1].replace(
+                    _cutted_result,
+                    ""
+                )
                 # form summary section
                 _data = _section + "\n" + _cutted_result
                 # set type
-                _type = TEMPEST_EXECUTION_SUMMARY
+                _type = strings.TEMPEST_EXECUTION_SUMMARY
 
                 _summary_count += 1
                 # print("{0} summary sections found".format(_count))
-            elif _section.startswith(tempest_summary_ok_section_start_string) or \
-                    _section.startswith(tempest_summary_fail_section_start_string):
+            elif _section.startswith(strings.summary_ok_string) or \
+                    _section.startswith(strings.summary_fail_string):
                 # this one was combined with previous one
                 # should not be entering here actually :)
                 pass
             # Fail section
-            elif _section.startswith(tempest_fail_head_section_start_string):
+            elif _section.startswith(strings.fail_head_start_string):
                 # this is a fail reporting section
                 # search for next fail or end of section
-                (_fail_sec, _index) = self._fail_section_end_lookup(_index, _data_list)
+                (_fail_sec, _index) = self._fail_section_end_lookup(
+                    _index,
+                    _data_list
+                )
                 _data = _section + '\n\n' + _fail_sec
 
                 # _data = _section
-                _type = TEMPEST_FAIL_MESSAGE
+                _type = strings.TEMPEST_FAIL_MESSAGE
 
                 _fail_count += 1
             # execution section
-            elif _section.startswith(tempest_execution_setup_section_start_string) or \
-                    _section.startswith(tempest_execution_tempest_section_start_string):
+            elif _section.startswith(strings.setupclass_start_string) or \
+                    _section.startswith(strings.test_start_string):
                 _data = _section
-                _type = TEMPEST_EXECUTION_FLOW
-            elif _section.startswith(tempest_speed_summary_section_start_string):
+                _type = strings.TEMPEST_EXECUTION_FLOW
+            elif _section.startswith(strings.speed_start_string):
                 _data = _section
-                _type = TEMPEST_SPEED_SUMMARY
+                _type = strings.TEMPEST_SPEED_SUMMARY
             else:
-                # this is an unknown section, we should add it to previous one as a trace
-                cli_objects_list[cli_objects_list.__len__() - 1]["data"] += _section
+                # this is an unknown section,
+                # we should add it to previous one as a trace
+                cli_objects_list[len(cli_objects_list) - 1]["data"] += _section
                 _index += 1
                 continue
 
@@ -152,16 +164,16 @@ class TempestLogParser:
         # if object["type"] == TEMPEST_FAIL_MESSAGE:
         # print("{0}".format(object["data"]))
 
-        print("Pre-parsing done: {0} objects, {1} fails, {2} summary, {3} unknown".format(
+        print("Found: {0} obj, {1} fails, {2} summary, {3} unknown".format(
             cli_objects_list.__len__(),
             _fail_count,
             _summary_count,
             _unknown_count
-        )
-        )
+        ))
 
         # breaking list into sections
-        # at this point objects (no matter which type they are: flow, fail, ...) followed by each other
+        # at this point objects (no matter of their type: flow, fail, etc)
+        # followed by each other.
         # They are NOT logically connected to each other
 
         # Normally, we should have this order: execution, speed, fail, summary
@@ -174,7 +186,8 @@ class TempestLogParser:
             # if _section_start_index == _index:
             # continue
 
-            if cli_objects_list[_index]["type"] == TEMPEST_EXECUTION_SUMMARY:
+            if cli_objects_list[_index]["type"] == \
+                    strings.TEMPEST_EXECUTION_SUMMARY:
                 # we passed through items and sound end of the section
                 # save it
                 for _section_index in range(_section_start_index, _index):
@@ -189,12 +202,12 @@ class TempestLogParser:
     # Parse object list with specifics about it's content
     def parse_execution_list(self, _object_list):
         # fill items
-        _execution_item = deepcopy(structs._execution_item_template)
+        _execution_item = deepcopy(structs.execution_item_template)
         for _object in _object_list:
             _execution_item["execution_name"] = _object["source"].lower()
             _execution_item["execution_date"] = _object["created_date"]
             _execution_item["raw"] += _object["data"]
-            if _object["type"] == TEMPEST_EXECUTION_FLOW:
+            if _object["type"] == strings.TEMPEST_EXECUTION_FLOW:
                 # do some specific parsing
                 _lines = _object["data"].splitlines()
 
@@ -204,13 +217,15 @@ class TempestLogParser:
 
                 for _line in _lines:
                     _line = _line.lstrip()
-                    # split into "words" and remove multiple spaces in the process
+                    # split into "words"
+                    # and remove multiple spaces in the process
                     _line_s = re.sub(" +", " ", _line)
 
                     # preload_template in case we will not found it in the list
                     # _test_item = deepcopy(structs._template_test_item)
 
-                    # forwards for the data found, class_name already found at this point
+                    # forwards for the data found,
+                    # class_name already found at this point
                     _test_name = ""
                     _test_options = ""
                     _result = ""
@@ -218,12 +233,12 @@ class TempestLogParser:
 
                     _test = _line_s.split(" ")
 
-                    if _line.startswith(tempest_execution_tempest_section_start_string):
+                    if _line.startswith(strings.test_start_string):
                         _class_name = _line.strip()
                         _setUp_tearDown_class_failed = False
                         continue
-                    elif _line.startswith(tempest_execution_setup_section_start_string) or \
-                            _line.startswith(tempest_execution_tearDown_section_start_string):
+                    elif _line.startswith(strings.setupclass_start_string) or \
+                            _line.startswith(strings.teardown_start_string):
                         _class_name = _line_s.split(" ")[0].strip()
                         _test_class_prefix = _line_s.split("(")[1].strip()
                         _setUp_tearDown_class_failed = True
@@ -232,12 +247,19 @@ class TempestLogParser:
                         if _test.__len__() == 1:
                             # test name and result with no space, no time
                             _test_name = _test[0].split("[")[0].strip()
-                            _test_options, _result = self._split_options_from_result(_test[0].split("]")[1].strip())
+                            _test_options, _result = \
+                                self._split_options_from_result(
+                                    _test[0].split("]")[1].strip()
+                                )
                         elif _test.__len__() == 2 and \
                                 _test[1][0].isdigit():
-                            # test name and result with no space, followed by time
+                            # test name and result with no space,
+                            # followed by time
                             _test_name = _test[0].split("[")[0].strip()
-                            _test_options, _result = self._split_options_from_result(_test[0].split("]")[1].strip())
+                            _test_options, _result = \
+                                self._split_options_from_result(
+                                    _test[0].split("]")[1].strip()
+                                )
                             _time = _test[1].strip()
                         elif _test.__len__() == 2 and \
                                 (
@@ -245,21 +267,30 @@ class TempestLogParser:
                                     _test[1].startswith("FAIL") or
                                     _test[1].startswith("SKIP")
                                 ):
-                            # test name and result with a space between em', no time
-                            _test_name, _test_options = self._split_options_from_test_name(_test[0])
+                            # test name and result with a space between em',
+                            # no time
+                            _test_name, _test_options = \
+                                self._split_options_from_test_name(_test[0])
                             _result = _test[1].strip()
                         elif _test.__len__() > 2:
                             # test name, result and time separated by space
-                            _test_name, _test_options = self._split_options_from_test_name(_test[0])
+                            _test_name, _test_options = \
+                                self._split_options_from_test_name(_test[0])
                             _result = _test[1].strip()
                             _time = _test[2].strip()
-                    # if this is not a start of a subsection, or start of a test, then, if class fail flag is set
-                    # we should load the result value and do test name combining
-                    elif _line_s.split(")").__len__() > 1 and _setUp_tearDown_class_failed:
-                        # class name fail, test class name remainder with a SKIP as a result with a space between
+                    # if this is not a start of a subsection,
+                    # or start of a test, then, if class fail flag is set
+                    # we should load the result value
+                    # and do test name combining
+                    elif len(_line_s.split(")")) > 1 and \
+                            _setUp_tearDown_class_failed:
+                        # class name fail,
+                        # test class name remainder with a SKIP
+                        # as a result with a space between
                         _test = _line_s.split(" ")
                         # _class_name = "setupClass"
-                        _test_name = _test_class_prefix + '.' + _test[0].strip()[:-1]
+                        _test_name = \
+                            _test_class_prefix + '.' + _test[0].strip()[:-1]
                         _result = _test[1].strip()
                         if _test.__len__() > 2:
                             _time = _test[2].strip()
@@ -267,7 +298,8 @@ class TempestLogParser:
                         # Unknown
                         print("Unknown text in line: \n {0}".format(_line))
 
-                    # we have a test_name and all of the results now, and it is time to add this tests result
+                    # we have a test_name and all of the results now,
+                    # it is time to add this tests result
                     # lookup test in the list
                     self.test_mgr.add_result_for_test(
                         _execution_item["execution_name"],
@@ -277,7 +309,7 @@ class TempestLogParser:
                         _result,
                         _time
                     )
-            elif _object["type"] == TEMPEST_FAIL_MESSAGE:
+            elif _object["type"] == strings.TEMPEST_FAIL_MESSAGE:
                 # do some specific parsing fail messages object
                 _lines = _object["data"].splitlines()
 
@@ -293,11 +325,12 @@ class TempestLogParser:
                 for _line in _lines:
                     _line_s = _line.lstrip()
 
-                    if _line_s.startswith(tempest_fail_head_section_start_string) or \
+                    if _line_s.startswith(strings.fail_head_start_string) or \
                             _line_s.startswith("----------------------------"):
                         continue
-                    elif _line_s.startswith(tempest_execution_tempest_section_start_string):
-                        # this is a start of a new test fail, we should save the old one
+                    elif _line_s.startswith(strings.test_start_string):
+                        # this is a start of a new test fail,
+                        # we should save the old one
                         if _test_fail_head_found:
                             self.test_mgr.add_fail_data_for_test(
                                 _execution_item["execution_name"],
@@ -312,7 +345,7 @@ class TempestLogParser:
                         # extract nest one
                         try:
                             _full_name = _line_s.split(" ", 1)[1]
-                        except IndexError as e:
+                        except IndexError:
                             _full_name = _line_s
 
                         (_class_name, _test_name, _uuid, _test_options) = \
@@ -335,34 +368,35 @@ class TempestLogParser:
                     _trace,
                     _message
                 )
-            elif _object["type"] == TEMPEST_SPEED_SUMMARY:
+            elif _object["type"] == strings.TEMPEST_SPEED_SUMMARY:
                 # do some specific parsing for Slowest timings object
                 _lines = _object["data"].splitlines()
 
                 _class_name = ""
-                _slowest_item = deepcopy(structs._template_slowest_item)
+                _slowest_item = deepcopy(structs.template_slowest_item)
 
                 for _line in _lines:
                     _line = _line.lstrip()
                     _line_s = re.sub(" +", " ", _line)
 
-                    _test_name = ""
-
-                    if _line.startswith(tempest_speed_summary_section_start_string):
+                    if _line.startswith(strings.speed_start_string):
                         # parse timing header
                         _slowest = _line.split(" ")
                         _slowest_item["count"] = _slowest[1]
                         _slowest_item["time_total"] = _slowest[4]
                         continue
-                    elif _line.startswith(tempest_execution_tempest_section_start_string) or \
-                            _line.startswith(tempest_execution_setup_section_start_string) or \
-                            _line.startswith(tempest_execution_tearDown_section_start_string):
+                    elif _line.startswith(strings.test_start_string) or \
+                            _line.startswith(
+                                strings.setupclass_start_string
+                            ) or \
+                            _line.startswith(strings.teardown_start_string):
                         _class_name = _line.strip()
                         continue
                     elif _line.startswith("test_"):
-                        _class_name, _test_name, _test_options = self.test_mgr.split_test_name_from_speed(
-                            _class_name + '.' + _line_s
-                        )
+                        _class_name, _test_name, _test_options = \
+                            self.test_mgr.split_test_name_from_speed(
+                                _class_name + '.' + _line_s
+                            )
 
                         self.test_mgr.mark_slowest_test_in_execution_by_name(
                             _execution_item["execution_name"],
@@ -371,28 +405,31 @@ class TempestLogParser:
                             _test_options
                         )
                 _execution_item["slowest"] = _slowest_item
-            elif _object["type"] == TEMPEST_EXECUTION_SUMMARY:
+            elif _object["type"] == strings.TEMPEST_EXECUTION_SUMMARY:
                 # do some specific parsing for summary section
                 _lines = _object["data"].splitlines()
 
-                _summary_item = deepcopy(structs._template_summary_item)
+                _summary_item = deepcopy(structs.template_summary_item)
                 for _line in _lines:
-                    if _line.startswith(tempest_summary_ran_section_start_string):
+                    if _line.startswith(strings.summary_ran_string):
                         _summary_list = _line.split(" ")
 
                         _summary_item["total"] = _summary_list[1]
                         _summary_item["time"] = _summary_list[4]
-                    elif _line.startswith(tempest_summary_ok_section_start_string):
+                    elif _line.startswith(strings.summary_ok_string):
                         _summary_item["outcome"] = _line.strip()
-                    elif _line.startswith(tempest_summary_fail_section_start_string):
+                    elif _line.startswith(strings.summary_fail_string):
                         _summary_list = _line.split(" ")
 
                         _summary_item["outcome"] = _summary_list[0]
-                        _summary_item["failed"] = _summary_list[1].split("=")[1][:-1]
+                        _summary_item["failed"] = \
+                            _summary_list[1].split("=")[1][:-1]
 
                 _execution_item["summary"] = _summary_item
             else:
-                print("Empty or unknown section found:\n{0}".format(_object["data"]))
+                print("Empty or unknown section found:\n{0}".format(
+                    _object["data"]
+                ))
 
         # We're done
         return _execution_item
@@ -410,8 +447,8 @@ class TempestLogParser:
         for _fail_end_search_index in range(_index + 1, _data_list.__len__()):
             _tmp = _data_list[_fail_end_search_index]
 
-            if _tmp.startswith(tempest_fail_head_section_start_string) or \
-                    _tmp.startswith(tempest_summary_ran_section_start_string):
+            if _tmp.startswith(strings.fail_head_start_string) or \
+                    _tmp.startswith(strings.summary_ran_string):
                 _local_index = _fail_end_search_index - 1
                 break
             else:
@@ -438,7 +475,8 @@ Current executions sets list:\n
 """)
         for execution in executions:
             # throw a quick summary
-            running_time, total, ok, fail, skip = self.test_mgr.get_summary_for_execution(execution)
+            running_time, total, ok, fail, skip = \
+                self.test_mgr.get_summary_for_execution(execution)
 
             print("""
 Tempest testrun {0}: {1} executed: {2} passed, {3} failed, {4} skipped
@@ -455,4 +493,3 @@ Tempest testrun {0}: {1} executed: {2} passed, {3} failed, {4} skipped
 
     def parse(self):
         self.object_parser(self.cli_parser())
-

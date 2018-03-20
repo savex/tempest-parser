@@ -52,4 +52,3 @@ setup(
                 " XML from PyCharm, CSV (two types) and Subunit.",
     long_description=README
 )
-

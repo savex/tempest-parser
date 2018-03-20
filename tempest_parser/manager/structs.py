@@ -1,7 +1,7 @@
 # test_template
 # result item list here consists of dicts with
 # execution_name as a key and result
-_template_test_result = {
+template_test_result = {
     "result": "",
     "time": "",
     "slowest": False,
@@ -10,7 +10,7 @@ _template_test_result = {
     "message": ""
 }
 
-_template_test_item = {
+template_test_item = {
     # class names will be as a key
     # "class_name": "",
     "test_name": "",
@@ -20,13 +20,13 @@ _template_test_item = {
     "results": {}
 }
 
-_template_slowest_item = {
+template_slowest_item = {
     "time_total": "",
     "count": 0,
     "tests": []
 }
 
-_template_summary_item = {
+template_summary_item = {
     "total": 0,
     "failed": 0,
     "outcome": "",
@@ -34,15 +34,15 @@ _template_summary_item = {
 }
 
 # Execution dict template
-_execution_item_template = {
+execution_item_template = {
     "execution_name": "",
     "execution_date": "",
-    "slowest": _template_slowest_item,
-    "summary": _template_summary_item,
+    "slowest": template_slowest_item,
+    "summary": template_summary_item,
     "raw": ""
 }
 
-_tests_template = {
+tests_template = {
     # class names
     "tests": {},
     # parsed execution names
