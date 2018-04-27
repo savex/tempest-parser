@@ -33,7 +33,7 @@ def get_date_from_source(source):
     # _ctime = time.strftime("%d/%m/%Y %H:%M", time.gmtime(ctime))
     return time.strftime(
         "%d/%m/%Y %H:%M GMT",
-        time.gmtime(ctime)
+        time.gmtime(mtime)
     )
 
 
