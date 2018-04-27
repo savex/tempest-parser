@@ -60,81 +60,76 @@ class XMLImporter(ImporterBase):
 
     @staticmethod
     def _parse_status(status):
-        return {
-            'passed': 'OK',
-            'failed': 'FAIL',
-            'ignored': 'SKIP',
-            'error': 'FAIL'
-        }[status]
+        # Rally XML has one child node for status and text as a reason
+        if not len(status):
+            return 'OK', "Test passed"
+        else:
+            _status = status[0].tag
+            _reason = status[0].text
+            return {
+                'skipped': 'SKIP',
+                'failure': 'FAIL'
+            }[_status], _reason
 
     def parse(self):
         tree = parse(self.source)
         root = tree.getroot()
 
-        _execution_name = root.attrib['name'].lower()
+        for _testsuite in root.findall('testsuite'):
+            
+            _execution_name = _testsuite.attrib['id']
 
-        # iterate through classes
-        for _class_node in root.findall('suite'):
             # iterate through tests
-            _class_name = _class_node.attrib['name']
+            for _test_node in _testsuite.findall('testcase'):
+                
+                _class_name = _test_node.attrib['classname']
+                # remove any '%' symbols and following number
+                _symbol_index = _class_name.find('%')
+                if _symbol_index > 0:
+                    _class_name = _class_name[:_symbol_index] + \
+                                _class_name[_symbol_index + 2:]
 
-            # remove any '%' symbols and following number
-            _symbol_index = _class_name.find('%')
-            if _symbol_index > 0:
-                _class_name = _class_name[:_symbol_index] + \
-                              _class_name[_symbol_index + 2:]
-
-            for _test_node in _class_node.findall('test'):
                 # get all attributes from xml
+                _uuid = _test_node.attrib['id']
                 _test_name = _test_node.attrib['name']
                 _duration = "0s"
                 try:
                     _duration = self._parse_duration(
-                        _test_node.attrib['duration']
+                        _test_node.attrib['time']
                     )
                 except KeyError:
                     pass
-                _status = self._parse_status(_test_node.attrib['status'])
+                
+                _status, _reason = self._parse_status(list(_test_node))
                 _options = ''
+                _message = ""
+                _trace = ""
+                if _status == 'skipped':
+                    # no trace present
+                    _message = _reason.text
+                elif _status == 'failure':
+                    _trace = _reason.text
 
                 # add this result to list
                 self.tm.add_result_for_test(
                     _execution_name,
                     _class_name,
                     _test_name,
+                    _uuid,
                     _options,
                     _status,
                     _duration,
-                    class_name_short=True
+                    message=_message,
+                    trace=_trace
                 )
-                for _output in _test_node.findall('output'):
-                    _type = _output.attrib['type']
-                    _trace = ""
-                    _message = ""
 
-                    if _type == 'stdout':
-                        # no trace present
-                        _message = _output.text
-                    elif _type == 'stderr':
-                        _trace = _output.text
+            self.add_execution(
+                _execution_name,
+                '',
+                self._parse_duration(_testsuite.attrib['time'])
+            )
 
-                    self.tm.add_fail_data_for_test(
-                        _execution_name,
-                        _class_name,
-                        _test_name,
-                        _options,
-                        _trace,
-                        _message,
-                        class_name_short=True
-                    )
-
-        self.add_execution(
-            _execution_name,
-            '',
-            self._parse_duration(root.attrib['duration'])
-        )
-
-        return _execution_name
+        return True
 
 
 class JSONImporter(ImporterBase):

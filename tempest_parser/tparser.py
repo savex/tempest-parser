@@ -174,9 +174,7 @@ def tempest_cli_parser_main():
     #     S_ISFIFO(os.fstat(0).st_mode),
     #     args.inputfile
     # ))
-    if S_ISFIFO(
-            os.fstat(0).st_mode
-    ) and hasattr(args.inputfile, "name"):
+    if hasattr(args.inputfile, "name"):
         if args.inputfile.name == "<stdin>":
             if args.input_format is None:
                 pipe_fmt = const.FMT_SUBUNIT
