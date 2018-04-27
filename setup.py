@@ -48,7 +48,7 @@ setup(
     license="Apache Licence, version 2",
     description="Tempest Parser tool used to generate trending reports "
                 "out of various result formats openstack/tempest "
-                "produces: pytest's CLI, JSON from Rally, "
-                " XML from PyCharm, CSV (two types) and Subunit.",
+                "produces: pytest's CLI, JSON/XML from Rally, "
+                "CSV (two types) and Subunit.",
     long_description=README
 )
