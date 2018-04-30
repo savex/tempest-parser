@@ -37,6 +37,7 @@ template_summary_item = {
 execution_item_template = {
     "execution_name": "",
     "execution_date": "",
+    "unixtime": 0,
     "slowest": template_slowest_item,
     "summary": template_summary_item,
     "raw": ""

@@ -1,7 +1,6 @@
 import os
 import sys
 import argparse
-from stat import S_ISFIFO
 
 from tempest_parser import const
 from tempest_parser.reports import reporter

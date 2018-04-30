@@ -54,6 +54,7 @@ class TempestLogParser:
             "%d/%m/%Y %H:%M",
             time.gmtime(os.path.getctime(self.source.name))
         )
+        _unixtime = time.gmtime(os.path.getctime(self.source.name))
         print("\tcreated: {0}".format(_file_c_date))
         print("\tlast modified: {0}".format(_file_m_date))
 
@@ -149,9 +150,10 @@ class TempestLogParser:
             cli_objects_list.append(
                 {
                     "source": self.source.name,
-                    "created_date": _file_c_date,
+                    "created_date": _file_m_date,
                     "data": _data,
                     "type": _type,
+                    "unixtime": _unixtime
                 }
             )
             _index += 1
@@ -206,6 +208,7 @@ class TempestLogParser:
         for _object in _object_list:
             _execution_item["execution_name"] = _object["source"].lower()
             _execution_item["execution_date"] = _object["created_date"]
+            _execution_item["unixtime"] = _object["unixtime"]
             _execution_item["raw"] += _object["data"]
             if _object["type"] == strings.TEMPEST_EXECUTION_FLOW:
                 # do some specific parsing

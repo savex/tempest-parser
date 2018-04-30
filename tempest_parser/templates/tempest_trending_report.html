@@ -182,15 +182,15 @@
             <div class="label {{ status_description[STATUS_ADDED] | lower }}">added</div>
         </td>
         <!-- Repeatable -->
-    {% for execution in executions if execution != 'required' %}
+    {% for index in range(executions|length) if executions[index]['name'] != 'required' %}
         <td class="resultcolumn">
             <!-- SUM -->
-            <div class="label total">{{ totals[execution].total }}</div>
-            <div class="label {{ status_description[STATUS_PASS] | lower }}">{{ totals[execution][STATUS_PASS] }}</div>
-            <div class="label {{ status_description[STATUS_FAIL] | lower }}">{{ totals[execution][STATUS_FAIL] }}</div>
-            <div class="label {{ status_description[STATUS_SKIP] | lower }}">{{ totals[execution][STATUS_SKIP] }}</div>
-            <div class="label {{ status_description[STATUS_NA] | lower }}">{{ totals[execution][STATUS_NA] }}</div>
-            <div class="label {{ status_description[STATUS_ADDED] | lower }}">{{ totals[execution][STATUS_ADDED] }}</div>
+            <div class="label total">{{ totals[executions[index]['name']].total }}</div>
+            <div class="label {{ status_description[STATUS_PASS] | lower }}">{{ totals[executions[index]['name']][STATUS_PASS] }}</div>
+            <div class="label {{ status_description[STATUS_FAIL] | lower }}">{{ totals[executions[index]['name']][STATUS_FAIL] }}</div>
+            <div class="label {{ status_description[STATUS_SKIP] | lower }}">{{ totals[executions[index]['name']][STATUS_SKIP] }}</div>
+            <div class="label {{ status_description[STATUS_NA] | lower }}">{{ totals[executions[index]['name']][STATUS_NA] }}</div>
+            <div class="label {{ status_description[STATUS_ADDED] | lower }}">{{ totals[executions[index]['name']][STATUS_ADDED] }}</div>
         </td>
         {% if detailed %}
         <td class="textlabel">
@@ -203,10 +203,10 @@
         <td>#</td>
         <td>Test name and parameters</td>
         <td>Required vs Added</td>
-    {% for execution in executions if execution != 'required' %}
-        <td>{{ executions[execution]['date'] }}</td>
+        {% for index in range(executions|length) if executions[index]['name'] != 'required' %}
+        <td>{{ executions[index]['date'] }}</td>
         {% if detailed %}
-        <td>{{ executions[execution]['filename'] }}</td>
+        <td>{{ executions[index]['filename'] }}</td>
         {% endif %}
     {%- endfor -%}
 {#    {% set counter = 1 %}#}
@@ -215,8 +215,8 @@
     <tr class="group">
         <td colspan="2" class="name">Class {{ test_class }}</td>
         <td colspan="1" class="blank"></td>
-        {% for execution in executions if execution != 'required' %}
-            {% if detailed %}
+    {% for index in range(executions|length) if executions[index]['name'] != 'required' %}
+        {% if detailed %}
         <td colspan="2" class="blank"></td>
             {% else %}
         <td colspan="1" class="blank"></td>
@@ -238,11 +238,12 @@
         {% else %}
             <td class="status added">A</td>
         {% endif %}
-            {% for execution in executions if execution != 'required' %}
-            {% if test['results'].has_key(execution) %}
-        <td class="status {{ test['results'][execution]['result'] | lower }}">{{ test['results'][execution]['result'] }}</td>
+    {% for index in range(executions|length) if executions[index]['name'] != 'required' %}
+            {% set _name = executions[index]['name'] %}
+            {% if test['results'].has_key(_name) %}
+        <td class="status {{ test['results'][_name]['result'] | lower }}">{{ test['results'][_name]['result'] }}</td>
                 {%  if detailed %}
-        <td class="tracemessage">{{ test['results'][execution]['message'] }}<br>{{ test['results'][execution]['trace'] }}</td>
+        <td class="tracemessage">{{ test['results'][_name]['message'] }}<br>{{ test['results'][_name]['trace'] }}</td>
                 {% endif %}
             {% else %}
         <td class="status blank"></td>

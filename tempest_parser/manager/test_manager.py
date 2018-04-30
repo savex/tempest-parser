@@ -18,8 +18,8 @@ class TestsManager:
         # on init we should either load the full set of tests
         # ... or load supplied ones
         _tests_list_filename = os.path.join(pkg_dir, "res", all_tests_filepath)
-        _date = time.strftime("%d/%m/%Y %H:%M", time.gmtime(
-            os.path.getctime(_tests_list_filename)))
+        _unixtime = os.path.getctime(_tests_list_filename)
+        _date = time.strftime("%d/%m/%Y %H:%M", time.gmtime(_unixtime))
 
         if path is not None and not os.path.isfile(path):
             # if this is a folder, load files into sections
@@ -34,8 +34,13 @@ class TestsManager:
             self.tests_list["tests"] = self._all_tests_file_preload(
                 _tests_list_filename)
         self.add_execution(
-            dict(execution_name=self.required_execution_name,
-                 execution_date=_date, summary=dict(time="0s")))
+            dict(
+                execution_name=self.required_execution_name,
+                execution_date=_date,
+                summary=dict(time="0s")
+            ),
+            unixtime=_unixtime
+        )
 
     def _load_from_folder(self, folder):
         _tests = {}
@@ -191,11 +196,11 @@ class TestsManager:
         else:
             return None
 
-    def add_execution(self, _execution):
+    def add_execution(self, execution, unixtime=None):
         # time = float(_execution["summary"]["time"][:-1])
-        date = _execution["execution_date"]
-        _name = _execution["execution_name"]
-        self.tests_list["executions"][_name] = date
+        _date = execution["execution_date"]
+        _name = execution["execution_name"]
+        self.tests_list["executions"][_name] = [_date, unixtime]
 
     def mark_slowest_test_in_execution_by_name(self, execution_name,
                                                class_name, test_name,

@@ -40,15 +40,16 @@ class _TMPLBase(_Base):
     def _count_totals(data):
         data['totals'] = {}
 
-        for execution in data['executions']:
+        for ex_data in data['executions']:
+            ex_name = ex_data['name']
             _total = _pass = _fail = _error = _na = _skip = 0
             # classes = data['tests'].keys()
             _added = 0
             for test_class in data['tests']:
                 for test in data['tests'][test_class]:
-                    if execution in test['results']:
+                    if ex_name in test['results']:
                         _total += 1
-                        _result = test['results'][execution]['result'].lower()
+                        _result = test['results'][ex_name]['result'].lower()
                         if _result == 'ok':
                             _pass += 1
                         elif _result == 'fail':
@@ -60,7 +61,7 @@ class _TMPLBase(_Base):
                     else:
                         _na += 1
 
-            data['totals'][execution] = {
+            data['totals'][ex_name] = {
                 'total': _total,
                 const.STATUS_PASS: _pass,
                 const.STATUS_FAIL: _fail,
@@ -72,17 +73,20 @@ class _TMPLBase(_Base):
 
     def __call__(self, results, detailed=False):
         data = self.common_data()
+        _ex = []
+        for key, value in results['executions'].iteritems():
+            _ex.append({
+                "name": key,
+                "date": value[0],
+                "unixtime": value[1],
+                "filename": os.path.basename(key)
+            })
+        _ex.sort(key=lambda item: item['unixtime'])
         data.update({
-            "executions": {},
+            "executions": _ex,
             "detailed": detailed,
             "tests": results['tests']
         })
-
-        for _execution in results['executions']:
-            data['executions'][_execution] = {
-                "date": results['executions'][_execution],
-                "filename": os.path.basename(_execution)
-            }
         self._extend_data(data)
         self._count_totals(data)
 
@@ -126,19 +130,19 @@ class HTMLErrorsReport(_TMPLBase):
         failed_messages = {}
 
         # Reverse source list and get unique errors
-        for execution in data['executions']:
-
+        for item in data['executions']:
+            ex_name = item['name']
             for test_class in data['tests']:
                 for test in data['tests'][test_class]:
 
-                    _message = test['results'][execution]['message']
+                    _message = test['results'][ex_name]['message']
                     main_message = "" if _message is None else _message
 
                     if main_message.startswith("Trace"):
                         _trace = main_message
                         main_message = ""
                     else:
-                        _trace = test['results'][execution]['trace'].rstrip()
+                        _trace = test['results'][ex_name]['trace'].rstrip()
 
                     _trace_details = ""
                     _trace_additional = []
@@ -171,7 +175,7 @@ class HTMLErrorsReport(_TMPLBase):
                         'trace_details': _trace_details,
                         'trace_additional': _trace_messages
                     }
-                    _dict.update(test['results'][execution])
+                    _dict.update(test['results'][ex_name])
 
                     if _dict['result'].lower() == 'skip':
                         if main_message not in skipped_messages:

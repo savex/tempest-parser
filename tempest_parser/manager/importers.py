@@ -34,7 +34,7 @@ def get_date_from_source(source):
     return time.strftime(
         "%d/%m/%Y %H:%M GMT",
         time.gmtime(mtime)
-    )
+    ), time.gmtime(mtime)
 
 
 class ImporterBase(object):
@@ -42,13 +42,14 @@ class ImporterBase(object):
         self.source = source
         self.tm = test_manager
 
-    def add_execution(self, name, date, duration):
+    def add_execution(self, name, date, duration, unixtime):
         self.tm.add_execution(
             dict(
                 execution_name=name,
                 execution_date=date,
-                summary={'time': duration}
-            )
+                summary={'time': duration},
+            ),
+            unixtime=unixtime
         )
 
 
@@ -75,13 +76,15 @@ class XMLImporter(ImporterBase):
         tree = parse(self.source)
         root = tree.getroot()
 
+        _execution_date, _unixtime = get_date_from_source(self.source)
+
         for _testsuite in root.findall('testsuite'):
-            
-            _execution_name = _testsuite.attrib['id']
+
+            # _execution_name = _testsuite.attrib['id']
+            _execution_name = self.source.name
 
             # iterate through tests
             for _test_node in _testsuite.findall('testcase'):
-                
                 _class_name = _test_node.attrib['classname']
                 # remove any '%' symbols and following number
                 _symbol_index = _class_name.find('%')
@@ -99,16 +102,16 @@ class XMLImporter(ImporterBase):
                     )
                 except KeyError:
                     pass
-                
+
                 _status, _reason = self._parse_status(list(_test_node))
                 _options = ''
                 _message = ""
                 _trace = ""
-                if _status == 'skipped':
+                if _status == 'SKIP':
                     # no trace present
-                    _message = _reason.text
-                elif _status == 'failure':
-                    _trace = _reason.text
+                    _message = _reason
+                elif _status == 'FAIL':
+                    _trace = _reason
 
                 # add this result to list
                 self.tm.add_result_for_test(
@@ -125,8 +128,9 @@ class XMLImporter(ImporterBase):
 
             self.add_execution(
                 _execution_name,
-                '',
-                self._parse_duration(_testsuite.attrib['time'])
+                _execution_date,
+                self._parse_duration(_testsuite.attrib['time']),
+                _unixtime
             )
 
         return True
@@ -148,7 +152,7 @@ class JSONImporter(ImporterBase):
 
         # Use filename as name for the execution
         _execution_name = self.source.name
-        _execution_date = get_date_from_source(self.source)
+        _execution_date, _unixtime = get_date_from_source(self.source)
 
         verification = data['verifications'].keys()[0]
 
@@ -193,7 +197,8 @@ class JSONImporter(ImporterBase):
         self.add_execution(
             _execution_name,
             _execution_date,
-            '0s'
+            '0s',
+            _unixtime
         )
         return _execution_name
 
@@ -240,7 +245,7 @@ class CSVImporter(ImporterBase):
 
     def parse_own_csv(self):
         _execution_name = self.source.name
-        _execution_date = get_date_from_source(self.source)
+        _execution_date, _unixtime = get_date_from_source(self.source)
 
         _class_name = ''
 
@@ -283,13 +288,14 @@ class CSVImporter(ImporterBase):
         self.add_execution(
             _execution_name,
             _execution_date,
-            'n/a'
+            'n/a',
+            _unixtime
         )
         return _execution_name
 
     def parse_xunit_csv(self):
         _execution_name = self.source.name
-        _execution_date = get_date_from_source(self.source)
+        _execution_date, _unixtime = get_date_from_source(self.source)
 
         for row in self.csvdata:
             # parse the data
@@ -316,7 +322,8 @@ class CSVImporter(ImporterBase):
         self.add_execution(
             _execution_name,
             _execution_date,
-            'n/a'
+            'n/a',
+            _unixtime
         )
         return _execution_name
 
@@ -384,7 +391,7 @@ class SubunitImporter(ImporterBase):
         self.source = make_stream_binary(source)
 
     def parse(self):
-        _execution_date = get_date_from_source(self.source)
+        _execution_date, _unixtime = get_date_from_source(self.source)
         _execution_name = self.source.name + _execution_date
 
         run_tests_from_stream(
@@ -398,7 +405,8 @@ class SubunitImporter(ImporterBase):
         self.add_execution(
             _execution_name,
             _execution_date,
-            'n/a'
+            'n/a',
+            _unixtime
         )
 
         return
