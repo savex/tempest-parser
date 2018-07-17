@@ -128,10 +128,12 @@ class TestsManager:
                 _first_name.endswith("_tempest_plugin") or \
                 _first_name.endswith("_tempest_tests"):
             _class = full_test_name.rsplit(".", 1)[0]
-            _test = full_test_name.rsplit(".", 1)[1].split('[')[0]
-            _trailing = full_test_name.rsplit(".", 1)[1].split('[')[1]
-            _guid, _tags = _dig_guid(_trailing)
-            _options = _dig_options(_trailing)
+            _raw_test = full_test_name.rsplit(".", 1)[1]
+            _test = _raw_test.split('[')[0]
+            if '[' in _raw_test:
+                _trailing = _raw_test.split('[')[1]
+                _guid, _tags = _dig_guid(_trailing)
+                _options = _dig_options(_trailing)
 
         return _class, _test, _guid, _options
 

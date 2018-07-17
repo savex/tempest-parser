@@ -73,7 +73,7 @@ LOG parser anchors against lines started with specific strings.
 Make sure to remove leading environment variables and worker report stuff.
 
 ----- .xml files
-Files exported from Rally in XML format.
+Files exported from tempest with subunit's XML export.
 
 ----- .json files
 [Rally](https://github.com/openstack/rally) tool export:
@@ -82,4 +82,4 @@ Files exported from Rally in XML format.
 
 ======= Credits
 
-Thanks to Dmitry Bogun, Alexey Diyan and Dmitriy Zapeka.
+Thanks goes to Dmitry Bogun, Alexey Diyan and Dmitriy Zapeka.

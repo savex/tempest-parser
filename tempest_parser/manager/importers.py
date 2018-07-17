@@ -61,7 +61,7 @@ class XMLImporter(ImporterBase):
 
     @staticmethod
     def _parse_status(status):
-        # Rally XML has one child node for status and text as a reason
+        # XML has one child node for status and text as a reason
         if not len(status):
             return 'OK', "Test passed"
         else:
@@ -77,8 +77,14 @@ class XMLImporter(ImporterBase):
         root = tree.getroot()
 
         _execution_date, _unixtime = get_date_from_source(self.source)
+        _all_testsuites = []
+        # We should be ready for multiple test suites in one xml
+        if root.tag == 'testsuite':
+            _all_testsuites.append(root)
+        else:
+            _all_testsuites += root.findall('testsuite')
 
-        for _testsuite in root.findall('testsuite'):
+        for _testsuite in _all_testsuites:
 
             # _execution_name = _testsuite.attrib['id']
             _execution_name = self.source.name
@@ -93,8 +99,11 @@ class XMLImporter(ImporterBase):
                                 _class_name[_symbol_index + 2:]
 
                 # get all attributes from xml
-                _uuid = _test_node.attrib['id']
+                # _uuid = _test_node.attrib['id']
                 _test_name = _test_node.attrib['name']
+                _, _test_name, _uuid, _options = self.tm.split_test_name(
+                    _class_name + "." + _test_name
+                )
                 _duration = "0s"
                 try:
                     _duration = self._parse_duration(
@@ -104,7 +113,7 @@ class XMLImporter(ImporterBase):
                     pass
 
                 _status, _reason = self._parse_status(list(_test_node))
-                _options = ''
+                # _options = ''
                 _message = ""
                 _trace = ""
                 if _status == 'SKIP':

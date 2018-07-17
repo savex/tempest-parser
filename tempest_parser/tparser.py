@@ -27,7 +27,7 @@ def help_message():
     Please, supply pytest output file as a parameter. \n
          " ...or previously exported CSV file \n
          " ...or rally's tool exported JSON file \n
-         " ...or PyCharm's exported XML file \n
+         " ...or subunit's exported XML file \n
          " ...or saved subunit output \n
          " ...or folder full of files with types mentioned.\n
     """
@@ -44,7 +44,7 @@ def detect_format_from_filename(filename):
         return const.FMT_CSV
     elif filename.endswith(".xml"):
         # this is an xml file, parse it using specific importer
-        return const.FMT_PYCHARM_XML
+        return const.FMT_XML
     elif filename.endswith(".log"):
         # ..it is a bare testr output, parse it
         return const.FMT_PYTEST
@@ -74,7 +74,7 @@ def do_parse_file(source, tm, fmt=None):
     elif fmt is const.FMT_CSV:
         # this is simple csv file
         importer = CSVImporter(tm, source)
-    elif fmt is const.FMT_PYCHARM_XML:
+    elif fmt is const.FMT_XML:
         # this is an xml file, parse it using specific importer
         importer = XMLImporter(tm, source)
     elif fmt is const.FMT_PYTEST:

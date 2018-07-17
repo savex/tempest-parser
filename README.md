@@ -63,7 +63,7 @@ Bare tempest output captured with either redirection or by copying XX numbered f
 LOG parser anchors against lines started with specific strings. Make sure to remove leading environment variables and worker report stuff.
 
 ### .xml files
-Files exported from Rally in XML format.
+Files exported from subunit in XML format.
 
 ### .json files
 [Rally](https://github.com/openstack/rally) tool export: 
