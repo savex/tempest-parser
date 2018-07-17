@@ -120,7 +120,22 @@ class XMLImporter(ImporterBase):
                     # no trace present
                     _message = _reason
                 elif _status == 'FAIL':
-                    _trace = _reason
+                    # Check if there is a inner Traceback present
+                    if _reason.count('Traceback') > 1:
+                        # There is multiple tracebacks present
+                        # correct one has line after Trace as 'File'
+                        _tmp = ""
+                        _lines = _reason.splitlines()
+                        for idx in range(len(_lines)-1):
+                            _line = _lines[idx].strip()
+                            _next_line = _lines[idx+1].strip()
+                            if _line.startswith("Traceback") and \
+                                    _next_line.startswith('File'):
+                                _tmp = "\n".join(_lines[idx:])
+                                break
+                        _trace = _tmp
+                    else:
+                        _trace = _reason
 
                 # add this result to list
                 self.tm.add_result_for_test(
