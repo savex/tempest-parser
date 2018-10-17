@@ -43,12 +43,14 @@ class ImporterBase(object):
         test_manager,
         source,
         use_raw_names=False,
+        status_filters=None,
         force_single_execution=None
     ):
         self.source = source
         self.tm = test_manager
         self.use_raw_names = use_raw_names
         self.forced_execution_name = force_single_execution
+        self.status_filters = status_filters
 
     def add_execution(self, name, date, duration, unixtime):
         self.tm.add_execution(
@@ -152,6 +154,8 @@ class XMLImporter(ImporterBase):
                     else:
                         _trace = _reason
 
+                if _status in self.status_filters:
+                    continue
                 # add this result to list
                 self.tm.add_result_for_test(
                     _execution_name,

@@ -57,7 +57,7 @@ def detect_format_from_filename(filename):
         sys.exit(1)
 
 
-def do_parse_file(source, tm, fmt=None, force_single=None):
+def do_parse_file(source, tm, fmt=None, force_single=None, filters=None):
     close_source = False
     filename = "unknown/stdin"
     if not hasattr(source, "read"):
@@ -71,14 +71,14 @@ def do_parse_file(source, tm, fmt=None, force_single=None):
 
     if fmt is const.FMT_RALLY_JSON:
         # this is Rally's json file
-        importer = JSONImporter(tm, source)
+        importer = JSONImporter(tm, source, status_filters=filters)
     elif fmt is const.FMT_CSV:
         # this is simple csv file
-        importer = CSVImporter(tm, source)
+        importer = CSVImporter(tm, source, status_filters=filters)
     elif fmt is const.FMT_XML_TEMPEST:
         # this is an xml file from tempest
         # parse it using specific importer
-        importer = XMLImporter(tm, source)
+        importer = XMLImporter(tm, source, status_filters=filters)
     elif fmt is const.FMT_XML_RAW:
         # this is a raw xml file
         # parse it and use test names as is
@@ -86,7 +86,8 @@ def do_parse_file(source, tm, fmt=None, force_single=None):
             tm,
             source,
             use_raw_names=True,
-            force_single_execution=force_single
+            force_single_execution=force_single,
+            status_filters=filters
         )
     elif fmt is const.FMT_PYTEST:
         # ..it is a bare testr output, parse it
@@ -119,6 +120,12 @@ def tempest_cli_parser_main():
     Input format. Defaults to SUBUNIT for pipe.
     Tries to detect from extension if filename is supplied
     """)
+
+    parser.add_argument(
+        "--omit-status",
+        action="append",
+        help="Do not include tests with target status in final report"
+    )
 
     parser.add_argument(
         "-d",
@@ -183,6 +190,7 @@ def tempest_cli_parser_main():
     do_detailed = _args_detailed if _args_detailed \
         else _config_detailed_default
 
+    # prepare format
     input_fmt = None
     _fmt = args.input_format.strip()
     if _fmt in const.ALL_INPUT_FORMATS:
@@ -193,6 +201,9 @@ def tempest_cli_parser_main():
         print("Supplied format is not supported: '{}'".format(
             args.input_format
         ))
+
+    # prepare filter
+    status_filters = args.omit_status
 
     pipe_fmt = None
     # Detect pipe input, prior to handle args
@@ -252,14 +263,16 @@ def tempest_cli_parser_main():
         do_parse_file(
             args.inputfile,
             tests_manager,
-            fmt=pipe_fmt
+            fmt=pipe_fmt,
+            filters=status_filters
         )
     elif os.path.isfile(args.inputfile):
         # this is a file, parse it using supplied input format
         do_parse_file(
             args.inputfile,
             tests_manager,
-            fmt=input_fmt
+            fmt=input_fmt,
+            filters=status_filters
         )
     else:
         print("Importing tests from folder '{}'".format(args.inputfile))
@@ -267,7 +280,17 @@ def tempest_cli_parser_main():
         _folder_content = os.listdir(args.inputfile)
 
         for _file in _folder_content:
-            # parse log files
+            # parse files according to format
+            _target_extension = const.FORMAT_LABELS[input_fmt]
+            if input_fmt is not None and not _file.endswith(_target_extension):
+                print(
+                    "Skipped '{}', "
+                    "extension not corresponds to given format ({})".format(
+                        _file,
+                        _target_extension
+                    ))
+                continue
+            # if extension fits - process file
             if args.force_single:
                 do_parse_file(
                     os.path.join(
@@ -276,7 +299,8 @@ def tempest_cli_parser_main():
                     ),
                     tests_manager,
                     fmt=input_fmt,
-                    force_single=args.inputfile
+                    force_single=args.inputfile,
+                    filters=status_filters
                 )
             else:
                 do_parse_file(
@@ -285,7 +309,8 @@ def tempest_cli_parser_main():
                         _file
                     ),
                     tests_manager,
-                    fmt=input_fmt
+                    fmt=input_fmt,
+                    filters=status_filters
                 )
 
     if args.html_trending_filename:
