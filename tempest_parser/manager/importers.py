@@ -38,9 +38,17 @@ def get_date_from_source(source):
 
 
 class ImporterBase(object):
-    def __init__(self, test_manager, source):
+    def __init__(
+        self,
+        test_manager,
+        source,
+        use_raw_names=False,
+        force_single_execution=None
+    ):
         self.source = source
         self.tm = test_manager
+        self.use_raw_names = use_raw_names
+        self.forced_execution_name = force_single_execution
 
     def add_execution(self, name, date, duration, unixtime):
         self.tm.add_execution(
@@ -87,7 +95,10 @@ class XMLImporter(ImporterBase):
         for _testsuite in _all_testsuites:
 
             # _execution_name = _testsuite.attrib['id']
-            _execution_name = self.source.name
+            if self.forced_execution_name is None:
+                _execution_name = self.source.name
+            else:
+                _execution_name = self.forced_execution_name
 
             # iterate through tests
             for _test_node in _testsuite.findall('testcase'):
@@ -101,9 +112,13 @@ class XMLImporter(ImporterBase):
                 # get all attributes from xml
                 # _uuid = _test_node.attrib['id']
                 _test_name = _test_node.attrib['name']
-                _, _test_name, _uuid, _options = self.tm.split_test_name(
-                    _class_name + "." + _test_name
-                )
+                if self.use_raw_names:
+                    _options = ''
+                    _uuid = ''
+                else:
+                    _, _test_name, _uuid, _options = self.tm.split_test_name(
+                        _class_name + "." + _test_name
+                    )
                 _duration = "0s"
                 try:
                     _duration = self._parse_duration(

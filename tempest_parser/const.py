@@ -31,14 +31,16 @@ _cnt = itertools.count()
 FMT_SUBUNIT = next(_cnt)
 FMT_CSV = next(_cnt)
 FMT_RALLY_JSON = next(_cnt)
-FMT_XML = next(_cnt)
+FMT_XML_TEMPEST = next(_cnt)
+FMT_XML_RAW = next(_cnt)
 FMT_PYTEST = next(_cnt)
 
 ALL_INPUT_FORMATS = {
     "subunit": FMT_SUBUNIT,
     "csv": FMT_CSV,
     "json": FMT_RALLY_JSON,
-    "xml": FMT_XML,
+    "t_xml": FMT_XML_TEMPEST,
+    "r_xml": FMT_XML_RAW,
     "log": FMT_PYTEST
 }
 
@@ -46,7 +48,8 @@ FORMAT_LABELS = {
     FMT_SUBUNIT: "subunit",
     FMT_CSV: "csv",
     FMT_RALLY_JSON: "json",
-    FMT_XML: "xml",
+    FMT_XML_TEMPEST: "xml",
+    FMT_XML_RAW: "xml",
     FMT_PYTEST: "log"
 }
 

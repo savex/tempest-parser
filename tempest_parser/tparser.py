@@ -44,7 +44,8 @@ def detect_format_from_filename(filename):
         return const.FMT_CSV
     elif filename.endswith(".xml"):
         # this is an xml file, parse it using specific importer
-        return const.FMT_XML
+        # default to tempest type
+        return const.FMT_XML_TEMPEST
     elif filename.endswith(".log"):
         # ..it is a bare testr output, parse it
         return const.FMT_PYTEST
@@ -56,7 +57,7 @@ def detect_format_from_filename(filename):
         sys.exit(1)
 
 
-def do_parse_file(source, tm, fmt=None):
+def do_parse_file(source, tm, fmt=None, force_single=None):
     close_source = False
     filename = "unknown/stdin"
     if not hasattr(source, "read"):
@@ -74,9 +75,19 @@ def do_parse_file(source, tm, fmt=None):
     elif fmt is const.FMT_CSV:
         # this is simple csv file
         importer = CSVImporter(tm, source)
-    elif fmt is const.FMT_XML:
-        # this is an xml file, parse it using specific importer
+    elif fmt is const.FMT_XML_TEMPEST:
+        # this is an xml file from tempest
+        # parse it using specific importer
         importer = XMLImporter(tm, source)
+    elif fmt is const.FMT_XML_RAW:
+        # this is a raw xml file
+        # parse it and use test names as is
+        importer = XMLImporter(
+            tm,
+            source,
+            use_raw_names=True,
+            force_single_execution=force_single
+        )
     elif fmt is const.FMT_PYTEST:
         # ..it is a bare testr output, parse it
         importer = TempestLogParser(tm, source)
@@ -140,6 +151,12 @@ def tempest_cli_parser_main():
     )
 
     parser.add_argument(
+        "--force-single",
+        action="store_true", default=False,
+        help="All files in folder treated as single execution"
+    )
+
+    parser.add_argument(
         "-r",
         "--html-trending-filename",
         help="When set, creates HTML Trending Report"
@@ -166,6 +183,17 @@ def tempest_cli_parser_main():
     do_detailed = _args_detailed if _args_detailed \
         else _config_detailed_default
 
+    input_fmt = None
+    _fmt = args.input_format.strip()
+    if _fmt in const.ALL_INPUT_FORMATS:
+        input_fmt = const.ALL_INPUT_FORMATS[_fmt]
+    elif args.input_format is None:
+        pass
+    else:
+        print("Supplied format is not supported: '{}'".format(
+            args.input_format
+        ))
+
     pipe_fmt = None
     # Detect pipe input, prior to handle args
     # print("istty?={}, fifo?={}, fd?={}".format(
@@ -175,18 +203,13 @@ def tempest_cli_parser_main():
     # ))
     if hasattr(args.inputfile, "name"):
         if args.inputfile.name == "<stdin>":
-            if args.input_format is None:
+            if input_fmt is None:
                 pipe_fmt = const.FMT_SUBUNIT
                 print("No PIPE format set, defaulted to: '{}'".format(
                     const.FORMAT_LABELS[pipe_fmt]
                 ))
             else:
-                if args.input_format in const.ALL_INPUT_FORMATS:
-                    pipe_fmt = const.ALL_INPUT_FORMATS[args.input_format]
-                else:
-                    print("Supplied format is not supported: '{}'".format(
-                        args.input_format
-                    ))
+                pipe_fmt = input_fmt
         else:
             print("Error: Unknown PIPE: '{}', '<stdin>' expected".format(
                 args.inputfile.name
@@ -236,7 +259,7 @@ def tempest_cli_parser_main():
         do_parse_file(
             args.inputfile,
             tests_manager,
-            fmt=args.input_format
+            fmt=input_fmt
         )
     else:
         print("Importing tests from folder '{}'".format(args.inputfile))
@@ -245,13 +268,25 @@ def tempest_cli_parser_main():
 
         for _file in _folder_content:
             # parse log files
-            do_parse_file(
-                os.path.join(
-                    args.inputfile,
-                    _file
-                ),
-                tests_manager,
-            )
+            if args.force_single:
+                do_parse_file(
+                    os.path.join(
+                        args.inputfile,
+                        _file
+                    ),
+                    tests_manager,
+                    fmt=input_fmt,
+                    force_single=args.inputfile
+                )
+            else:
+                do_parse_file(
+                    os.path.join(
+                        args.inputfile,
+                        _file
+                    ),
+                    tests_manager,
+                    fmt=input_fmt
+                )
 
     if args.html_trending_filename:
         # prepare the reporting subsystem
