@@ -224,7 +224,7 @@
         {% endfor %}
 
     </tr>
-        {% for test in tests[test_class] %}
+        {% for test in tests[test_class] | sort %}
     <tr>
         <td>{{ counters.all_count + loop.index0 }}</td>
         <td>

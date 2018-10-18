@@ -124,7 +124,8 @@ def tempest_cli_parser_main():
     parser.add_argument(
         "--omit-status",
         action="append",
-        help="Do not include tests with target status in final report"
+        help="Do not include tests with target status in final report. "
+             "Option can be used multiple times."
     )
 
     parser.add_argument(
