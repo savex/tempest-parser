@@ -57,7 +57,7 @@ def detect_format_from_filename(filename):
         sys.exit(1)
 
 
-def do_parse_file(source, tm, fmt=None, force_single=None, filters=None):
+def do_parse_file(source, tm, fmt=None, force_single=None, filters=[]):
     close_source = False
     filename = "unknown/stdin"
     if not hasattr(source, "read"):
@@ -205,7 +205,10 @@ def tempest_cli_parser_main():
             ))
 
     # prepare filter
-    status_filters = args.omit_status
+    if args.omit_status:
+        status_filters = args.omit_status
+    else:
+        status_filters = []
 
     pipe_fmt = None
     # Detect pipe input, prior to handle args
