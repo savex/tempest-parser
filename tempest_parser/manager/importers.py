@@ -43,7 +43,7 @@ class ImporterBase(object):
         test_manager,
         source,
         use_raw_names=False,
-        status_filters=None,
+        status_filters=[],
         force_single_execution=None
     ):
         self.source = source

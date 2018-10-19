@@ -193,15 +193,16 @@ def tempest_cli_parser_main():
 
     # prepare format
     input_fmt = None
-    _fmt = args.input_format.strip()
-    if _fmt in const.ALL_INPUT_FORMATS:
-        input_fmt = const.ALL_INPUT_FORMATS[_fmt]
-    elif args.input_format is None:
+    if args.input_format is None:
         pass
     else:
-        print("Supplied format is not supported: '{}'".format(
-            args.input_format
-        ))
+        _fmt = args.input_format.strip()
+        if _fmt in const.ALL_INPUT_FORMATS:
+            input_fmt = const.ALL_INPUT_FORMATS[_fmt]
+        else:
+            print("Supplied format is not supported: '{}'".format(
+                args.input_format
+            ))
 
     # prepare filter
     status_filters = args.omit_status
