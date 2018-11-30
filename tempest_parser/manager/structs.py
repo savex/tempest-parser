@@ -16,7 +16,7 @@ template_test_item = {
     "test_name": "",
     "uuid": "",
     "test_options": "",
-    "tags": "",
+    "tags": [],
     "results": {}
 }
 

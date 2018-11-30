@@ -27,7 +27,7 @@ class CSVReporter:
         _result_columns = 0
         # execution names for header
         if 'required' in self._total_executions:
-            _date_prepared = self._tests['executions']['required']
+            _date_prepared = self._tests['executions']['required'][0]
             _date_prepared = _date_prepared.replace('/', '\n')
             _date_prepared = _date_prepared.replace(' ', '\n')
             csv_header += '"' + _date_prepared + '",'
@@ -37,7 +37,7 @@ class CSVReporter:
             if _execution != 'required':
                 # execution name
                 # csv_header += _execution + ','
-                _date_prepared = self._tests['executions'][_execution]
+                _date_prepared = self._tests['executions'][_execution][0]
                 _date_prepared = _date_prepared.replace('/', '\n')
                 _date_prepared = _date_prepared.replace(' ', '\n')
                 csv_header += '"' + _date_prepared + '",'

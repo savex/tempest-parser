@@ -27,7 +27,7 @@ entry_points = {
 
 setup(
     name="TempestParser",
-    version="0.2.5",
+    version="0.2.51",
     author="Alex Savatieiev",
     author_email="a.savex@gmail.com",
     classifiers=[

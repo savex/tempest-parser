@@ -117,10 +117,12 @@ class XMLImporter(ImporterBase):
                 if self.use_raw_names:
                     _options = ''
                     _uuid = ''
+                    _tags = ''
                 else:
-                    _, _test_name, _uuid, _options = self.tm.split_test_name(
-                        _class_name + "." + _test_name
-                    )
+                    _, _test_name, _uuid, _options, _tags = \
+                        self.tm.split_test_name(
+                            _class_name + "." + _test_name
+                        )
                 _duration = "0s"
                 try:
                     _duration = self._parse_duration(
@@ -166,7 +168,8 @@ class XMLImporter(ImporterBase):
                     _status,
                     _duration,
                     message=_message,
-                    trace=_trace
+                    trace=_trace,
+                    tags=_tags
                 )
 
             self.add_execution(
@@ -203,7 +206,7 @@ class JSONImporter(ImporterBase):
         for _test_name, _test_value in data['tests'].items():
             if isinstance(_test_name, six.text_type):
                 _test_name = _test_name.encode("utf-8")
-            _class_name, _test_name, _uuid, _options = \
+            _class_name, _test_name, _uuid, _options, _tags = \
                 self.tm.split_test_name(_test_name)
             _test_value_results = _test_value['by_verification'][verification]
             _status = self._parse_status(_test_value_results['status'])
@@ -234,7 +237,8 @@ class JSONImporter(ImporterBase):
                 _status,
                 _duration,
                 message=_message,
-                trace=_trace
+                trace=_trace,
+                tags=_tags
             )
 
         self.add_execution(
@@ -315,7 +319,7 @@ class CSVImporter(ImporterBase):
                     _status,
                     '',
                     message=_message,
-                    test_name_bare=True
+                    test_name_bare=True,
                 )
 
                 continue
@@ -395,9 +399,9 @@ class TParserResult(TestByTestResult):
         _test_options = ""
         _id = test.id()
         if _id.startswith("setUpClass"):
-            _class_name, _, _, _ = self.tm.split_test_name(_id)
+            _class_name, _, _, _, _ = self.tm.split_test_name(_id)
         else:
-            _class_name, _test_name, _uuid, _test_options = \
+            _class_name, _test_name, _uuid, _test_options, _tags = \
                 self.tm.split_test_name(_id)
 
         _status = self._parse_status(status)

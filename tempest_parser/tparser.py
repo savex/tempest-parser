@@ -260,7 +260,11 @@ def tempest_cli_parser_main():
         print("Preloading all tests from '{}'".format(
             _all_tests_filename
         ))
-        tests_manager.add_required(_all_tests_filename)
+        _use_raw_names = True if input_fmt == const.FMT_XML_RAW else False
+        tests_manager.add_required(
+            _all_tests_filename,
+            use_raw_names=_use_raw_names
+        )
     # # Parse objects from raw file
     # # and Collect / sort objects into executions and parse them
     if pipe_fmt is not None:

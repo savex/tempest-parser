@@ -14,7 +14,7 @@ class TestsManager:
         self.tests_list = deepcopy(structs.tests_template)
         self.required_execution_name = "required"
 
-    def add_required(self, all_tests_filepath, path=None):
+    def add_required(self, all_tests_filepath, path=None, use_raw_names=False):
         # on init we should either load the full set of tests
         # ... or load supplied ones
         _tests_list_filename = os.path.join(pkg_dir, "res", all_tests_filepath)
@@ -32,7 +32,9 @@ class TestsManager:
             # self.all_tests_list = read_file_as_lines(path)
 
             self.tests_list["tests"] = self._all_tests_file_preload(
-                _tests_list_filename)
+                _tests_list_filename,
+                use_raw_names=use_raw_names
+            )
         self.add_execution(
             dict(
                 execution_name=self.required_execution_name,
@@ -64,14 +66,17 @@ class TestsManager:
     # In case we'll need to list all of the tests in tempest
     # and mark which ones was executed, we have list of all tests
     # It produced by ./tempest run --list-tests >all_tests_tag_<N>.list
-    def _all_tests_file_preload(self, resource_file):
+    def _all_tests_file_preload(self, resource_file, use_raw_names=False):
         _tests = {}
 
         # load all tests file
         with open(resource_file) as tests_file:
             for line in tests_file:
-                _class_name, _test_name, _uuid, _test_options = \
-                    self.split_test_name(line.replace("\n", ""))
+                _class_name, _test_name, _uuid, _test_options, _tags = \
+                    self.split_test_name(
+                        line.replace("\n", ""),
+                        raw_names=use_raw_names
+                    )
 
                 self._test_item = deepcopy(structs.template_test_item)
                 self._test_item["test_name"] = _test_name
@@ -80,6 +85,7 @@ class TestsManager:
                     self.required_execution_name] = dict(result="R", time='0s')
 
                 self._test_item["test_options"] = _test_options
+                self._test_item["tags"] = _tags
 
                 if _class_name not in _tests:
                     _tests[_class_name] = []
@@ -87,7 +93,7 @@ class TestsManager:
         return _tests
 
     @staticmethod
-    def split_test_name(full_test_name):
+    def split_test_name(full_test_name, raw_names=False):
         def _dig_guid(raw_trailing):
             _all_items = raw_trailing.split(']')[0].split(",")
             __guid = ""
@@ -125,17 +131,21 @@ class TestsManager:
                 _guid = _dig_guid(_tmp)
                 _options = _dig_options(_tmp)
         elif _first_name.startswith("tempest") or \
+                _first_name.startswith("cvp_checks") or \
                 _first_name.endswith("_tempest_plugin") or \
                 _first_name.endswith("_tempest_tests"):
             _class = full_test_name.rsplit(".", 1)[0]
             _raw_test = full_test_name.rsplit(".", 1)[1]
-            _test = _raw_test.split('[')[0]
-            if '[' in _raw_test:
-                _trailing = _raw_test.split('[')[1]
-                _guid, _tags = _dig_guid(_trailing)
-                _options = _dig_options(_trailing)
+            if not raw_names:
+                _test = _raw_test.split('[')[0]
+                if '[' in _raw_test:
+                    _trailing = _raw_test.split('[')[1]
+                    _guid, _tags = _dig_guid(_trailing)
+                    _options = _dig_options(_trailing)
+            else:
+                _test = _raw_test
 
-        return _class, _test, _guid, _options
+        return _class, _test, _guid, _options, _tags
 
     @staticmethod
     def split_test_name_from_speed(full_test_name):

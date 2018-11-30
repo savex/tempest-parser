@@ -351,7 +351,7 @@ class TempestLogParser:
                         except IndexError:
                             _full_name = _line_s
 
-                        (_class_name, _test_name, _uuid, _test_options) = \
+                        (_class_name, _test_name, _uuid, _test_options, _tags) = \
                             self.test_mgr.split_test_name(_full_name)
                         _test_fail_head_found = True
                     elif _line_s.startswith("Details: "):
@@ -396,7 +396,7 @@ class TempestLogParser:
                         _class_name = _line.strip()
                         continue
                     elif _line.startswith("test_"):
-                        _class_name, _test_name, _test_options = \
+                        _class_name, _test_name, _test_options, _tags = \
                             self.test_mgr.split_test_name_from_speed(
                                 _class_name + '.' + _line_s
                             )
