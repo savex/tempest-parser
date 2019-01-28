@@ -54,6 +54,8 @@ class _TMPLBase(_Base):
                             _pass += 1
                         elif _result == 'fail':
                             _fail += 1
+                        elif _result == 'error':
+                            _error += 1
                         elif _result == 'skip':
                             _skip += 1
                         if 'required' not in test['results']:

@@ -27,7 +27,7 @@ entry_points = {
 
 setup(
     name="TempestParser",
-    version="0.2.51",
+    version="0.2.53",
     author="Alex Savatieiev",
     author_email="a.savex@gmail.com",
     classifiers=[
@@ -47,8 +47,7 @@ setup(
     data_files=DATA,
     license="Apache Licence, version 2",
     description="Tempest Parser tool used to generate trending reports "
-                "out of various result formats openstack/tempest "
-                "produces: pytest's CLI, Rally's JSON, CSV (two types) "
-                "and Subunit (binary stream and XML export).",
+                "out of various result formats: pytest's CLI, Rally's XML,"
+                "JSON, jUnit XML (with v4 schema support), CSV (two types).",
     long_description=README
 )

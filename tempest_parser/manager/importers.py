@@ -4,8 +4,10 @@ from xml.etree.ElementTree import parse
 import json
 import csv
 import os
+import re
 import six
 import time
+
 
 from subunit import make_stream_binary
 from subunit.test_results import TestByTestResult
@@ -14,6 +16,17 @@ from testtools import StreamToExtendedDecorator
 
 CSV_OWN = 1
 CSV_XUNIT = 2
+
+
+def remove_control_chars(s):
+    # import unicodedata
+    # all_chars = (unichr(i) for i in xrange(0x110000))
+    # control_chars = ''.join(
+    #   c for c in all_chars if unicodedata.category(c) == 'Cc'
+    # )
+    control_chars = ''.join(map(unichr, range(0, 32) + range(127, 160)))
+    control_char_re = re.compile('[%s]' % re.escape(control_chars))
+    return control_char_re.sub('', s)
 
 
 def get_date_from_source(source):
@@ -63,6 +76,27 @@ class ImporterBase(object):
         )
 
 
+"""<?xml version="1.0" encoding="UTF-8"?>
+<testsuites disabled="" errors="" failures="" name="" tests="" time="">
+    <testsuite disabled="" errors="" failures="" hostname="" id=""
+               name="" package="" skipped="" tests="" time="" timestamp="">
+        <properties>
+            <property name="" value=""/>
+        </properties>
+        <testcase assertions="" classname="" name="" status="" time="">
+            <skipped/>
+            <error message="" type=""/>
+            <failure message="" type=""/>
+            <system-out/>
+            <system-err/>
+        </testcase>
+        <system-out/>
+        <system-err/>
+    </testsuite>
+</testsuites>
+"""
+
+
 class XMLImporter(ImporterBase):
     @staticmethod
     def _parse_duration(duration):
@@ -77,9 +111,13 @@ class XMLImporter(ImporterBase):
         else:
             _status = status[0].tag
             _reason = status[0].text
+            # TODO: Add support for new junit4 schema
             return {
                 'skipped': 'SKIP',
-                'failure': 'FAIL'
+                'failure': 'FAIL',
+                'error': 'ERROR',
+                'system-out': 'ERROR',
+                'system-err': 'ERROR'
             }[_status], _reason
 
     def parse(self):
@@ -137,7 +175,7 @@ class XMLImporter(ImporterBase):
                 _trace = ""
                 if _status == 'SKIP':
                     # no trace present
-                    _message = _reason
+                    _message = _reason if _reason else ""
                 elif _status == 'FAIL':
                     # Check if there is a inner Traceback present
                     if _reason.count('Traceback') > 1:
@@ -153,6 +191,29 @@ class XMLImporter(ImporterBase):
                                 _tmp = "\n".join(_lines[idx:])
                                 break
                         _trace = _tmp
+                    elif _reason.count('errors.errorString') > 0 and \
+                            _reason.count('k8s.io') > 0:
+                        # This is a k8s-conformance error
+                        # Parse the error message
+                        _tmp = []
+                        _lines = _reason.splitlines()
+                        for idx in range(len(_lines)-1):
+                            _line = _lines[idx].strip()
+                            _next_line = _lines[idx+1].strip()
+                            if _line.startswith("<*errors.errorString") and \
+                                    _next_line.startswith("s: \""):
+                                err = _next_line.split('"')[1]
+                                err = err.encode('ascii', 'ignore')
+                                if err.count("\\x00") > 1:
+                                    err = err.replace("\\x00", "")
+                                err = remove_control_chars(err)
+                                _tmp.append(err)
+                            elif _next_line.startswith("not to have occurred"):
+                                _tmp.append(_line.encode('ascii', 'ignore'))
+                        if len(_tmp) > 0:
+                            _message = "\n".join(_tmp)
+                        else:
+                            _trace = _reason
                     else:
                         _trace = _reason
 

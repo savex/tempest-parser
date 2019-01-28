@@ -177,6 +177,7 @@
             <div class="label total">total</div>
             <div class="label {{ status_description[STATUS_PASS] | lower }}">pass</div>
             <div class="label {{ status_description[STATUS_FAIL] | lower }}">fail</div>
+            <div class="label {{ status_description[STATUS_ERROR] | lower }}">error</div>
             <div class="label {{ status_description[STATUS_SKIP] | lower }}">skip</div>
             <div class="label {{ status_description[STATUS_NA] | lower }}">n/a</div>
             <div class="label {{ status_description[STATUS_ADDED] | lower }}">added</div>
@@ -188,6 +189,7 @@
             <div class="label total">{{ totals[executions[index]['name']].total }}</div>
             <div class="label {{ status_description[STATUS_PASS] | lower }}">{{ totals[executions[index]['name']][STATUS_PASS] }}</div>
             <div class="label {{ status_description[STATUS_FAIL] | lower }}">{{ totals[executions[index]['name']][STATUS_FAIL] }}</div>
+            <div class="label {{ status_description[STATUS_ERROR] | lower }}">{{ totals[executions[index]['name']][STATUS_ERROR] }}</div>
             <div class="label {{ status_description[STATUS_SKIP] | lower }}">{{ totals[executions[index]['name']][STATUS_SKIP] }}</div>
             <div class="label {{ status_description[STATUS_NA] | lower }}">{{ totals[executions[index]['name']][STATUS_NA] }}</div>
             <div class="label {{ status_description[STATUS_ADDED] | lower }}">{{ totals[executions[index]['name']][STATUS_ADDED] }}</div>
