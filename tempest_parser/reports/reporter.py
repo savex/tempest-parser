@@ -146,6 +146,7 @@ class HTMLErrorsReport(_TMPLBase):
                     else:
                         _trace = test['results'][ex_name]['trace'].rstrip()
 
+                    _trace = _trace[_trace.find("failure:")+9:]
                     _trace_details = ""
                     _trace_additional = []
                     for line in _trace.split('\n'):

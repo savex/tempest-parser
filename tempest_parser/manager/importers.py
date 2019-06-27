@@ -97,6 +97,13 @@ class ImporterBase(object):
 """
 
 
+_error_status_map = {
+    'skipped': 'SKIP',
+    'failure': 'FAIL',
+    'error': 'ERROR',
+    'system-err': 'ERROR'
+}
+
 class XMLImporter(ImporterBase):
     @staticmethod
     def _parse_duration(duration):
@@ -109,16 +116,30 @@ class XMLImporter(ImporterBase):
         if not len(status):
             return 'OK', "Test passed"
         else:
-            _status = status[0].tag
-            _reason = status[0].text
-            # TODO: Add support for new junit4 schema
-            return {
-                'skipped': 'SKIP',
-                'failure': 'FAIL',
-                'error': 'ERROR',
-                'system-out': 'ERROR',
-                'system-err': 'ERROR'
-            }[_status], _reason
+            _status = ""
+            _reason = ""
+            # cut system-out
+            for idx in range(0, len(status)):
+                if status[idx].tag == 'system-out':
+                    _status = "OK"
+                    _reason = "{}:\n{}\n{}".format(
+                        status[idx].tag,
+                        status[idx].text,
+                        _reason
+                    )
+                    _ = status.pop(idx)
+
+            # iterate others
+            while len(status) > 0:
+                # last encountered node will be the status
+                _s = status.pop()
+                _status = _error_status_map[_s.tag]
+                _reason = "{}:\n{}\n{}".format(
+                    _s.tag,
+                    _s.text,
+                    _reason
+                )
+            return _status, _reason
 
     def parse(self):
         tree = parse(self.source)
