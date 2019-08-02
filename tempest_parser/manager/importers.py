@@ -76,6 +76,7 @@ class ImporterBase(object):
         )
 
 
+# Example of pytest4 xml structure
 """<?xml version="1.0" encoding="UTF-8"?>
 <testsuites disabled="" errors="" failures="" name="" tests="" time="">
     <testsuite disabled="" errors="" failures="" hostname="" id=""
@@ -103,6 +104,7 @@ _error_status_map = {
     'error': 'ERROR',
     'system-err': 'ERROR'
 }
+
 
 class XMLImporter(ImporterBase):
     @staticmethod
@@ -140,6 +142,31 @@ class XMLImporter(ImporterBase):
                     _reason
                 )
             return _status, _reason
+
+    def _is_k8s_error(self, reason):
+        _errs = reason.count('errors.errorString')
+        _k8s = reason.count('k8s.io')
+
+        return True if _errs > 0 and _k8s > 0 else False
+
+    def _detect_pytest_errors(self, reason):
+        _lines = re.findall(r"^[E]\s+.*$", reason, re.MULTILINE)
+        return _lines if _lines > 0 else []
+
+    def _parse_pytest_error(self, lines):
+        # Extract message
+        _msg = ""
+        _trace = ""
+        for line in lines:
+            line = line[1:].strip()
+            # Save all message in the traceback
+            # detect message
+            m = re.search(r"^[a-z,A-Z]+\:\s.*$", line, re.MULTILINE)
+            if m:
+                _msg = m.group(0)
+            else:
+                _trace += line + '\n'
+        return _msg, _trace
 
     def parse(self):
         tree = parse(self.source)
@@ -199,6 +226,8 @@ class XMLImporter(ImporterBase):
                     _message = _reason if _reason else ""
                 elif _status == 'FAIL':
                     # Check if there is a inner Traceback present
+                    # and prior to save the message, try to detect error type
+                    _pytest_lines = self._detect_pytest_errors(_reason)
                     if _reason.count('Traceback') > 1:
                         # There is multiple tracebacks present
                         # correct one has line after Trace as 'File'
@@ -212,8 +241,7 @@ class XMLImporter(ImporterBase):
                                 _tmp = "\n".join(_lines[idx:])
                                 break
                         _trace = _tmp
-                    elif _reason.count('errors.errorString') > 0 and \
-                            _reason.count('k8s.io') > 0:
+                    elif self._is_k8s_error(_reason):
                         # This is a k8s-conformance error
                         # Parse the error message
                         _tmp = []
@@ -235,11 +263,17 @@ class XMLImporter(ImporterBase):
                             _message = "\n".join(_tmp)
                         else:
                             _trace = _reason
+                    elif _pytest_lines:
+                        # This is a pytest error
+                        _message, _trace = self._parse_pytest_error(
+                            _pytest_lines
+                        )
                     else:
                         _trace = _reason
 
                 if _status in self.status_filters:
                     continue
+
                 # add this result to list
                 self.tm.add_result_for_test(
                     _execution_name,
@@ -491,9 +525,9 @@ class TParserResult(TestByTestResult):
         _message = ''
         _tb = ''
 
-        if _status is 'FAIL':
+        if _status == 'FAIL':
             _tb = details['traceback'].as_text()
-        elif _status is 'SKIP':
+        elif _status == 'SKIP':
             _message = details['reason'].as_text()
 
         self.tm.add_result_for_test(
