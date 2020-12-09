@@ -120,16 +120,19 @@ class XMLImporter(ImporterBase):
         else:
             _status = ""
             _reason = ""
+            _idx = 0
             # cut system-out
-            for idx in range(0, len(status)):
-                if status[idx].tag == 'system-out':
+            while len(status) > 0 and _idx < len(status):
+                if status[_idx].tag == 'system-out':
                     _status = "OK"
                     _reason = "{}:\n{}\n{}".format(
-                        status[idx].tag,
-                        status[idx].text,
+                        status[_idx].tag,
+                        status[_idx].text,
                         _reason
                     )
-                    _ = status.pop(idx)
+                    _ = status.pop(_idx)
+                else:
+                    _idx += 1
 
             # iterate others
             while len(status) > 0:
