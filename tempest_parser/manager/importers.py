@@ -154,7 +154,7 @@ class XMLImporter(ImporterBase):
 
     def _detect_pytest_errors(self, reason):
         _lines = re.findall(r"^[E]\s+.*$", reason, re.MULTILINE)
-        return _lines if _lines > 0 else []
+        return _lines if len(_lines) > 0 else []
 
     def _parse_pytest_error(self, lines):
         # Extract message

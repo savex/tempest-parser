@@ -4,6 +4,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Examples and xmls
+*.xml
+*.html
+
 # Mac's common
 .DS_Store
 

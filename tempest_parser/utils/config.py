@@ -1,4 +1,4 @@
-import ConfigParser
+import configparser
 import os
 
 pkg_dir = os.path.dirname(__file__)
@@ -15,7 +15,7 @@ class ParserConfigFile:
 
         self.section_name = 'ParserConfig'
 
-        self.config = ConfigParser.ConfigParser()
+        self.config = configparser.ConfigParser()
         self.config.read(self.config_file_path)
 
     def get_all_tests_list_filepath(self):

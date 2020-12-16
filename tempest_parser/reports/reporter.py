@@ -6,6 +6,7 @@ import abc
 import os
 import re
 import cgi
+import html
 
 from tempest_parser import const
 
@@ -76,7 +77,7 @@ class _TMPLBase(_Base):
     def __call__(self, results, detailed=False):
         data = self.common_data()
         _ex = []
-        for key, value in results['executions'].iteritems():
+        for key, value in results['executions'].items():
             _ex.append({
                 "name": key,
                 "date": value[0],
@@ -166,9 +167,9 @@ class HTMLErrorsReport(_TMPLBase):
                     elif main_message.__len__() == 0:
                         main_message = _trace_messages.split(':')[0]
 
-                    main_message = cgi.escape(main_message)
-                    _trace_details = cgi.escape(_trace_details)
-                    _trace_messages = cgi.escape(_trace_messages)
+                    main_message = html.escape(main_message)
+                    _trace_details = html.escape(_trace_details)
+                    _trace_messages = html.escape(_trace_messages)
 
                     _dict = {
                         'test_class': test_class,

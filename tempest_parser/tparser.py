@@ -23,14 +23,14 @@ class MyParser(argparse.ArgumentParser):
 
 
 def help_message():
-    print"""
+    print("""
     Please, supply pytest output file as a parameter. \n
-         " ...or previously exported CSV file \n
-         " ...or rally's tool exported JSON file \n
-         " ...or subunit's exported XML file \n
-         " ...or saved subunit output \n
-         " ...or folder full of files with types mentioned.\n
-    """
+          ...or previously exported CSV file \n
+          ...or rally's tool exported JSON file \n
+          ...or subunit's exported XML file \n
+          ...or saved subunit output \n
+          ...or folder full of files with types mentioned.\n
+    """)
 
     return
 

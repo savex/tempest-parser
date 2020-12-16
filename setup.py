@@ -27,12 +27,12 @@ entry_points = {
 
 setup(
     name="TempestParser",
-    version="0.2.56",
+    version="0.2.6",
     author="Alex Savatieiev",
     author_email="a.savex@gmail.com",
     classifiers=[
         "Programming Language :: Python",
-        "Programming Language :: Python :: 2.7"
+        "Programming Language :: Python :: 3.9"
     ],
     keywords="QA, tempest, openstack, html, report",
     entry_points=entry_points,

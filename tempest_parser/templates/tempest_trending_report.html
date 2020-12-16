@@ -226,14 +226,14 @@
         {% endfor %}
 
     </tr>
-        {% for test in tests[test_class] | sort %}
+        {% for test in tests[test_class] | sort(attribute="test_name") %}
     <tr>
         <td>{{ counters.all_count + loop.index0 }}</td>
         <td>
             <div class="test_name">{{ test.test_name }}</div>
             <div class="parameters">{{ test.uuid }} {{ test.test_options }}</div>
         </td>
-        {% if test['results'].has_key('required') %}
+        {% if "required" in test['results'] %}
             {% if test['results']['required']['result'] == 'R' -%}
             <td class="status required">R</td>
             {%- endif %}
@@ -242,7 +242,7 @@
         {% endif %}
     {% for index in range(executions|length) if executions[index]['name'] != 'required' %}
             {% set _name = executions[index]['name'] %}
-            {% if test['results'].has_key(_name) %}
+            {% if _name in test['results'] %}
         <td class="status {{ test['results'][_name]['result'] | lower }}">{{ test['results'][_name]['result'] }}</td>
                 {%  if detailed %}
         <td class="tracemessage">{{ test['results'][_name]['message'] }}<br>{{ test['results'][_name]['trace'] }}</td>
