@@ -33,13 +33,13 @@ Folder also can be used:
 
 ```tparser -c matched.csv folder1```
 
-And finally, here is HTML report
+HTML report
 
-```tparser -r trending.html tempest.xml```
+```tparser -f t_xml -r trending.html tempest.xml```
 
 or
 
-```tparser -r trending.html folder1```
+```tparser -f t_xml -r trending.html folder1```
 
 also, you can add full traceback messages to report by adding -d switch
 
@@ -54,6 +54,20 @@ Please, note that here you must supply `single test run` file
 This report matches FAILs and SKIPs by main 'message' to produce unique errors and skips list. If main message is not there it tries to extract it from trace by matching strings started with 'Details: ' as main message and additional ones with a pair of logical statements:
 - regular expression of r'\s' (no white spaces at string start)
 - string not started with 'Trace'
+
+In order to parse k8s conformance reports use specific xml format
+
+```tparser -f r_xml -r conformance.html conformance.xml```
+
+It happens that conformance and other k8s tests are spread across multiple files.
+They can be combined as a single report. 
+
+```tparser -d -r tests.html -f r_xml --force-single conformance_folder```
+
+Also, there is a possibility to omit specific status in the report. Say, there is a 2k+ SKIPs.
+'--omit-status' option can be uses several times
+
+```tparser -d -r tests.html -f r_xml --force-single --omit-status OK  conformance_folder```
 
 
 ## Imported Formats
