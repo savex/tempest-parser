@@ -15,6 +15,11 @@ pkg_dir = os.path.join(pkg_dir, os.pardir)
 pkg_dir = os.path.normpath(pkg_dir)
 
 
+def line_breaks(text):
+    # replace python linebreaks with html breaks
+    return text.replace("\n", "<br />")
+
+
 @six.add_metaclass(abc.ABCMeta)
 class _Base(object):
     def __init__(self):
@@ -92,6 +97,8 @@ class _TMPLBase(_Base):
         })
         self._extend_data(data)
         self._count_totals(data)
+
+        self.jinja2_env.filters['linebreaks'] = line_breaks
 
         tmpl = self.jinja2_env.get_template(self.tmpl)
         return tmpl.render(data)

@@ -315,7 +315,18 @@ for message: {2}
                 )
             if _index > -1:
                 # this matches one already in the list, copy
-
+                # Save message from existing execution
+                _r = "{}: {}\n".format(
+                    self.tests_list["tests"][_full_class_name][_index][
+                        "results"][execution_name]["result"],
+                    self.tests_list["tests"][_full_class_name][_index][
+                        "results"][execution_name]["message"]
+                )
+                _result["message"] = "{}\n{}: {}\n".format(
+                    _r,
+                    _result["result"],
+                    _result["message"]
+                )
                 self.tests_list["tests"][_full_class_name][_index]["results"][
                     execution_name] = _result
                 pass

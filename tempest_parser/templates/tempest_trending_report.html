@@ -245,7 +245,7 @@
             {% if _name in test['results'] %}
         <td class="status {{ test['results'][_name]['result'] | lower }}">{{ test['results'][_name]['result'] }}</td>
                 {%  if detailed %}
-        <td class="tracemessage">{{ test['results'][_name]['message'] }}<br>{{ test['results'][_name]['trace'] }}</td>
+        <td class="tracemessage">{{ test['results'][_name]['message'] | linebreaks }}<br>{{ test['results'][_name]['trace'] }}</td>
                 {% endif %}
             {% else %}
         <td class="status blank"></td>

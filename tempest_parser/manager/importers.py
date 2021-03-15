@@ -24,7 +24,12 @@ def remove_control_chars(s):
     # control_chars = ''.join(
     #   c for c in all_chars if unicodedata.category(c) == 'Cc'
     # )
-    control_chars = ''.join(map(unichr, range(0, 32) + range(127, 160)))
+    control_chars = ''.join(
+        map(
+            chr,
+            list(range(0, 32)) + list(range(127, 160))
+        )
+    )
     control_char_re = re.compile('[%s]' % re.escape(control_chars))
     return control_char_re.sub('', s)
 
@@ -48,6 +53,31 @@ def get_date_from_source(source):
         "%d/%m/%Y %H:%M GMT",
         time.gmtime(mtime)
     ), time.gmtime(mtime)
+
+
+def k8s_slow_extract(_reason):
+    _tmp = []
+    _m = ""
+    _t = ""
+    _lines = _reason.splitlines()
+    for idx in range(len(_lines)-1):
+        _line = _lines[idx].strip()
+        _next_line = _lines[idx+1].strip()
+        if _line.startswith("<*errors.errorString") and \
+                _next_line.startswith("s: \""):
+            err = _next_line.split('"')[1]
+            err = err.encode('ascii', 'ignore')
+            if err.count(b"\\x00") > 1:
+                err = err.replace(b"\\x00", b"")
+            err = remove_control_chars(err.decode('utf-8'))
+            _tmp.append(err)
+        elif _next_line.startswith("not to have occurred"):
+            _tmp.append(_line.encode('ascii', 'ignore'))
+    if len(_tmp) > 0:
+        _m = "\n".join(_tmp)
+    else:
+        _t = _reason
+    return _m, _t
 
 
 class ImporterBase(object):
@@ -116,19 +146,19 @@ class XMLImporter(ImporterBase):
     def _parse_status(status):
         # XML has one child node for status and text as a reason
         if not len(status):
-            return 'OK', "Test passed"
+            return 'OK', "Test passed", ""
         else:
             _status = ""
             _reason = ""
+            _sysout = ""
             _idx = 0
             # cut system-out
             while len(status) > 0 and _idx < len(status):
                 if status[_idx].tag == 'system-out':
                     _status = "OK"
-                    _reason = "{}:\n{}\n{}".format(
+                    _sysout = "{}:\n{}".format(
                         status[_idx].tag,
-                        status[_idx].text,
-                        _reason
+                        status[_idx].text
                     )
                     _ = status.pop(_idx)
                 else:
@@ -144,13 +174,23 @@ class XMLImporter(ImporterBase):
                     _s.text,
                     _reason
                 )
-            return _status, _reason
+            return _status, _reason, _sysout
 
     def _is_k8s_error(self, reason):
-        _errs = reason.count('errors.errorString')
+        _e1 = reason.count('errors.errorString')
+        _e2 = reason.count('errors.StatusError')
         _k8s = reason.count('k8s.io')
-
-        return True if _errs > 0 and _k8s > 0 else False
+        _m = re.findall(
+            r"^.{0,3}\s+\d{1,2}\s\d{1,2}:\d{1,2}:\d{1,2}\.\d{0,3}:.*$",
+            reason,
+            re.MULTILINE
+        )
+        if _e1 or _e2 or _k8s:
+            return True
+        elif _m:
+            return True
+        else:
+            return False
 
     def _detect_pytest_errors(self, reason):
         _lines = re.findall(r"^[E]\s+.*$", reason, re.MULTILINE)
@@ -220,7 +260,9 @@ class XMLImporter(ImporterBase):
                 except KeyError:
                     pass
 
-                _status, _reason = self._parse_status(list(_test_node))
+                _status, _reason, _sysout = self._parse_status(
+                    list(_test_node)
+                )
                 # _options = ''
                 _message = ""
                 _trace = ""
@@ -246,26 +288,26 @@ class XMLImporter(ImporterBase):
                         _trace = _tmp
                     elif self._is_k8s_error(_reason):
                         # This is a k8s-conformance error
-                        # Parse the error message
-                        _tmp = []
-                        _lines = _reason.splitlines()
-                        for idx in range(len(_lines)-1):
-                            _line = _lines[idx].strip()
-                            _next_line = _lines[idx+1].strip()
-                            if _line.startswith("<*errors.errorString") and \
-                                    _next_line.startswith("s: \""):
-                                err = _next_line.split('"')[1]
-                                err = err.encode('ascii', 'ignore')
-                                if err.count("\\x00") > 1:
-                                    err = err.replace("\\x00", "")
-                                err = remove_control_chars(err)
-                                _tmp.append(err)
-                            elif _next_line.startswith("not to have occurred"):
-                                _tmp.append(_line.encode('ascii', 'ignore'))
-                        if len(_tmp) > 0:
-                            _message = "\n".join(_tmp)
+                        # Try to extract with regex
+
+                        # This is not good, error messages can be multilined
+                        # _errs = re.findall(
+                        #     r"^.{0,3}\s+\d{1,2}\s\d{1,2}:\d{1,2}:\d{1,2}\.\d{0,3}:.*$",
+                        #     _reason,
+                        #     re.MULTILINE
+                        # )
+
+                        # All between "<digit>\n" and "\n/go"
+                        _errs = re.findall(
+                            "(?s)(?<=\d\n)(.*?)(?=\n\/go)",
+                            _reason,
+                            re.MULTILINE
+                        )
+                        if not _errs:
+                            # Parse the error message line by line
+                            _message, _trace = k8s_slow_extract(_reason)
                         else:
-                            _trace = _reason
+                            _message = "\n".join(_errs)
                     elif _pytest_lines:
                         # This is a pytest error
                         _message, _trace = self._parse_pytest_error(
