@@ -123,7 +123,14 @@ class _TMPLBase(_Base):
                 const.STATUS_ADDED: 'Added'}}
 
     def _extend_data(self, data):
-        pass
+        # Escape html symbols in messages
+        for item in data['executions']:
+            ex_name = item['name']
+            for test_class in data['tests']:
+                for test in data['tests'][test_class]:
+
+                    _message = html.escape(test['results'][ex_name]['message'])
+                    test['results'][ex_name]['message'] = _message
 
 
 # Trending report
@@ -153,8 +160,10 @@ class HTMLErrorsReport(_TMPLBase):
                         main_message = ""
                     else:
                         _trace = test['results'][ex_name]['trace'].rstrip()
+                    # cut out unneeded text if present
+                    _tindex = _trace.find("failure:")
+                    _trace = _trace[_tindex+9:] if _tindex > 0 else _trace
 
-                    _trace = _trace[_trace.find("failure:")+9:]
                     _trace_details = ""
                     _trace_additional = []
                     for line in _trace.split('\n'):
@@ -173,6 +182,7 @@ class HTMLErrorsReport(_TMPLBase):
                             main_message = "Fail message can't be extracted"
                     elif main_message.__len__() == 0:
                         main_message = _trace_messages.split(':')[0]
+
 
                     main_message = html.escape(main_message)
                     _trace_details = html.escape(_trace_details)

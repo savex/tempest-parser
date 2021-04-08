@@ -282,7 +282,8 @@ class XMLImporter(ImporterBase):
                             _line = _lines[idx].strip()
                             _next_line = _lines[idx+1].strip()
                             if _line.startswith("Traceback") and \
-                                    _next_line.startswith('File'):
+                                    (_next_line.startswith('File') or \
+                                    _next_line.find('Traceback (') >= 0):
                                 _tmp = "\n".join(_lines[idx:])
                                 break
                         _trace = _tmp

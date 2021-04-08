@@ -315,21 +315,26 @@ for message: {2}
                 )
             if _index > -1:
                 # this matches one already in the list, copy
-                # Save message from existing execution
-                _r = "{}: {}\n".format(
-                    self.tests_list["tests"][_full_class_name][_index][
-                        "results"][execution_name]["result"],
-                    self.tests_list["tests"][_full_class_name][_index][
-                        "results"][execution_name]["message"]
-                )
-                _result["message"] = "{}\n{}: {}\n".format(
-                    _r,
-                    _result["result"],
-                    _result["message"]
-                )
+                _rs = self.tests_list["tests"][_full_class_name][_index][
+                        "results"]
+                # if the execution is current, then
+                # save message from existing execution
+                if execution_name in _rs:
+                    # build old message
+                    _r = "{}: {}\n".format(
+                        self.tests_list["tests"][_full_class_name][_index][
+                            "results"][execution_name]["result"],
+                        self.tests_list["tests"][_full_class_name][_index][
+                            "results"][execution_name]["message"]
+                    )
+                    # cascade messages: old, new
+                    _result["message"] = "{}\n{}: {}\n".format(
+                        _r,
+                        _result["result"],
+                        _result["message"]
+                    )
                 self.tests_list["tests"][_full_class_name][_index]["results"][
                     execution_name] = _result
-                pass
             else:
                 # the test is not there, add it
                 _test_item = deepcopy(structs.template_test_item)
