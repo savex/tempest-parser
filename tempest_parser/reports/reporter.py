@@ -128,9 +128,9 @@ class _TMPLBase(_Base):
             ex_name = item['name']
             for test_class in data['tests']:
                 for test in data['tests'][test_class]:
-
-                    _message = html.escape(test['results'][ex_name]['message'])
-                    test['results'][ex_name]['message'] = _message
+                    if ex_name in test['results']:
+                        _message = html.escape(test['results'][ex_name]['message'])
+                        test['results'][ex_name]['message'] = _message
 
 
 # Trending report
