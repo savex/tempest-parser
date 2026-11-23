@@ -3,7 +3,7 @@
 Bring tempest-parser in line with the scribe repository: GitHub workflows, a tagged test suite,
 tag-based versioning, a README status line and project rules.
 
-Status: **phase 1 done**, phases 2–5 not started. Open decisions are listed at the end.
+Status: **phases 1–2 done**, phases 3–5 not started. Open decisions are listed at the end.
 
 ## 1. Review findings
 
@@ -73,6 +73,10 @@ Bugs and risks found by reading the code (not yet confirmed by running it):
 
 - Add `scripts/version.sh`, adapted from scribe's, so it reads and writes the version in `setup.py`.
 - Pick one starting version and make `setup.py`, `changelog.md` and the git tag agree.
+- Done. `scripts/version.sh` has scribe's commands, with `setup` in place of `cargo`, skips tags that
+  aren't SemVer (`v0.1`, `v0.2.4RC`) and runs on macOS's bash 3.2. `v0.2.81` was back-filled on
+  `29b1f05`, the commit published to PyPI as 0.2.81, and `changelog.md` got a 0.2.81 section. The next
+  release is 0.3.0, made by the Bump version workflow in phase 3.
 
 ### Phase 3: workflows (`.github/workflows/`, on `master`)
 
@@ -104,5 +108,5 @@ Bugs and risks found by reading the code (not yet confirmed by running it):
    requests and pushes to `master`, since they'll take well under a minute.
 2. **PyPI:** the README says `pip install tempestparser`. Should releases also upload to PyPI?
    That needs a trusted publisher set up on PyPI.
-3. **Starting version:** tag the current code as `v0.2.81`, or jump to `v0.3.0` once the CI is in.
+3. ~~**Starting version**~~: decided, `v0.2.81` back-filled; the next release is 0.3.0.
 4. **Python versions:** suggested 3.10–3.13, dropping 3.9.

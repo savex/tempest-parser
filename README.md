@@ -156,6 +156,10 @@ python3 -m venv .venv
 Tests live in `tests/smoke`, `tests/functional` and `tests/integration`; the folder is the test's tag
 (`pytest -m smoke` runs one tag). Sample inputs are in `tests/data`.
 
+Versions come from `v*` git tags. `scripts/version.sh versions` shows the latest tag, the `setup.py`
+version and the newest `changelog.md` release, and whether they agree; see the script's header for the
+other commands. Don't edit the version in `setup.py` by hand.
+
 ## Credits
 
 Thanks to Dmitry Bogun, Alexey Diyan and Dmitriy Zapeka.

@@ -2,14 +2,19 @@
 
 All notable changes to tempest-parser, newest first. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+Versions come from `v*` git tags; `scripts/version.sh` keeps `setup.py` and this file in line with them.
+
 Every commit that changes behaviour, configuration, interfaces, tooling or documents adds a line under
-**Unreleased**.
+**Unreleased**. On release, **Bump version** turns that section into the new version.
 
 Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Security**.
 
 ## [Unreleased]
 
 ### Added
+- `scripts/version.sh`: tag-based versioning helper (current, next and highest version, SemVer compare,
+  writes `setup.py` and releases the changelog's Unreleased section), with tests. Tag `v0.2.81` back-filled
+  on the commit that was published to PyPI as 0.2.81.
 - Test suite in `tests/` with one tag per test from its folder: `smoke` (the `tparser` command end to end),
   `functional` (importers, log parser, test manager, reports, config) and `integration` (the built wheel,
   installed and run). Made-up sample inputs for every format in `tests/data/`.
@@ -33,3 +38,11 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
   report got HTML entities.
 - Double quotes in failure and skip messages broke the CSV report.
 - `import cgi` in the reporter, which fails on Python 3.13.
+
+## [0.2.81] - 2021-04-27
+
+### Fixed
+- Escaping in the trending report.
+
+[Unreleased]: https://github.com/savex/tempest-parser/compare/v0.2.81...HEAD
+[0.2.81]: https://github.com/savex/tempest-parser/releases/tag/v0.2.81
