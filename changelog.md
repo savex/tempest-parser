@@ -63,6 +63,8 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
 ### Fixed
 - The wheel no longer installs a top-level `tests` package (the 0.3.0 wheel on the GitHub release does).
 - `--force-single` also works for `.xml` files read as tempest XML (it applied only to `-f r_xml`).
+- **Release** checksums use `sha256sum -- *` (shellcheck SC2035), which failed the actionlint step in CI.
+  The `lint` group installs `shellcheck-py`, so `uv run actionlint` checks workflow scripts locally too.
 - `markupsafe`, imported by the reports, is now a declared dependency (it came only through Jinja2), and
   every dependency has a minimum version. Unused test tools (`mock`, `pytest-html`, `coverage`,
   `pytest-cov`) are no longer installed.

@@ -132,7 +132,7 @@ jobs:
 
       - name: Checksums
         working-directory: dist
-        run: sha256sum * > SHA256SUMS && cat SHA256SUMS
+        run: sha256sum -- * > SHA256SUMS && cat SHA256SUMS
 
       - name: Create or update release
         run: |

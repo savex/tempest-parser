@@ -52,7 +52,8 @@ test = [
     "setuptools>=77",
     "setuptools-scm>=8",
 ]
-lint = ["ruff>=0.12", "actionlint-py>=1.7"]
+# shellcheck-py: actionlint runs shellcheck on workflow scripts when it is on PATH, as on GitHub
+lint = ["ruff>=0.12", "actionlint-py>=1.7", "shellcheck-py>=0.10"]
 release = ["build>=1.2", "twine>=6"]
 dev = [{ include-group = "test" }, { include-group = "lint" }, { include-group = "release" }]
 
