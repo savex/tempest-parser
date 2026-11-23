@@ -4,7 +4,8 @@ import os
 from setuptools import setup, find_packages
 
 here = os.path.abspath(os.path.dirname(__file__))
-README = open(os.path.join(here, 'README')).read()
+with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
+    README = f.read()
 
 DATA = [
     ('etc', [f for f in glob.glob(os.path.join('etc', '*'))]),
@@ -49,5 +50,6 @@ setup(
     description="Tempest Parser tool used to generate trending reports "
                 "out of various result formats: pytest's CLI, Rally's XML,"
                 "JSON, jUnit XML (with v4 schema support), CSV (two types).",
-    long_description=README
+    long_description=README,
+    long_description_content_type="text/markdown"
 )

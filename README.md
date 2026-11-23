@@ -1,90 +1,148 @@
+# tempest-parser
+
+Imports test results from many runs, matches the tests by class, name and options, and builds HTML and CSV
+reports to track their statuses over time.
+
 ## Foreword
 
-When you running tempest, you probably want to review result in a human manner.
+When you run tempest, you probably want to review the results in a human manner.
 
-You running it once again... and again... and a couple times more the next day... you end up with 20+ files in '.testrepository' folder. Start digging how specific tempest test was executed yesterday, how changed result is today. 'grep', 'less'... Brain goes hot.
-...
-Honestly, Subunit's CLI output is good enough for reading the word PASSED at the end...and the summary.
+You run it once again... and again... and a couple more times the next day... and you end up with 20+ files
+in the `.testrepository` folder. You start digging into how a specific tempest test ran yesterday and how its
+result changed today. `grep`, `less`... Brain goes hot.
+
+Honestly, Subunit's CLI output is good enough for reading the word PASSED at the end... and the summary.
 
 So, there is a need to:
-- import tempest tests results
-- match tests by Class, test_name and options
-- produce some sort of a report to work with test statuses and track them over time
-- Have error messages be added to the report
-
+- import tempest test results
+- match tests by class, test name and options
+- produce a report to work with test statuses and track them over time
+- have error messages added to the report
 
 ## Installing
 
-Latest published version can be obtained using pip:
+The latest published version can be installed with pip:
 
-```pip install tempestparser```
+```bash
+pip install tempestparser
+```
 
-or using setup.py from cloned git repo
+or from a cloned git repo:
 
-```python setup.py install```
+```bash
+pip install .
+```
 
 ## Usage
 
-This util is originally intended for 'import-match-export' flow to produce CSV with tests matched by Class and name against the list of tests that was originally executed.
+The tool was originally made for an "import, match, export" flow: produce a CSV with tests matched by class
+and name against the list of tests that was originally executed.
 
-```tparser -c matched.csv tempest.log```
+```bash
+tparser -c matched.csv tempest.log
+```
 
-Folder also can be used:
+A folder can be used too:
 
-```tparser -c matched.csv folder1```
+```bash
+tparser -c matched.csv folder1
+```
 
-HTML report
+HTML trending report:
 
-```tparser -f t_xml -r trending.html tempest.xml```
+```bash
+tparser -f t_xml -r trending.html tempest.xml
+```
 
 or
 
-```tparser -f t_xml -r trending.html folder1```
+```bash
+tparser -f t_xml -r trending.html folder1
+```
 
-also, you can add full traceback messages to report by adding -d switch
+Add full traceback messages to the report with `-d`:
 
-```tparser -r trending.html -d folder1```
+```bash
+tparser -f t_xml -r trending.html -d folder1
+```
 
-In order to eliminate some time waste when scrolling report back and forth,
-you can produce unique errors report (see below).
-Please, note that here you must supply `single test run` file
+To avoid scrolling the report back and forth, you can produce a unique errors report (see below).
+Note that it needs a single test run file:
 
-```tparser -e errors.html single_run.json```
+```bash
+tparser -e errors.html single_run.json
+```
 
-This report matches FAILs and SKIPs by main 'message' to produce unique errors and skips list. If main message is not there it tries to extract it from trace by matching strings started with 'Details: ' as main message and additional ones with a pair of logical statements:
-- regular expression of r'\s' (no white spaces at string start)
-- string not started with 'Trace'
+This report groups FAILs and SKIPs by their main message to produce lists of unique errors and skips.
+If there is no main message, it is taken from the trace: the line starting with `Details: ` becomes the main
+message, and additional lines are those that:
+- don't start with whitespace (regular expression `\s`)
+- don't start with `Trace`
 
-In order to parse k8s conformance reports use specific xml format
+To parse k8s conformance reports, use the raw XML format:
 
-```tparser -f r_xml -r conformance.html conformance.xml```
+```bash
+tparser -f r_xml -r conformance.html conformance.xml
+```
 
-It happens that conformance and other k8s tests are spread across multiple files.
-They can be combined as a single report. 
+Conformance and other k8s tests are often spread across several files. They can be combined into a single
+report:
 
-```tparser -d -r tests.html -f r_xml --force-single conformance_folder```
+```bash
+tparser -d -r tests.html -f r_xml --force-single conformance_folder
+```
 
-Also, there is a possibility to omit specific status in the report. Say, there is a 2k+ SKIPs.
-'--omit-status' option can be uses several times
+You can also leave specific statuses out of the report, say 2k+ SKIPs. `--omit-status` can be used several
+times:
 
-```tparser -d -r tests.html -f r_xml --force-single --omit-status OK  conformance_folder```
+```bash
+tparser -d -r tests.html -f r_xml --force-single --omit-status OK conformance_folder
+```
 
+Results can be piped in as a subunit stream:
 
-## Imported Formats
+```bash
+stestr last --subunit | tparser -r trending.html
+```
+
+### Options
+
+| Option | Meaning |
+|---|---|
+| `-f, --input-format` | `log`, `t_xml`, `r_xml`, `json`, `csv` or `subunit`. Detected from the extension when omitted; stdin defaults to `subunit`. |
+| `-r, --html-trending-filename` | Write the HTML trending report. |
+| `-e, --html-errors-filename` | Write the HTML unique errors report (single file input only). |
+| `-c, --csv-file` | Write the CSV report. |
+| `-d, --detailed` | Include messages and tracebacks. |
+| `-i, --include-required` | Add the baseline test list from the config as the first column. |
+| `--omit-status` | Leave tests with this status (`OK`, `FAIL`, `ERROR`, `SKIP`, ...) out. Repeatable. |
+| `--force-single` | Treat all files in a folder as a single run. |
+| `--config-file` | Use this config file (absolute path) instead of the packaged one. |
+
+## Imported formats
 
 ### .log files
-Bare tempest output captured with either redirection or by copying XX numbered files from `.testrepository` folder.
-LOG parser anchors against lines started with specific strings. Make sure to remove leading environment variables and worker report stuff.
+Bare tempest output, captured with a redirect or by copying the numbered files from the `.testrepository`
+folder. The LOG parser anchors on lines that start with specific strings, so remove leading environment
+variables and worker report lines.
 
 ### .xml files
-Files exported from subunit in XML format.
+jUnit XML files exported from subunit (`t_xml`, the default for `.xml`), or raw jUnit XML from k8s
+conformance and pytest (`r_xml`, test names used as is).
 
 ### .json files
-[Rally](https://github.com/openstack/rally) tool export: 
+[Rally](https://github.com/openstack/rally) tool export:
 
-```rally verify results --json --output-file result1.json```
+```bash
+rally verify results --json --output-file result1.json
+```
+
+### .csv files
+CSV files exported by tparser itself, or xunit CSV files.
+
+### .subunit files
+Subunit v2 streams saved to a file.
 
 ## Credits
 
 Thanks to Dmitry Bogun, Alexey Diyan and Dmitriy Zapeka.
-

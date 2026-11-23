@@ -1,0 +1,116 @@
+# tempest-parser: specification
+
+Describes how the tool behaves today (version `0.2.81` in `setup.py`). Known deviations from the intended
+behaviour are listed in section 8; the fixes are planned in [plan.md](plan.md).
+
+## 1. Purpose
+
+`tparser` imports test results from one or more runs (OpenStack Tempest, pytest, Rally, k8s conformance,
+subunit), matches the tests by class, name and options across runs, and writes reports to follow results over
+time:
+
+- **Trending report** (HTML): every test against every run.
+- **Errors report** (HTML): unique failure and skip messages from a single run.
+- **CSV**: the same matrix as the trending report.
+
+## 2. Command line
+
+```
+tparser [options] [inputfile]
+```
+
+`inputfile` is a file, a folder or, when omitted, stdin.
+
+| Option | Meaning |
+|---|---|
+| `-f, --input-format FMT` | Input format (section 3). Detected from the file extension when not set; stdin defaults to `subunit`. |
+| `-r, --html-trending-filename F` | Write the trending report to `F`. |
+| `-e, --html-errors-filename F` | Write the errors report to `F`. Needs a single file as input, not a folder. |
+| `-c, --csv-file F` | Write the CSV report to `F`. |
+| `-d, --detailed` | Add a messages/traceback column. Default from config `default_detailed`. |
+| `-i, --include-required` | Preload the baseline test list (config `default_test_list`) as a `required` column. Ignored with `-e`. |
+| `--omit-status S` | Leave tests with status `S` out of the reports. Can be repeated. |
+| `--force-single` | Treat every file in a folder as one run, named after the folder. |
+| `--config-file F` | Use config file `F` (absolute path) instead of the packaged one. |
+
+Exit codes: `0` on success; `1` for a missing path, an unsupported extension, a folder given with `-e`, or an
+unexpected pipe; `2` for invalid arguments (help is printed).
+
+## 3. Input formats
+
+| `-f` value | Extension | Source | Importer |
+|---|---|---|---|
+| `log` | `.log` | Tempest/testr console output (lines starting with known markers; strip leading env vars and worker prefixes) | `TempestLogParser` |
+| `t_xml` | `.xml` | subunit/Tempest jUnit XML (v4 schema supported); names split into class, test, UUID and options | `XMLImporter` |
+| `r_xml` | — | Raw jUnit XML (k8s conformance, pytest); names used as is | `XMLImporter(use_raw_names=True)` |
+| `json` | `.json` | Rally JSON export | `JSONImporter` |
+| `csv` | `.csv` | Own CSV export (first column `Class`) or xunit CSV (rows starting with `tempest.`) | `CSVImporter` |
+| `subunit` | `.subunit` | Subunit v2 stream | `SubunitImporter` |
+
+- In a folder, only files whose extension matches the given format are read; other files are skipped with a
+  message.
+- Each file is one run. The run is named after the file, and its date is the file's modification time (GMT).
+- XML failures are recognised as k8s errors (Go error types, `k8s.io`, klog timestamps) or pytest errors
+  (`E ` lines), and the main message is taken out of the traceback.
+
+## 4. Test identity and statuses
+
+A test is identified by **class name**, **test name**, **UUID** (`[id-...]`) and **options** (tags in
+brackets). With raw names (`r_xml`) the full name is used as is.
+
+| Status | Meaning |
+|---|---|
+| `OK` | Passed |
+| `FAIL` | Failed |
+| `ERROR` | Error (`error`, `system-err` in XML) |
+| `SKIP` | Skipped |
+| `X_FAIL` / `X_OK` | Expected failure / unexpected success (Rally, CSV) |
+| `R` | Listed in the baseline (`required`) but not run |
+
+Each result also records the time, the slowest-test flag, a setup-failure flag, the message and the trace.
+
+## 5. Data model
+
+`TestsManager` holds one structure (`manager/structs.py`):
+
+- `tests`: `{class_name: [test_item]}`; each test item has `test_name`, `uuid`, `test_options`, `tags` and
+  `results: {execution_name: result}`.
+- `executions`: `{execution_name: (date, unixtime, summary, ...)}`; the summary has total, failed, outcome and
+  time.
+
+The baseline run is the execution named `required`.
+
+## 6. Reports
+
+- **Trending** (`templates/tempest_trending_report.html`): classes and tests as rows, runs as columns ordered
+  by date, with per-class totals and times. Messages are HTML-escaped. `-d` adds the traces.
+- **Errors** (`templates/tempest_errors_report.html`): `FAIL` and `SKIP` results from one run, grouped by main
+  message. The main message is the result message; if there is none, it is the `Details:` line of the
+  trace; failing that, the trace lines that don't start with whitespace or `Trace`.
+- **CSV**: a header row of run dates (plus file names with `-d`), then a `Class,<name>` row for each class
+  followed by one row per test with a result per run.
+
+## 7. Configuration
+
+INI file, section `[ParserConfig]`, packaged as `tempest_parser/etc/tempest-parser.conf`:
+
+| Key | Default | Meaning |
+|---|---|---|
+| `default_test_list` | `res/all_tests_tag_18.list` | Baseline test list for `-i`; relative paths are resolved against the package folder. |
+| `default_detailed` | `false` | Default for `-d`. |
+
+The packaged resources are `res/*.list` (baseline lists) and `templates/*.html` (Jinja2 templates).
+
+## 8. Known deviations
+
+1. `csv` input crashes: `CSVImporter` doesn't accept the `status_filters` argument it is given.
+2. `--omit-status` has no effect for `log` and `subunit` input.
+3. A folder given without `-f` crashes (`FORMAT_LABELS[None]`) before the format is checked.
+4. An unsupported `-f` value prints an error but doesn't stop the run.
+5. Formats are compared with `is` instead of `==`.
+
+## 9. Requirements
+
+- Python 3.10 or newer (to be confirmed; `setup.py` still lists 3.9).
+- Runtime dependencies: `jinja2`, `six`, `python-subunit`, `testtools`.
+- Entry point: `tparser = tempest_parser.tparser:tempest_cli_parser_main`.

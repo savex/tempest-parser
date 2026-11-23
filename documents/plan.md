@@ -25,8 +25,8 @@ Bugs and risks found by reading the code (not yet confirmed by running it):
 6. **Packaging leftovers.**
    - The `data_files` globs look for `etc/*`, `templates/*` and `res/*` at the repo root, which
      don't exist, so they're empty.
-   - There are two READMEs: `README` feeds `long_description`, while `MANIFEST.in` lists only
-     `README.md`.
+   - ~~There are two READMEs~~: done, `README` was merged into `README.md`, which now feeds
+     `long_description`.
    - The classifiers say Python 3.9 only, and 3.9 is end-of-life.
 
 ## 2. What scribe has, and what carries over
@@ -84,7 +84,6 @@ Bugs and risks found by reading the code (not yet confirmed by running it):
 
 - Add the badge row (Tests, Release, Version tracking, Python versions, license, and PyPI if you
   publish there), a "Status:" note and a "Project status" table to `README.md`.
-- Merge `README` into `README.md` and point `long_description` at it.
 - Fix the classifiers and the `data_files` leftovers.
 
 ### Phase 5: project rules
