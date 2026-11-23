@@ -11,6 +11,8 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-23
+
 ### Added
 - GitHub workflows: **Tests** (lint, package and version checks, smoke and functional tests on
   ubuntu/macOS with Python 3.10–3.13, integration against the built wheel), **Version tracking**,
@@ -49,5 +51,6 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
 ### Fixed
 - Escaping in the trending report.
 
-[Unreleased]: https://github.com/savex/tempest-parser/compare/v0.2.81...HEAD
+[Unreleased]: https://github.com/savex/tempest-parser/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/savex/tempest-parser/releases/tag/v0.3.0
 [0.2.81]: https://github.com/savex/tempest-parser/releases/tag/v0.2.81
