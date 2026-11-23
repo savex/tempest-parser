@@ -19,6 +19,7 @@
 #   scripts/version.sh set <version>      write <version> into setup.py
 #   scripts/version.sh changelog <version> [date]
 #                                         turn the Unreleased section of changelog.md into <version>
+#   scripts/version.sh notes <version>    print the changelog.md section of <version> (release notes)
 #   scripts/version.sh check [tag]        setup.py must match [tag], or not be older than the latest tag
 #
 # Works with the bash 3.2 that ships with macOS.
@@ -238,6 +239,19 @@ changelog_release() {
   echo "$version"
 }
 
+# Body of the <version> section, without its heading; exit 1 if there is none.
+notes() {
+  local version=$1
+  validate "$version"
+  [[ -f $CHANGELOG ]] || die "no $CHANGELOG"
+  grep -q "^## \[$version\]" "$CHANGELOG" || die "changelog.md has no $version section"
+  awk -v v="$version" '
+    index($0, "## [" v "]") == 1 { on = 1; next }
+    on && (/^## \[/ || /^\[[^]]+\]: /) { exit }
+    on { print }
+  ' "$CHANGELOG" | sed -e '/./,$!d' | awk '{ lines[NR] = $0 } END { n = NR; while (n > 0 && lines[n] == "") n--; for (i = 1; i <= n; i++) print lines[i] }'
+}
+
 check() {
   local setup tag=${1:-}
   setup=$(setup_version)
@@ -273,6 +287,7 @@ case $cmd in
   validate)          validate "${1:?version required}"; echo "ok" ;;
   set)               set_version "${1:?version required}" ;;
   changelog)         changelog_release "${1:?version required}" "${2:-}" ;;
+  notes)             notes "${1:?version required}" ;;
   check)             check "$@" ;;
   *)                 die "unknown command '$cmd' (see header of $0)" ;;
 esac

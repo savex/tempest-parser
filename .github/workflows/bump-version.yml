@@ -1,0 +1,122 @@
+# Manual: picks the next version after the highest one known (latest tag, setup.py, changelog.md),
+# writes it to setup.py, turns the changelog's Unreleased section into it, commits "Release vX.Y.Z"
+# to master, tags it and starts the Release workflow. Warns when the three versions disagree and
+# refuses a version that isn't newer than all of them.
+name: Bump version
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Part to bump (ignored when 'version' is set)"
+        type: choice
+        options: [patch, minor, major]
+        default: minor
+      prerelease:
+        description: "Optional pre-release label, e.g. rc.1 or beta.2"
+        type: string
+        required: false
+      version:
+        description: "Explicit version instead of a bump, e.g. 1.0.0 (must be newer than every known version)"
+        type: string
+        required: false
+      dry_run:
+        description: "Only show what would happen"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: bump-version
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Fetch every tag
+        run: git fetch --tags --force origin
+
+      - name: Compare tag, setup.py and changelog versions
+        run: |
+          report=$(scripts/version.sh versions) && synced=1 || synced=""
+          echo "$report"
+          {
+            echo "### Versions before the bump"
+            echo '```'
+            echo "$report"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [[ -z $synced ]]; then
+            while IFS= read -r line; do
+              [[ $line == "out of sync:"* ]] && echo "::warning title=Versions out of sync::${line#out of sync: }"
+            done <<< "$report"
+            echo "The next version is worked out from the highest of them: $(scripts/version.sh highest)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Work out the version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_BUMP: ${{ inputs.bump }}
+          INPUT_PRE: ${{ inputs.prerelease }}
+        run: |
+          if [[ -n "$INPUT_VERSION" ]]; then
+            version=${INPUT_VERSION#v}
+          else
+            version=$(scripts/version.sh next "$INPUT_BUMP" "$INPUT_PRE") \
+              || { echo "::error::cannot work out the next version"; exit 1; }
+          fi
+          scripts/version.sh newer "$version" || { echo "::error::$version is not newer than $(scripts/version.sh highest) or is already tagged"; exit 1; }
+          git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null \
+            && { echo "::error::tag v$version already exists on origin"; exit 1; }
+          echo "Highest known: $(scripts/version.sh highest) -> new version: $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Update setup.py and changelog.md
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          scripts/version.sh set "$VERSION"
+          scripts/version.sh changelog "$VERSION"
+          scripts/version.sh notes "$VERSION" > /dev/null \
+            || { echo "::error::changelog.md has no entries for $VERSION"; exit 1; }
+          pip install -q build
+          python -m build --sdist --outdir dist . > /dev/null
+          scripts/version.sh versions || true
+          git diff
+
+      - name: Commit and tag
+        if: ${{ !inputs.dry_run }}
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet; then
+            git commit -am "Release v$VERSION"
+          fi
+          git tag -a "v$VERSION" -m "tempest-parser $VERSION"
+          git push --atomic origin HEAD:master "refs/tags/v$VERSION"
+
+      - name: Start release
+        if: ${{ !inputs.dry_run }}
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh workflow run release.yml --ref "v$VERSION" -f tag="v$VERSION"
+          echo "Tagged v$VERSION and started the Release workflow." >> "$GITHUB_STEP_SUMMARY"

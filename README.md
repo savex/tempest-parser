@@ -160,6 +160,16 @@ Versions come from `v*` git tags. `scripts/version.sh versions` shows the latest
 version and the newest `changelog.md` release, and whether they agree; see the script's header for the
 other commands. Don't edit the version in `setup.py` by hand.
 
+CI (`.github/workflows`):
+- **Tests** runs on pull requests and pushes to `master`: ruff, package build and `twine check`,
+  version and test-tag checks, then the tests on ubuntu and macOS with Python 3.10–3.13.
+- **Version tracking** reports the version on every push to `master`.
+- **Bump version** (manual) picks the next version, updates `setup.py` and `changelog.md`, commits
+  `Release vX.Y.Z`, tags it and starts **Release**.
+- **Release** builds the sdist and wheel, smoke-tests them and publishes a GitHub release with the
+  changelog section as notes. PyPI upload runs only when the repository variable `PYPI_PUBLISH` is
+  `true`.
+
 ## Credits
 
 Thanks to Dmitry Bogun, Alexey Diyan and Dmitriy Zapeka.

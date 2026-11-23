@@ -3,7 +3,7 @@
 Bring tempest-parser in line with the scribe repository: GitHub workflows, a tagged test suite,
 tag-based versioning, a README status line and project rules.
 
-Status: **phases 1–2 done**, phases 3–5 not started. Open decisions are listed at the end.
+Status: **phases 1–3 done**, phases 4–5 not started. Open decisions are listed at the end.
 
 ## 1. Review findings
 
@@ -89,6 +89,11 @@ Bugs and risks found by reading the code (not yet confirmed by running it):
 - `release.yml`: on a tag push. It checks the tag, runs the tests, builds the sdist and wheel,
   generates checksums and publishes a GitHub Release. Uploading to PyPI with trusted publishing
   is optional.
+- Done. Tests run on pull requests, pushes to `master` and by hand, on ubuntu and macOS with Python
+  3.10–3.13. Release notes come from the changelog (`scripts/version.sh notes`); the release also
+  installs the wheel into a clean venv and runs `tparser` on a sample. The PyPI upload job is off
+  until the repository variable `PYPI_PUBLISH` is `true` and PyPI trusts the workflow (environment
+  `pypi`). All workflows pass actionlint; their shell steps were run locally, not on GitHub yet.
 
 ### Phase 4: status line and docs
 

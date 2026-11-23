@@ -1,0 +1,160 @@
+# Automatic: builds and publishes a GitHub Release for every pushed version tag.
+# Also dispatched by "Bump version" (pushes made with GITHUB_TOKEN don't trigger tag events),
+# and can be re-run by hand for an existing tag.
+# Uploading to PyPI is off until the repository variable PYPI_PUBLISH is "true" and PyPI has a
+# trusted publisher for this repository, workflow release.yml and environment "pypi".
+name: Release
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to release, e.g. v0.3.0"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  verify:
+    name: Verify tag
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TAG }}
+          fetch-depth: 0
+
+      - name: Check tag, setup.py and branch
+        id: version
+        run: |
+          git rev-parse -q --verify "refs/tags/$TAG" >/dev/null || { echo "::error::tag $TAG not found"; exit 1; }
+          version=${TAG#v}
+          scripts/version.sh validate "$version"
+          scripts/version.sh check "$TAG"
+          git fetch --quiet origin master
+          git merge-base --is-ancestor "$TAG^{commit}" origin/master \
+            || { echo "::error::$TAG is not on master"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [[ $version == *-* ]]; then echo "prerelease=true"; else echo "prerelease=false"; fi >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: "*requirements.txt"
+
+      - name: Tests
+        run: |
+          pip install -r requirements.txt -r test-requirements.txt -e .
+          pytest
+
+  build:
+    name: Build and smoke-test the package
+    needs: verify
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.verify.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Build
+        run: |
+          pip install build twine
+          python -m build --outdir dist .
+          twine check --strict dist/*
+
+      - name: Smoke test (clean venv)
+        run: |
+          python -m venv /tmp/venv
+          /tmp/venv/bin/pip install dist/*.whl
+          got=$(/tmp/venv/bin/python -c "import importlib.metadata as m; print(m.version('TempestParser'))")
+          [[ "$got" == "$VERSION" ]] || { echo "::error::package reports '$got', expected '$VERSION'"; exit 1; }
+          cd /tmp
+          /tmp/venv/bin/tparser --help > /dev/null
+          /tmp/venv/bin/tparser -i -d -r report.html -c report.csv "$GITHUB_WORKSPACE/tests/data/tempest.xml"
+          /tmp/venv/bin/tparser -e errors.html "$GITHUB_WORKSPACE/tests/data/tempest.xml"
+          grep -q test_create_server report.html
+          grep -q AssertionError errors.html
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: dist
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub release
+    needs: [verify, build]
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      VERSION: ${{ needs.verify.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: dist
+          path: dist
+
+      - name: Checksums
+        working-directory: dist
+        run: sha256sum * > SHA256SUMS && cat SHA256SUMS
+
+      - name: Create or update release
+        run: |
+          flags=()
+          [[ "${{ needs.verify.outputs.prerelease }}" == "true" ]] && flags+=(--prerelease)
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber
+          else
+            if scripts/version.sh notes "$VERSION" > notes.md; then
+              flags+=(--notes-file notes.md)
+            else
+              flags+=(--generate-notes)
+            fi
+            gh release create "$TAG" dist/* --verify-tag --title "tempest-parser $VERSION" "${flags[@]}"
+          fi
+          echo "### Released tempest-parser $VERSION" >> "$GITHUB_STEP_SUMMARY"
+          echo "https://github.com/$GH_REPO/releases/tag/$TAG" >> "$GITHUB_STEP_SUMMARY"
+
+  pypi:
+    name: Upload to PyPI
+    needs: [verify, publish]
+    if: ${{ vars.PYPI_PUBLISH == 'true' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/TempestParser/${{ needs.verify.outputs.version }}/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: dist
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1

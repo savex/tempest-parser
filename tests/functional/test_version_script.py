@@ -164,3 +164,15 @@ def test_current_marks_dirty_tree(repo):
     repo.git("tag", "v0.2.81")
     (repo.path / "setup.py").write_text(SETUP_PY.format("0.2.81") + "# edit\n")
     assert repo("current")[1] == "0.2.81+dirty"
+
+
+def test_notes(repo):
+    repo("changelog", "0.3.0", "2026-11-23")
+    (repo.path / "changelog.md").write_text(
+        (repo.path / "changelog.md").read_text().replace(
+            "## [Unreleased]\n", "## [Unreleased]\n\n### Added\n- Later.\n"))
+    repo("changelog", "0.3.1", "2026-12-01")
+    assert repo("notes", "0.3.0") == (0, "### Fixed\n- Something.", "")
+    assert repo("notes", "0.3.1")[1] == "### Added\n- Later."
+    code, _, err = repo("notes", "0.4.0")
+    assert code == 1 and "no 0.4.0 section" in err

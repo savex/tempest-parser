@@ -12,6 +12,11 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
 ## [Unreleased]
 
 ### Added
+- GitHub workflows: **Tests** (lint, package and version checks, smoke and functional tests on
+  ubuntu/macOS with Python 3.10–3.13, integration against the built wheel), **Version tracking**,
+  **Bump version** and **Release** (GitHub release with changelog notes; optional PyPI upload behind the
+  `PYPI_PUBLISH` repository variable).
+- `scripts/version.sh notes <version>` prints a changelog section for release notes.
 - `scripts/version.sh`: tag-based versioning helper (current, next and highest version, SemVer compare,
   writes `setup.py` and releases the changelog's Unreleased section), with tests. Tag `v0.2.81` back-filled
   on the commit that was published to PyPI as 0.2.81.
