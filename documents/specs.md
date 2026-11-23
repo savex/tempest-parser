@@ -118,6 +118,6 @@ The packaged resources are `res/*.list` (baseline lists) and `templates/*.html` 
 
 ## 9. Requirements
 
-- Python 3.10 or newer (`python_requires`); CI tests 3.10–3.13 on Linux and macOS.
-- Runtime dependencies: `jinja2`, `six`, `python-subunit`, `testtools`.
+- Python 3.11 or newer (`python_requires`); CI tests 3.11–3.15 on Linux and macOS.
+- Runtime dependencies: `jinja2`, `python-subunit`, `testtools`.
 - Entry point: `tparser = tempest_parser.tparser:tempest_cli_parser_main`.

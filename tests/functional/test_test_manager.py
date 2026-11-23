@@ -134,12 +134,12 @@ def _linear_lookup(tests, test_name, uuid, test_options):
 def test_lookup_index_matches_linear_scan():
     rng = random.Random(7)
     tm = TestsManager()
-    names = ["test_%d" % i for i in range(30)]
+    names = [f"test_{i}" for i in range(30)]
     options = ["", "(ipv4)", "(ipv6)"]
     uuids = ["", "id-1", "id-2", None]
     for run in range(4):
         for _ in range(200):
-            _add(tm, "run%d" % run, rng.choice(names), "OK",
+            _add(tm, f"run{run}", rng.choice(names), "OK",
                  uuid=rng.choice(uuids[:3]), options=rng.choice(options))
     tests = tm.get_tests_for_class(SERVERS)
     for name in names + ["test_missing"]:

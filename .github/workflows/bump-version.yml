@@ -46,7 +46,7 @@ jobs:
 
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.15"
 
       - name: Fetch every tag
         run: git fetch --tags --force origin

@@ -4,7 +4,7 @@
 [![Release](https://github.com/savex/tempest-parser/actions/workflows/release.yml/badge.svg)](https://github.com/savex/tempest-parser/actions/workflows/release.yml)
 [![Version tracking](https://github.com/savex/tempest-parser/actions/workflows/version.yml/badge.svg)](https://github.com/savex/tempest-parser/actions/workflows/version.yml)
 [![PyPI](https://img.shields.io/pypi/v/TempestParser.svg)](https://pypi.org/project/TempestParser/)
-![Python 3.10–3.13](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue.svg)
+![Python 3.11–3.15](https://img.shields.io/badge/python-3.11%E2%80%933.15-blue.svg)
 ![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20macOS-blue.svg)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](https://github.com/savex/tempest-parser/blob/master/LICENSE)
 
@@ -162,7 +162,7 @@ Subunit v2 streams saved to a file.
 |---|---|
 | Input: Tempest log, subunit, jUnit XML (Tempest and raw / k8s), Rally JSON, CSV | Done |
 | Reports: HTML trending, HTML unique errors, CSV | Done |
-| Tests (smoke, functional, integration) and CI on Linux and macOS, Python 3.10–3.13 | Done |
+| Tests (smoke, functional, integration) and CI on Linux and macOS, Python 3.11–3.15 | Done |
 | Tag-based versioning, Bump version and Release workflows | Done; 0.3.0 was released through them |
 | Upload to PyPI from CI | Planned (off until PyPI trusts the Release workflow) |
 | Project rules for contributors ([CLAUDE.md](https://github.com/savex/tempest-parser/blob/master/CLAUDE.md)) | Done |
@@ -189,7 +189,7 @@ other commands. Don't edit the version in `setup.py` by hand.
 
 CI (`.github/workflows`):
 - **Tests** runs on pull requests and pushes to `master`: ruff, package build and `twine check`,
-  version and test-tag checks, then the tests on ubuntu and macOS with Python 3.10–3.13.
+  version and test-tag checks, then the tests on ubuntu and macOS with Python 3.11–3.15.
 - **Version tracking** reports the version on every push to `master`.
 - **Bump version** (manual) picks the next version, updates `setup.py` and `changelog.md`, commits
   `Release vX.Y.Z`, tags it and starts **Release**.

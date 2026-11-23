@@ -216,7 +216,7 @@ class ReportToFile:
             self._dump(payload, self.target)
 
     def _wrapped_dump(self, payload):
-        with open(self.target, 'wt') as target:
+        with open(self.target, "w") as target:
             self._dump(payload, target)
 
     @staticmethod

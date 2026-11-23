@@ -17,8 +17,10 @@ matches tests across them and writes HTML trending / errors reports and CSV. Usa
 
 ## Rules
 
-- Python 3.10+ (`python_requires` in `setup.py`); CI tests 3.10–3.13 on ubuntu and macOS. Raise the minimum
-  only when a dependency needs it, and say why in the changelog.
+- Python 3.11+ (`python_requires` in `setup.py`, ruff `target-version`); CI tests 3.11–3.15 on ubuntu and
+  macOS, and builds and releases on the newest. The minimum is the oldest CPython still supported upstream:
+  raise it when that version reaches end of life (or earlier if a dependency needs it), add each new
+  release to CI and the classifiers, and say why in the changelog.
 - Every commit that changes behaviour, configuration, interfaces, tooling or documents adds a line to
   `changelog.md` under **Unreleased**, in the right section (Added, Changed, Fixed, ...).
 - Before committing: `ruff check .`, `pytest`, `python scripts/check-test-tags.py`. Workflow changes must

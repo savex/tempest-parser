@@ -18,8 +18,8 @@ CSV_XUNIT = 2
 
 
 # C0 and C1 control characters, DEL included
-_CONTROL_CHARS_RE = re.compile(
-    '[%s]' % re.escape(''.join(map(chr, [*range(0, 32), *range(127, 160)]))))
+_CONTROL_CHARS = ''.join(map(chr, [*range(0, 32), *range(127, 160)]))
+_CONTROL_CHARS_RE = re.compile(f'[{re.escape(_CONTROL_CHARS)}]')
 
 
 def remove_control_chars(s):
@@ -148,10 +148,7 @@ class XMLImporter(ImporterBase):
             while len(status) > 0 and _idx < len(status):
                 if status[_idx].tag == 'system-out':
                     _status = "OK"
-                    _sysout = "{}:\n{}".format(
-                        status[_idx].tag,
-                        status[_idx].text
-                    )
+                    _sysout = f"{status[_idx].tag}:\n{status[_idx].text}"
                     _ = status.pop(_idx)
                 else:
                     _idx += 1
@@ -161,11 +158,7 @@ class XMLImporter(ImporterBase):
                 # last encountered node will be the status
                 _s = status.pop()
                 _status = _error_status_map[_s.tag]
-                _reason = "{}:\n{}\n{}".format(
-                    _s.tag,
-                    _s.text,
-                    _reason
-                )
+                _reason = f"{_s.tag}:\n{_s.text}\n{_reason}"
             return _status, _reason, _sysout
 
     def _is_k8s_error(self, reason):
@@ -414,7 +407,7 @@ class CSVImporter(ImporterBase):
         return _string
 
     def __init__(self, test_manager, source, **kwargs):
-        super(CSVImporter, self).__init__(test_manager, source, **kwargs)
+        super().__init__(test_manager, source, **kwargs)
 
         # read all rows, then detect file sub-type
         # by the first row that starts with 'Class' or a tempest test name
@@ -549,7 +542,7 @@ class TParserResult(TestByTestResult):
         }[status]
 
     def __init__(self, name, tm, status_filters=None):
-        super(TParserResult, self).__init__(self._on_test)
+        super().__init__(self._on_test)
         self._execution_name = name
         self.tm = tm
         self.status_filters = status_filters or []
@@ -581,7 +574,7 @@ class TParserResult(TestByTestResult):
 
         _time = ''
         if start_time is not None and stop_time is not None:
-            _time = "{}s".format((stop_time - start_time).total_seconds())
+            _time = f"{(stop_time - start_time).total_seconds()}s"
 
         self.tm.add_result_for_test(
             self._execution_name,
@@ -602,7 +595,7 @@ class TParserResult(TestByTestResult):
 class SubunitImporter(ImporterBase):
 
     def __init__(self, test_manager, source, **kwargs):
-        super(SubunitImporter, self).__init__(test_manager, source, **kwargs)
+        super().__init__(test_manager, source, **kwargs)
         self.source = make_stream_binary(source)
 
     def parse(self):

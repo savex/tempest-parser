@@ -34,6 +34,9 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
 - Test lookup in `TestsManager` uses an index per class instead of a linear scan; importing many large runs
   of one class is about 10× faster. Result dicts are built directly instead of deep-copied from templates.
 - Python 2 leftovers removed (`six` dependency, `__future__` imports, `utils/file.py`).
+- Requires Python 3.11+ (was 3.10+): Python 3.10 reached end of life in October 2026 and gets no more
+  security fixes. CI tests 3.11–3.15 and builds, bumps and releases on 3.15; classifiers list 3.11–3.15.
+- ruff checks pyupgrade rules (`UP`) against Python 3.11: f-strings, `super()`, `datetime.UTC`.
 
 ### Fixed
 - The wheel no longer installs a top-level `tests` package (the 0.3.0 wheel on the GitHub release does).

@@ -32,7 +32,7 @@ class CLIError(Exception):
 
 class MyParser(argparse.ArgumentParser):
     def error(self, message):
-        sys.stderr.write('Error: {0}\n\n'.format(message))
+        sys.stderr.write(f'Error: {message}\n\n')
         self.print_help()
         sys.exit(2)
 
@@ -78,7 +78,7 @@ def make_importer(fmt, tm, source, force_single=None, filters=None):
         return TempestLogParser(tm, source, status_filters=filters)
     if fmt == const.FMT_SUBUNIT:
         return SubunitImporter(tm, source, status_filters=filters)
-    raise CLIError("Unknown input format: {}".format(fmt))
+    raise CLIError(f"Unknown input format: {fmt}")
 
 
 def do_parse_file(source, tm, fmt=None, force_single=None, filters=None):
@@ -91,8 +91,8 @@ def do_parse_file(source, tm, fmt=None, force_single=None, filters=None):
         fmt = detect_format_from_filename(source)
         if fmt is None:
             raise CLIError(
-                "Input filename's extension is not supported: '{}'".format(source))
-    with open(source, "rt") as stream:
+                f"Input filename's extension is not supported: '{source}'")
+    with open(source) as stream:
         make_importer(fmt, tm, stream, force_single, filters).parse()
     log.info("Imported %s", source)
 
@@ -143,7 +143,7 @@ def collect_inputs(args, input_fmt):
     source = args.inputfile
     if hasattr(source, "name"):
         if source.name != "<stdin>":
-            raise CLIError("Unknown PIPE: '{}', '<stdin>' expected".format(source.name))
+            raise CLIError(f"Unknown PIPE: '{source.name}', '<stdin>' expected")
         fmt = input_fmt if input_fmt is not None else const.FMT_SUBUNIT
         if input_fmt is None:
             log.info("No PIPE format set, defaulted to: '%s'", const.FORMAT_LABELS[fmt])
@@ -151,12 +151,12 @@ def collect_inputs(args, input_fmt):
         return [(source, fmt, None)]
 
     if not os.path.exists(source):
-        raise CLIError("Supplied path/file not exists, '{}'".format(source))
+        raise CLIError(f"Supplied path/file not exists, '{source}'")
     if os.path.isfile(source):
         return [(source, input_fmt, None)]
     if args.html_errors_filename:
         raise CLIError(
-            "Errors report require single file, folder given: '{}'".format(source))
+            f"Errors report require single file, folder given: '{source}'")
 
     log.info("Importing tests from folder '%s'", source)
     inputs = []

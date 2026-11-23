@@ -156,12 +156,8 @@ class TempestLogParser:
                 }
             )
             _index += 1
-        log.debug("Found: {0} obj, {1} fails, {2} summary, {3} unknown".format(
-            len(cli_objects_list),
-            _fail_count,
-            _summary_count,
-            _unknown_count
-        ))
+        log.debug("Found: %d obj, %d fails, %d summary, %d unknown",
+                  len(cli_objects_list), _fail_count, _summary_count, _unknown_count)
 
         # breaking list into sections
         # at this point objects (no matter of their type: flow, fail, etc)
@@ -426,9 +422,7 @@ class TempestLogParser:
 
                 _execution_item["summary"] = _summary_item
             else:
-                log.debug("Empty or unknown section found:\n{0}".format(
-                    _object["data"]
-                ))
+                log.debug("Empty or unknown section found:\n%s", _object["data"])
 
         # We're done
         return _execution_item

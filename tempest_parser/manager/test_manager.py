@@ -400,7 +400,7 @@ class TestsManager:
                         if len(test["results"][_execution]["time"]) > 0:
                             running_time += float(
                                 test["results"][_execution]["time"][:-1])
-                _time_str += "{0}s ".format(running_time)
+                _time_str += f"{running_time}s "
         return _time_str
 
     def get_totals_as_string_for_class(self, class_name):
@@ -415,7 +415,7 @@ class TestsManager:
                         if test["results"][_execution]["result"] == "FAIL":
                             fail += 1
                         total += 1
-                _totals_str += "{0}/{1}, ".format(total, fail)
+                _totals_str += f"{total}/{fail}, "
         return _totals_str
 
     def get_summary_for_execution(self, execution_name):

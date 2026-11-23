@@ -122,4 +122,5 @@ Bugs and risks found by reading the code (not yet confirmed by running it):
    `PYPI_PUBLISH` is `true` and PyPI has a trusted publisher for `release.yml`, environment `pypi`.
    PyPI still has 0.2.81.
 3. ~~**Starting version**~~: decided, `v0.2.81` back-filled; the next release is 0.3.0.
-4. ~~**Python versions**~~: decided, 3.10–3.13 (`python_requires=">=3.10"`).
+4. ~~**Python versions**~~: decided, 3.10–3.13 (`python_requires=">=3.10"`); since moved to 3.11–3.15,
+   see `changelog.md`.

@@ -39,7 +39,7 @@ def write_subunit(path):
     """Write a subunit v2 stream with one test of each status."""
     from subunit import StreamResultToBytes
 
-    start = datetime.datetime(2026, 1, 1, tzinfo=datetime.timezone.utc)
+    start = datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC)
     stop = start + datetime.timedelta(seconds=1.5)
     tests = [
         (SERVERS + ".test_create_server[id-1111,smoke]", "success", None),

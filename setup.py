@@ -29,10 +29,11 @@ setup(
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
+        "Programming Language :: Python :: 3.15",
         "Topic :: Software Development :: Quality Assurance",
         "Topic :: Software Development :: Testing",
     ],
@@ -51,7 +52,7 @@ setup(
         '': ['*.conf', '*.list', '*.html']
     },
     zip_safe=False,
-    python_requires=">=3.10",
+    python_requires=">=3.11",
     install_requires=dependencies,
     license="Apache-2.0",
     description="Builds trending HTML and CSV reports from Tempest, pytest, Rally, "

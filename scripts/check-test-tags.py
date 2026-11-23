@@ -12,15 +12,15 @@ import sys
 TAGS = ("smoke", "functional", "integration")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-PLUGIN = '''
+PLUGIN = f'''
 import json, os
-TAGS = %r
+TAGS = {TAGS!r}
 def pytest_collection_finish(session):
     rows = [[item.nodeid, [m.name for m in item.iter_markers() if m.name in TAGS]]
             for item in session.items]
     with open(os.environ["TAG_REPORT"], "w") as f:
         json.dump(rows, f)
-''' % (TAGS,)
+'''
 
 
 def main():
@@ -47,15 +47,15 @@ def main():
     for nodeid, tags in rows:
         folder = nodeid.split("/")[1] if nodeid.startswith("tests/") else ""
         if len(tags) != 1:
-            bad.append("{}: {} tags {}, expected exactly 1".format(nodeid, len(tags), tags))
+            bad.append(f"{nodeid}: {len(tags)} tags {tags}, expected exactly 1")
         elif folder != tags[0]:
-            bad.append("{}: tag '{}' outside tests/{}/".format(nodeid, tags[0], tags[0]))
+            bad.append(f"{nodeid}: tag '{tags[0]}' outside tests/{tags[0]}/")
         else:
             count[tags[0]] += 1
     for line in bad:
         print("check-test-tags:", line, file=sys.stderr)
     for tag in TAGS:
-        print("{:<12} {}".format(tag, count[tag]))
+        print(f"{tag:<12} {count[tag]}")
     return 1 if bad else 0
 
 
