@@ -1,7 +1,7 @@
 # tempest-parser: specification
 
-Describes how the tool behaves today (version `0.2.81` in `setup.py`). Known deviations from the intended
-behaviour are listed in section 8; the fixes are planned in [plan.md](plan.md).
+Describes how the tool behaves (version `0.2.81` in `setup.py`, with the phase 1 fixes from
+[plan.md](plan.md)). Known limitations are listed in section 8. The tests in `tests/` check this behaviour.
 
 ## 1. Purpose
 
@@ -33,8 +33,8 @@ tparser [options] [inputfile]
 | `--force-single` | Treat every file in a folder as one run, named after the folder. |
 | `--config-file F` | Use config file `F` (absolute path) instead of the packaged one. |
 
-Exit codes: `0` on success; `1` for a missing path, an unsupported extension, a folder given with `-e`, or an
-unexpected pipe; `2` for invalid arguments (help is printed).
+Exit codes: `0` on success; `1` for a missing path, an unsupported extension or `-f` value, a folder given
+with `-e`, or an unexpected pipe; `2` for invalid arguments (help is printed).
 
 ## 3. Input formats
 
@@ -47,8 +47,8 @@ unexpected pipe; `2` for invalid arguments (help is printed).
 | `csv` | `.csv` | Own CSV export (first column `Class`) or xunit CSV (rows starting with `tempest.`) | `CSVImporter` |
 | `subunit` | `.subunit` | Subunit v2 stream | `SubunitImporter` |
 
-- In a folder, only files whose extension matches the given format are read; other files are skipped with a
-  message.
+- In a folder, files are read in name order. With `-f`, only files whose extension matches the format are
+  read; without it, each file's format is detected from its extension. Other files are skipped with a message.
 - Each file is one run. The run is named after the file, and its date is the file's modification time (GMT).
 - XML failures are recognised as k8s errors (Go error types, `k8s.io`, klog timestamps) or pytest errors
   (`E ` lines), and the main message is taken out of the traceback.
@@ -101,13 +101,14 @@ INI file, section `[ParserConfig]`, packaged as `tempest_parser/etc/tempest-pars
 
 The packaged resources are `res/*.list` (baseline lists) and `templates/*.html` (Jinja2 templates).
 
-## 8. Known deviations
+## 8. Known limitations
 
-1. `csv` input crashes: `CSVImporter` doesn't accept the `status_filters` argument it is given.
-2. `--omit-status` has no effect for `log` and `subunit` input.
-3. A folder given without `-f` crashes (`FORMAT_LABELS[None]`) before the format is checked.
-4. An unsupported `-f` value prints an error but doesn't stop the run.
-5. Formats are compared with `is` instead of `==`.
+1. XML `time` attributes are divided by 1000, i.e. read as milliseconds; jUnit writes seconds.
+2. A subunit run is named after the file path and the date joined without a separator.
+3. Importing an own CSV export reads only the first result column.
+4. The `log` parser expects the old testr console layout (class line, indented test lines, blank-line
+   separated sections, `Slowest`, `====` failure blocks, `Ran N tests`).
+5. CSV export replaces `"` in messages and traces with `'`.
 
 ## 9. Requirements
 

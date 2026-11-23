@@ -1,0 +1,22 @@
+tempest.api.compute.servers.test_servers.ServersTestJSON
+    test_create_server[id-1111,smoke]                 OK  1.50
+    test_delete_server[id-2222]                       FAIL  0.50
+tempest.api.network.test_ports.PortsTestJSON
+    test_list_ports[id-3333]                          SKIP  0.00
+
+Slowest 2 tests took 2.00 secs:
+tempest.api.compute.servers.test_servers.ServersTestJSON
+    test_create_server[id-1111,smoke]   1.50
+    test_delete_server[id-2222]   0.50
+
+======================================================================
+tempest.api.compute.servers.test_servers.ServersTestJSON.test_delete_server[id-2222]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tempest/api/compute/servers/test_servers.py", line 42, in test_delete_server
+    self.assertEqual(1, 2)
+Details: 1 != 2
+
+Ran 3 tests in 2.000s
+
+FAILED (failures=1)

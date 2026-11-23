@@ -3,7 +3,7 @@
 Bring tempest-parser in line with the scribe repository: GitHub workflows, a tagged test suite,
 tag-based versioning, a README status line and project rules.
 
-Status: **draft**, not started. Open decisions are listed at the end.
+Status: **phase 1 done**, phases 2–5 not started. Open decisions are listed at the end.
 
 ## 1. Review findings
 
@@ -61,6 +61,12 @@ Bugs and risks found by reading the code (not yet confirmed by running it):
 - **Integration test:** build the wheel, install it into a temporary venv, and run `tparser` there.
   This catches templates or resource files missing from the package.
 - Fix bugs 1–4 from section 1, each with a test that fails before the fix.
+- Done. Beyond bugs 1–4 the tests found and fixed: folder input without `-f` crashing, unsupported
+  `-f` not stopping the run, Rally JSON and `.log` import crashing on Python 3, subunit `error` /
+  `uxsuccess` statuses and timedelta times, CSV import dropping the first row, `-i` with `-r`
+  crashing, new tests losing their UUID and options (duplicate rows across runs), tags never stored,
+  reports HTML-escaping the shared results (double escaping, escaped CSV), quotes breaking CSV export,
+  and `import cgi` (removed in Python 3.13).
 - Configure pytest and ruff in a new `pyproject.toml`, and add `scripts/check-test-tags.py`.
 
 ### Phase 2: versioning

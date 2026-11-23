@@ -1,4 +1,5 @@
 import tempest_parser.manager.structs as structs
+import calendar
 import os
 import time
 from copy import deepcopy
@@ -59,7 +60,7 @@ class TestsManager:
                         _file
                     )
                 )
-            _tests = dict(_tests.items() + _tests_in_file.items())
+            _tests.update(_tests_in_file)
 
         return _tests
 
@@ -81,8 +82,10 @@ class TestsManager:
                 self._test_item = deepcopy(structs.template_test_item)
                 self._test_item["test_name"] = _test_name
                 self._test_item["uuid"] = _uuid
+                _required = deepcopy(structs.template_test_result)
+                _required.update(result="R", time='0s')
                 self._test_item["results"][
-                    self.required_execution_name] = dict(result="R", time='0s')
+                    self.required_execution_name] = _required
 
                 self._test_item["test_options"] = _test_options
                 self._test_item["tags"] = _tags
@@ -103,7 +106,7 @@ class TestsManager:
                     __guid = _tag
                 else:
                     __tags.append(_tag)
-            return __guid, _tags
+            return __guid, __tags
 
         def _dig_options(raw_options):
             __options = raw_options.split(']')[1:]
@@ -128,7 +131,7 @@ class TestsManager:
             _class = _name[0]
             _test = _tmp.split('[')[0]
             if ']' in _tmp:
-                _guid = _dig_guid(_tmp)
+                _guid, _tags = _dig_guid(_tmp.split('[', 1)[1])
                 _options = _dig_options(_tmp)
         elif _first_name.startswith("tempest") or \
                 _first_name.startswith("cvp_checks") or \
@@ -209,7 +212,9 @@ class TestsManager:
             return None
 
     def add_execution(self, execution, unixtime=None):
-        # time = float(_execution["summary"]["time"][:-1])
+        # keep one type for sorting: seconds since the epoch
+        if isinstance(unixtime, time.struct_time):
+            unixtime = calendar.timegm(unixtime)
         _date = execution["execution_date"]
         _name = execution["execution_name"]
         self.tests_list["executions"][_name] = [_date, unixtime]
@@ -272,7 +277,7 @@ for message: {2}
 
     def add_result_for_test(self, execution_name, class_name, test_name, uuid,
                             test_options, result, running_time,
-                            message='', trace='', tags=list(),
+                            message='', trace='', tags=None,
                             class_name_short=False, test_name_bare=False):
         _result = deepcopy(structs.template_test_result)
         _result["result"] = result
@@ -339,7 +344,9 @@ for message: {2}
                 # the test is not there, add it
                 _test_item = deepcopy(structs.template_test_item)
                 _test_item["test_name"] = test_name
-                _test_item["tags"] = tags
+                _test_item["uuid"] = uuid
+                _test_item["test_options"] = test_options
+                _test_item["tags"] = tags if tags is not None else []
                 _test_item["results"][execution_name] = _result
 
                 if _full_class_name not in self.tests_list["tests"]:

@@ -88,6 +88,7 @@ celerybeat-schedule
 
 # virtualenv
 venv/
+.venv/
 ENV/
 
 # Spyder project settings
@@ -101,3 +102,6 @@ ENV/
 
 # Visual Studio Code
 .vscode
+
+# Test samples are tracked despite the *.xml / *.log rules above
+!tests/data/*

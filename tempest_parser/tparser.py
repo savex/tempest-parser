@@ -35,7 +35,7 @@ def help_message():
     return
 
 
-def detect_format_from_filename(filename):
+def detect_format_from_filename(filename, strict=True):
     if filename.endswith(".json"):
         # this is Rally's json file
         return const.FMT_RALLY_JSON
@@ -52,12 +52,13 @@ def detect_format_from_filename(filename):
     elif filename.endswith(".subunit"):
         # ..it is a subunit stream saved as a file, pass it along
         return const.FMT_SUBUNIT
-    else:
+    elif strict:
         print("Error: Input filename's extension is not supported")
         sys.exit(1)
+    return None
 
 
-def do_parse_file(source, tm, fmt=None, force_single=None, filters=[]):
+def do_parse_file(source, tm, fmt=None, force_single=None, filters=None):
     close_source = False
     filename = "unknown/stdin"
     if not hasattr(source, "read"):
@@ -67,19 +68,20 @@ def do_parse_file(source, tm, fmt=None, force_single=None, filters=[]):
         source = open(source, "rt")
         close_source = True
 
+    filters = filters or []
     importer = None
 
-    if fmt is const.FMT_RALLY_JSON:
+    if fmt == const.FMT_RALLY_JSON:
         # this is Rally's json file
         importer = JSONImporter(tm, source, status_filters=filters)
-    elif fmt is const.FMT_CSV:
+    elif fmt == const.FMT_CSV:
         # this is simple csv file
         importer = CSVImporter(tm, source, status_filters=filters)
-    elif fmt is const.FMT_XML_TEMPEST:
+    elif fmt == const.FMT_XML_TEMPEST:
         # this is an xml file from tempest
         # parse it using specific importer
         importer = XMLImporter(tm, source, status_filters=filters)
-    elif fmt is const.FMT_XML_RAW:
+    elif fmt == const.FMT_XML_RAW:
         # this is a raw xml file
         # parse it and use test names as is
         importer = XMLImporter(
@@ -89,12 +91,12 @@ def do_parse_file(source, tm, fmt=None, force_single=None, filters=[]):
             force_single_execution=force_single,
             status_filters=filters
         )
-    elif fmt is const.FMT_PYTEST:
+    elif fmt == const.FMT_PYTEST:
         # ..it is a bare testr output, parse it
-        importer = TempestLogParser(tm, source)
-    elif fmt is const.FMT_SUBUNIT:
+        importer = TempestLogParser(tm, source, status_filters=filters)
+    elif fmt == const.FMT_SUBUNIT:
         # ..it is a subunit stream saved as a file, pass it along
-        importer = SubunitImporter(tm, source)
+        importer = SubunitImporter(tm, source, status_filters=filters)
 
     importer.parse()
     print("Imported {}".format(filename))
@@ -200,9 +202,12 @@ def tempest_cli_parser_main():
         if _fmt in const.ALL_INPUT_FORMATS:
             input_fmt = const.ALL_INPUT_FORMATS[_fmt]
         else:
-            print("Supplied format is not supported: '{}'".format(
-                args.input_format
-            ))
+            print("Error: Supplied format is not supported: '{}', "
+                  "use one of: {}".format(
+                      args.input_format,
+                      ", ".join(sorted(const.ALL_INPUT_FORMATS))
+                  ))
+            sys.exit(1)
 
     # prepare filter
     if args.omit_status:
@@ -288,15 +293,20 @@ def tempest_cli_parser_main():
         # this is a folder, get files one by one
         _folder_content = os.listdir(args.inputfile)
 
-        for _file in _folder_content:
+        for _file in sorted(_folder_content):
             # parse files according to format
-            _target_extension = const.FORMAT_LABELS[input_fmt]
-            if input_fmt is not None and not _file.endswith(_target_extension):
+            if input_fmt is None:
+                if detect_format_from_filename(_file, strict=False) is None:
+                    print("Skipped '{}', extension is not supported".format(
+                        _file
+                    ))
+                    continue
+            elif not _file.endswith(const.FORMAT_LABELS[input_fmt]):
                 print(
                     "Skipped '{}', "
                     "extension not corresponds to given format ({})".format(
                         _file,
-                        _target_extension
+                        const.FORMAT_LABELS[input_fmt]
                     ))
                 continue
             # if extension fits - process file

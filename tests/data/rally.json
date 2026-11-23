@@ -1,0 +1,33 @@
+{
+  "verifications": {
+    "verification-1": {"status": "finished"}
+  },
+  "tests": {
+    "tempest.api.compute.servers.test_servers.ServersTestJSON.test_create_server[id-1111,smoke]": {
+      "name": "tempest.api.compute.servers.test_servers.ServersTestJSON.test_create_server",
+      "tags": ["id-1111", "smoke"],
+      "by_verification": {
+        "verification-1": {"status": "success", "duration": "1.500"}
+      }
+    },
+    "tempest.api.compute.servers.test_servers.ServersTestJSON.test_delete_server[id-2222]": {
+      "name": "tempest.api.compute.servers.test_servers.ServersTestJSON.test_delete_server",
+      "tags": ["id-2222"],
+      "by_verification": {
+        "verification-1": {
+          "status": "fail",
+          "duration": "0.500",
+          "details": "AssertionError: 1 != 2",
+          "traceback": "Traceback (most recent call last):\n  File \"test_servers.py\", line 42\nAssertionError: 1 != 2"
+        }
+      }
+    },
+    "tempest.api.network.test_ports.PortsTestJSON.test_list_ports[id-3333]": {
+      "name": "tempest.api.network.test_ports.PortsTestJSON.test_list_ports",
+      "tags": ["id-3333"],
+      "by_verification": {
+        "verification-1": {"status": "skip", "duration": "0.000", "details": "Network extension ports is not enabled"}
+      }
+    }
+  }
+}

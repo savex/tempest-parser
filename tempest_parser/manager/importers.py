@@ -5,7 +5,6 @@ import json
 import csv
 import os
 import re
-import six
 import time
 
 
@@ -86,14 +85,14 @@ class ImporterBase(object):
         test_manager,
         source,
         use_raw_names=False,
-        status_filters=[],
+        status_filters=None,
         force_single_execution=None
     ):
         self.source = source
         self.tm = test_manager
         self.use_raw_names = use_raw_names
         self.forced_execution_name = force_single_execution
-        self.status_filters = status_filters
+        self.status_filters = status_filters or []
 
     def add_execution(self, name, date, duration, unixtime):
         self.tm.add_execution(
@@ -300,7 +299,7 @@ class XMLImporter(ImporterBase):
 
                         # All between "<digit>\n" and "\n/go"
                         _errs = re.findall(
-                            "(?s)(?<=\d\n)(.*?)(?=\n\/go)",
+                            r"(?s)(?<=\d\n)(.*?)(?=\n\/go)",
                             _reason,
                             re.MULTILINE
                         )
@@ -362,12 +361,10 @@ class JSONImporter(ImporterBase):
         _execution_name = self.source.name
         _execution_date, _unixtime = get_date_from_source(self.source)
 
-        verification = data['verifications'].keys()[0]
+        verification = next(iter(data['verifications']))
 
         # iterate through test cases and add up results
         for _test_name, _test_value in data['tests'].items():
-            if isinstance(_test_name, six.text_type):
-                _test_name = _test_name.encode("utf-8")
             _class_name, _test_name, _uuid, _options, _tags = \
                 self.tm.split_test_name(_test_name)
             _test_value_results = _test_value['by_verification'][verification]
@@ -379,6 +376,8 @@ class JSONImporter(ImporterBase):
                 _message = ''
             _trace = _test_value_results[
                 'traceback'] if 'traceback' in _test_value_results else ''
+            if _status in self.status_filters:
+                continue
 
             # parsing tags
             # if _test_value['tags'][0].find('(') > -1:
@@ -421,14 +420,15 @@ class CSVImporter(ImporterBase):
         _string = _string.replace(',', ' ')
         return _string
 
-    def __init__(self, test_manager, source):
-        super(CSVImporter, self).__init__(test_manager, source)
+    def __init__(self, test_manager, source, **kwargs):
+        super(CSVImporter, self).__init__(test_manager, source, **kwargs)
 
-        # detect file sub-type
-        self.csvdata = csv.reader(self.source, delimiter=',')
+        # read all rows, then detect file sub-type
+        # by the first row that starts with 'Class' or a tempest test name
+        self.rows = [row for row in csv.reader(self.source, delimiter=',')
+                     if row]
 
-        for row in self.csvdata:
-            # detect if line starts with 'Class'
+        for row in self.rows:
             if row[0] == 'Class':
                 self.subtype = CSV_OWN
                 break
@@ -459,9 +459,9 @@ class CSVImporter(ImporterBase):
         _class_name = ''
 
         _status_index = 2
-        for row in self.csvdata:
-            # parse the data
-            if self.csvdata.line_num == 1:
+        for _row_index, row in enumerate(self.rows):
+            # parse the data, first row is the header
+            if _row_index == 0:
                 continue
             elif row[0].lower() == 'class':
                 _class_name = row[1]
@@ -472,6 +472,8 @@ class CSVImporter(ImporterBase):
                     _status_index = 3
                 _status = row[_status_index]
                 _message = self._fix_message(row[_status_index+1])
+                if _status in self.status_filters:
+                    continue
                 self.tm.add_result_for_test(
                     _execution_name,
                     _class_name,
@@ -506,15 +508,17 @@ class CSVImporter(ImporterBase):
         _execution_name = self.source.name
         _execution_date, _unixtime = get_date_from_source(self.source)
 
-        for row in self.csvdata:
-            # parse the data
-            if self.csvdata.line_num == 1:
+        for row in self.rows:
+            # parse the data, skip the header and other non-test rows
+            if not row[0].startswith("tempest."):
                 continue
             _splitted_test_name = row[0].rsplit('.', 1)
             _class_name = _splitted_test_name[0]
             _test_name = _splitted_test_name[1]
             _status = self._parse_status(row[1])
             _message = row[2]
+            if _status in self.status_filters:
+                continue
 
             self.tm.add_result_for_test(
                 _execution_name,
@@ -543,15 +547,17 @@ class TParserResult(TestByTestResult):
         return {
             'success': 'OK',
             'failure': 'FAIL',
+            'error': 'ERROR',
             'skip': 'SKIP',
             'xfail': 'X_FAIL',
-            'usuccess': 'X_OK'
+            'uxsuccess': 'X_OK'
         }[status]
 
-    def __init__(self, name, tm):
+    def __init__(self, name, tm, status_filters=None):
         super(TParserResult, self).__init__(self._on_test)
         self._execution_name = name
         self.tm = tm
+        self.status_filters = status_filters or []
         self.counter = 0
 
     def _on_test(self, test, status, start_time, stop_time, tags, details):
@@ -571,10 +577,17 @@ class TParserResult(TestByTestResult):
         _message = ''
         _tb = ''
 
-        if _status == 'FAIL':
+        if _status in self.status_filters:
+            return
+
+        if _status in ('FAIL', 'ERROR') and 'traceback' in details:
             _tb = details['traceback'].as_text()
-        elif _status == 'SKIP':
+        elif _status == 'SKIP' and 'reason' in details:
             _message = details['reason'].as_text()
+
+        _time = ''
+        if start_time is not None and stop_time is not None:
+            _time = "{}s".format((stop_time - start_time).total_seconds())
 
         self.tm.add_result_for_test(
             self._execution_name,
@@ -583,7 +596,7 @@ class TParserResult(TestByTestResult):
             _uuid,
             _test_options,
             _status,
-            stop_time - start_time,
+            _time,
             tags=tags,
             message=_message,
             trace=_tb
@@ -595,8 +608,8 @@ class TParserResult(TestByTestResult):
 
 class SubunitImporter(ImporterBase):
 
-    def __init__(self, test_manager, source):
-        super(SubunitImporter, self).__init__(test_manager, source)
+    def __init__(self, test_manager, source, **kwargs):
+        super(SubunitImporter, self).__init__(test_manager, source, **kwargs)
         self.source = make_stream_binary(source)
 
     def parse(self):
@@ -605,7 +618,9 @@ class SubunitImporter(ImporterBase):
 
         run_tests_from_stream(
             self.source,
-            StreamToExtendedDecorator(TParserResult(_execution_name, self.tm)),
+            StreamToExtendedDecorator(TParserResult(
+                _execution_name, self.tm, status_filters=self.status_filters
+            )),
             protocol_version=2,
             passthrough_subunit=False
         )

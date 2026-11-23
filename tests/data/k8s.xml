@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="Kubernetes e2e suite" tests="3" failures="1" errors="0" time="12000">
+    <testcase name="[sig-apps] Deployment should run the lifecycle of a Deployment [Conformance]" classname="Kubernetes e2e suite" time="4000"/>
+    <testcase name="[sig-network] DNS should provide DNS for services [Conformance]" classname="Kubernetes e2e suite" time="6000">
+      <failure type="Failure">/go/src/k8s.io/kubernetes/test/e2e/network/dns.go:120
+Unexpected error:
+    &lt;*errors.errorString | 0xc000123&gt;: {
+        s: "timed out waiting for the condition",
+    }
+    timed out waiting for the condition
+occurred
+/go/src/k8s.io/kubernetes/test/e2e/network/dns.go:130</failure>
+    </testcase>
+    <testcase name="[sig-storage] PersistentVolumes should be mountable [Slow]" classname="Kubernetes e2e suite" time="2000">
+      <skipped/>
+    </testcase>
+  </testsuite>
+</testsuites>

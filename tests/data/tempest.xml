@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite errors="0" failures="1" name="tempest" tests="4" time="3500">
+  <testcase classname="tempest.api.compute.servers.test_servers.ServersTestJSON" name="test_create_server[id-1111,smoke]" time="1500"/>
+  <testcase classname="tempest.api.compute.servers.test_servers.ServersTestJSON" name="test_delete_server[id-2222]" time="500">
+    <failure type="testtools.testresult.real._StringException">Traceback (most recent call last):
+  File "tempest/api/compute/servers/test_servers.py", line 42, in test_delete_server
+    self.assertEqual(1, 2)
+AssertionError: 1 != 2 &lt;server&gt;</failure>
+  </testcase>
+  <testcase classname="tempest.api.network.test_ports.PortsTestJSON" name="test_list_ports[id-3333]" time="1000">
+    <skipped>Network extension &lt;ports&gt; is not enabled</skipped>
+  </testcase>
+  <testcase classname="tempest.api.network.test_ports.PortsTestJSON" name="test_update_port[id-4444,network]" time="500"/>
+</testsuite>

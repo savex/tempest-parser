@@ -4,3 +4,7 @@ pytest
 pytest-cov
 pytest-html
 testtools
+build
+ruff
+setuptools>=61
+wheel

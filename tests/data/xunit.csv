@@ -1,0 +1,4 @@
+Test,Status,Message
+tempest.api.compute.servers.test_servers.ServersTestJSON.test_create_server,success,
+tempest.api.compute.servers.test_servers.ServersTestJSON.test_delete_server,fail,AssertionError: 1 != 2
+tempest.api.network.test_ports.PortsTestJSON.test_list_ports,skip,Network extension ports is not enabled

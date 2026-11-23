@@ -98,14 +98,15 @@ class CSVReporter:
                                     _trace = copy(
                                         _test['results'][_execution]['trace'])
                                     _trace = _trace.replace('"', '\'')
+                                    _message = _test['results'][_execution][
+                                        'message'].replace('"', '\'')
                                     _results += \
-                                        '\"' + _test['results'][_execution][
-                                            'message'] + '\x0a' + _trace + \
+                                        '\"' + _message + '\x0a' + _trace + \
                                         '\"' + ','
                                 elif _tmp_result == 'SKIP':
                                     _message = \
                                         copy(_test['results'][_execution]
-                                             ['message']).replace("\'", '\'')
+                                             ['message']).replace('"', '\'')
                                     _results += '\"' + _message + '\"' + ','
                                 else:
                                     _results += ','

@@ -8,11 +8,10 @@ import tempest_parser.parser.parser_strings as strings
 
 
 class TempestLogParser:
-    def __init__(self, test_manager, source):
+    def __init__(self, test_manager, source, status_filters=None):
         self.test_mgr = test_manager
         self.source = source
-
-        pass
+        self.status_filters = status_filters or []
 
     @staticmethod
     def _split_options_from_test_name(_test_name_with_options):
@@ -300,6 +299,13 @@ class TempestLogParser:
                     else:
                         # Unknown
                         print("Unknown text in line: \n {0}".format(_line))
+                        continue
+
+                    if not _test_name or _result in self.status_filters:
+                        continue
+                    # times are printed as bare seconds
+                    if _time and _time[-1].isdigit():
+                        _time += "s"
 
                     # we have a test_name and all of the results now,
                     # it is time to add this tests result
@@ -308,6 +314,7 @@ class TempestLogParser:
                         _execution_item["execution_name"],
                         _class_name,
                         _test_name,
+                        "",
                         _test_options,
                         _result,
                         _time
@@ -396,7 +403,7 @@ class TempestLogParser:
                         _class_name = _line.strip()
                         continue
                     elif _line.startswith("test_"):
-                        _class_name, _test_name, _test_options, _tags = \
+                        _class_name, _test_name, _test_options = \
                             self.test_mgr.split_test_name_from_speed(
                                 _class_name + '.' + _line_s
                             )
@@ -405,7 +412,7 @@ class TempestLogParser:
                             _execution_item["execution_name"],
                             _class_name,
                             _test_name,
-                            _test_options
+                            test_options=_test_options
                         )
                 _execution_item["slowest"] = _slowest_item
             elif _object["type"] == strings.TEMPEST_EXECUTION_SUMMARY:
@@ -467,10 +474,12 @@ class TempestLogParser:
 
         for _execution_raw in executions_list_raw:
             _execution_item = self.parse_execution_list(_execution_raw)
-            self.test_mgr.add_execution(_execution_item)
+            self.test_mgr.add_execution(
+                _execution_item,
+                unixtime=_execution_item["unixtime"]
+            )
 
-        executions = self.test_mgr.get_executions()
-        executions.sort()
+        executions = sorted(self.test_mgr.get_executions())
 
         print("""
 Current executions sets list:\n

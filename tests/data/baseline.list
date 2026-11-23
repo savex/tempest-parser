@@ -1,0 +1,4 @@
+tempest.api.compute.servers.test_servers.ServersTestJSON.test_create_server[id-1111,smoke]
+tempest.api.compute.servers.test_servers.ServersTestJSON.test_delete_server[id-2222]
+tempest.api.network.test_ports.PortsTestJSON.test_list_ports[id-3333]
+tempest.api.network.test_ports.PortsTestJSON.test_not_run[id-5555]

@@ -143,6 +143,19 @@ CSV files exported by tparser itself, or xunit CSV files.
 ### .subunit files
 Subunit v2 streams saved to a file.
 
+## Development
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt -r test-requirements.txt -e .
+.venv/bin/pytest
+.venv/bin/ruff check .
+.venv/bin/python scripts/check-test-tags.py
+```
+
+Tests live in `tests/smoke`, `tests/functional` and `tests/integration`; the folder is the test's tag
+(`pytest -m smoke` runs one tag). Sample inputs are in `tests/data`.
+
 ## Credits
 
 Thanks to Dmitry Bogun, Alexey Diyan and Dmitriy Zapeka.

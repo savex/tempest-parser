@@ -5,8 +5,8 @@ import six
 import abc
 import os
 import re
-import cgi
 import html
+from copy import deepcopy
 
 from tempest_parser import const
 
@@ -93,7 +93,8 @@ class _TMPLBase(_Base):
         data.update({
             "executions": _ex,
             "detailed": detailed,
-            "tests": results['tests']
+            # reports escape messages, keep the source results intact
+            "tests": deepcopy(results['tests'])
         })
         self._extend_data(data)
         self._count_totals(data)
