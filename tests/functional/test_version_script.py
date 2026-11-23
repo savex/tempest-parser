@@ -6,8 +6,12 @@ import subprocess
 import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-SHELLS = [s for s in ("/bin/bash", shutil.which("bash")) if s and os.path.exists(s)]
-SHELLS = sorted(set(SHELLS))
+# /bin/bash (3.2 on macOS) and the bash on PATH, once each even when both are the same binary
+SHELLS = {}
+for _shell in ("/bin/bash", shutil.which("bash")):
+    if _shell and os.path.exists(_shell):
+        SHELLS.setdefault(os.path.realpath(_shell), _shell)
+SHELLS = sorted(SHELLS.values())
 
 SETUP_PY = '''from setuptools import setup
 

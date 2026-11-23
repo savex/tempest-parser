@@ -1,7 +1,19 @@
 # tempest-parser
 
+[![Tests](https://github.com/savex/tempest-parser/actions/workflows/tests.yml/badge.svg)](https://github.com/savex/tempest-parser/actions/workflows/tests.yml)
+[![Release](https://github.com/savex/tempest-parser/actions/workflows/release.yml/badge.svg)](https://github.com/savex/tempest-parser/actions/workflows/release.yml)
+[![Version tracking](https://github.com/savex/tempest-parser/actions/workflows/version.yml/badge.svg)](https://github.com/savex/tempest-parser/actions/workflows/version.yml)
+[![PyPI](https://img.shields.io/pypi/v/TempestParser.svg)](https://pypi.org/project/TempestParser/)
+![Python 3.10–3.13](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue.svg)
+![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20macOS-blue.svg)
+[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](https://github.com/savex/tempest-parser/blob/master/LICENSE)
+
 Imports test results from many runs, matches the tests by class, name and options, and builds HTML and CSV
 reports to track their statuses over time.
+
+> **Status: maintained.** All six input formats and the three reports work and are covered by tests in CI.
+> The latest release is [0.3.0](https://github.com/savex/tempest-parser/releases/tag/v0.3.0); PyPI still has 0.2.81.
+> See [Project status](#project-status).
 
 ## Foreword
 
@@ -142,6 +154,20 @@ CSV files exported by tparser itself, or xunit CSV files.
 
 ### .subunit files
 Subunit v2 streams saved to a file.
+
+## Project status
+
+| Part | State |
+|---|---|
+| Input: Tempest log, subunit, jUnit XML (Tempest and raw / k8s), Rally JSON, CSV | Done |
+| Reports: HTML trending, HTML unique errors, CSV | Done |
+| Tests (smoke, functional, integration) and CI on Linux and macOS, Python 3.10–3.13 | Done |
+| Tag-based versioning, Bump version and Release workflows | Done; 0.3.0 was released through them |
+| Upload to PyPI from CI | Planned (off until PyPI trusts the Release workflow) |
+| Project rules for contributors (`CLAUDE.md`) | Next |
+
+The plan is in [documents/plan.md](https://github.com/savex/tempest-parser/blob/master/documents/plan.md), the specification in
+[documents/specs.md](https://github.com/savex/tempest-parser/blob/master/documents/specs.md) and the changes in [changelog.md](https://github.com/savex/tempest-parser/blob/master/changelog.md).
 
 ## Development
 

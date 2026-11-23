@@ -11,6 +11,14 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
 
 ## [Unreleased]
 
+### Changed
+- `setup.py`: requires Python 3.10+, classifiers for 3.10–3.13, `Apache-2.0` license expression, project
+  URLs and a description that lists every input format; the empty `data_files` are gone.
+- `README.md`: CI badges, a status note and a Project status table; links are absolute for PyPI.
+
+### Fixed
+- The wheel no longer installs a top-level `tests` package (the 0.3.0 wheel on the GitHub release does).
+
 ## [0.3.0] - 2026-11-23
 
 ### Added

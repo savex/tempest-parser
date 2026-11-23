@@ -3,7 +3,7 @@
 Bring tempest-parser in line with the scribe repository: GitHub workflows, a tagged test suite,
 tag-based versioning, a README status line and project rules.
 
-Status: **phases 1–3 done**, phases 4–5 not started. Open decisions are listed at the end.
+Status: **phases 1–4 done**, phase 5 not started. Open decisions are listed at the end.
 
 ## 1. Review findings
 
@@ -100,6 +100,10 @@ Bugs and risks found by reading the code (not yet confirmed by running it):
 - Add the badge row (Tests, Release, Version tracking, Python versions, license, and PyPI if you
   publish there), a "Status:" note and a "Project status" table to `README.md`.
 - Fix the classifiers and the `data_files` leftovers.
+- Done. Badges, a status note and a Project status table are at the top of `README.md`; its links are
+  absolute so they also work on PyPI. `setup.py` requires Python 3.10+, lists 3.10–3.13, drops the
+  empty `data_files`, and packages with `find_namespace_packages`, which also stops the `tests`
+  package from slipping into the wheel.
 
 ### Phase 5: project rules
 
@@ -114,4 +118,4 @@ Bugs and risks found by reading the code (not yet confirmed by running it):
 2. **PyPI:** the README says `pip install tempestparser`. Should releases also upload to PyPI?
    That needs a trusted publisher set up on PyPI.
 3. ~~**Starting version**~~: decided, `v0.2.81` back-filled; the next release is 0.3.0.
-4. **Python versions:** suggested 3.10–3.13, dropping 3.9.
+4. ~~**Python versions**~~: decided, 3.10–3.13 (`python_requires=">=3.10"`).
