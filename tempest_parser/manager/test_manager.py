@@ -1,8 +1,11 @@
-import tempest_parser.manager.structs as structs
 import calendar
+import logging
 import os
 import time
-from copy import deepcopy
+
+import tempest_parser.manager.structs as structs
+
+log = logging.getLogger(__name__)
 
 pkg_dir = os.path.dirname(__file__)
 pkg_dir = os.path.join(pkg_dir, os.pardir)
@@ -12,8 +15,11 @@ pkg_dir = os.path.normpath(pkg_dir)
 class TestsManager:
     def __init__(self):
         # structure
-        self.tests_list = deepcopy(structs.tests_template)
+        self.tests_list = structs.new_tests_list()
         self.required_execution_name = "required"
+        # class name -> (tests list, its length, {(name, options): [positions]}, {name: position});
+        # see _class_index
+        self._index = {}
 
     def add_required(self, all_tests_filepath, path=None, use_raw_names=False):
         # on init we should either load the full set of tests
@@ -79,20 +85,12 @@ class TestsManager:
                         raw_names=use_raw_names
                     )
 
-                self._test_item = deepcopy(structs.template_test_item)
-                self._test_item["test_name"] = _test_name
-                self._test_item["uuid"] = _uuid
-                _required = deepcopy(structs.template_test_result)
-                _required.update(result="R", time='0s')
-                self._test_item["results"][
-                    self.required_execution_name] = _required
+                _test_item = structs.new_test_item(
+                    _test_name, _uuid, _test_options, _tags)
+                _test_item["results"][self.required_execution_name] = \
+                    structs.new_test_result(result="R", time='0s')
 
-                self._test_item["test_options"] = _test_options
-                self._test_item["tags"] = _tags
-
-                if _class_name not in _tests:
-                    _tests[_class_name] = []
-                _tests[_class_name].append(self._test_item)
+                _tests.setdefault(_class_name, []).append(_test_item)
         return _tests
 
     @staticmethod
@@ -156,8 +154,8 @@ class TestsManager:
         _test = full_test_name.rsplit(".", 2)[1].split('[')[0]
         _tmp = full_test_name.split(" ")[0].rsplit(".", 1)[1].split(']')
         _options = ""
-        if _tmp.__len__() >= 2:
-            if _tmp[1].__len__() > 0:
+        if len(_tmp) >= 2:
+            if len(_tmp[1]) > 0:
                 _options = _tmp[1]
         return (
             _class,
@@ -165,35 +163,54 @@ class TestsManager:
             _options
         )
 
+    def _class_index(self, class_name):
+        """Lookup indexes for one class's tests, or None if the class is unknown.
+
+        Kept up to date by _append_test; rebuilt when the class's list was replaced or
+        changed elsewhere (add_required, code that edits tests_list directly).
+        """
+        tests = self.tests_list["tests"].get(class_name)
+        if tests is None:
+            return None
+        cached = self._index.get(class_name)
+        if cached is None or cached[0] is not tests or cached[1] != len(tests):
+            by_key, by_name = {}, {}
+            for position, test in enumerate(tests):
+                by_key.setdefault(
+                    (test["test_name"], test["test_options"]), []).append(position)
+                by_name.setdefault(test["test_name"], position)
+            cached = [tests, len(tests), by_key, by_name]
+            self._index[class_name] = cached
+        return cached
+
+    def _append_test(self, class_name, test_item):
+        tests = self.tests_list["tests"].setdefault(class_name, [])
+        cached = self._class_index(class_name)
+        position = len(tests)
+        tests.append(test_item)
+        cached[1] += 1
+        cached[2].setdefault(
+            (test_item["test_name"], test_item["test_options"]), []).append(position)
+        cached[3].setdefault(test_item["test_name"], position)
+
     def test_name_lookup(self, class_name, test_name, uuid, test_options):
-        _index = -1
-        _tests = self.tests_list["tests"]
-
-        if class_name in _tests:
-            for _test_index in range(0, _tests[class_name].__len__()):
-                _indexed_test = _tests[class_name][_test_index]
-                if _indexed_test["test_name"] == test_name \
-                        and _indexed_test["test_options"] == test_options:
-                    if uuid == '' or _indexed_test["uuid"] == '':
-                        _index = _test_index
-                        break
-                    elif _indexed_test["uuid"] == uuid:
-                        _index = _test_index
-                        break
-
-        return _index
+        """Position of the first test with this name and options whose UUID matches
+        (either UUID empty counts as a match), or -1."""
+        cached = self._class_index(class_name)
+        if cached is None:
+            return -1
+        tests = cached[0]
+        for position in cached[2].get((test_name, test_options), ()):
+            _uuid = tests[position]["uuid"]
+            if uuid == '' or _uuid == '' or _uuid == uuid:
+                return position
+        return -1
 
     def test_name_lookup_bare(self, class_name, test_name):
-        _index = -1
-        _tests = self.tests_list["tests"]
-
-        if class_name in _tests:
-            for _test_index in range(0, _tests[class_name].__len__()):
-                if _tests[class_name][_test_index]["test_name"] == test_name:
-                    _index = _test_index
-                    break
-
-        return _index
+        cached = self._class_index(class_name)
+        if cached is None:
+            return -1
+        return cached[3].get(test_name, -1)
 
     def partial_class_name_lookup(self, class_name_short, test_name,
                                   uuid=None, test_options=None):
@@ -206,10 +223,7 @@ class TestsManager:
                 if _index > -1:
                     _full_class_name = _class_name
                     _list.append(_full_class_name)
-        if _list.__len__() > 0:
-            return _list[0]
-        else:
-            return None
+        return _list[0] if _list else None
 
     def add_execution(self, execution, unixtime=None):
         # keep one type for sorting: seconds since the epoch
@@ -230,9 +244,8 @@ class TestsManager:
             self.tests_list["tests"][class_name][_index]["results"][
                 execution_name]["slowest"] = True
         else:
-            print("""
-        WARNING: Parsed slowest test not found in list: {0}, {1}, {2}
-        """.format(execution_name, class_name, test_name))
+            log.warning("Parsed slowest test not found in list: %s, %s, %s",
+                        execution_name, class_name, test_name)
 
     def add_fail_data_for_test(self, execution_name, class_name, test_name,
                                test_options, trace, message,
@@ -242,7 +255,7 @@ class TestsManager:
             # mark all tests with this result
             _tests = self.tests_list["tests"]
             if test_name in _tests:
-                for _test_index in range(0, _tests[test_name].__len__()):
+                for _test_index in range(0, len(_tests[test_name])):
                     _tests[test_name][_test_index]["results"][execution_name][
                         "trace"] = trace
                     _tests[test_name][_test_index]["results"][execution_name][
@@ -270,20 +283,14 @@ class TestsManager:
                 self.tests_list["tests"][_full_class_name][_index]["results"][
                     execution_name]["message"] = message
             else:
-                print("""
-WARNING: Test NOT found: {0}, {1}
-for message: {2}
-""".format(_full_class_name, test_name, message))
+                log.warning("Test not found: %s, %s; for message: %s",
+                            _full_class_name, test_name, message)
 
     def add_result_for_test(self, execution_name, class_name, test_name, uuid,
                             test_options, result, running_time,
                             message='', trace='', tags=None,
                             class_name_short=False, test_name_bare=False):
-        _result = deepcopy(structs.template_test_result)
-        _result["result"] = result
-        _result["time"] = running_time
-        _result["message"] = message
-        _result["trace"] = trace
+        _result = structs.new_test_result(result, running_time, message, trace)
         if class_name == "setUpClass" or class_name == "tearDownClass":
             # if this is a setUpClass situation,
             # mark all tests with this result
@@ -342,17 +349,10 @@ for message: {2}
                     execution_name] = _result
             else:
                 # the test is not there, add it
-                _test_item = deepcopy(structs.template_test_item)
-                _test_item["test_name"] = test_name
-                _test_item["uuid"] = uuid
-                _test_item["test_options"] = test_options
-                _test_item["tags"] = tags if tags is not None else []
+                _test_item = structs.new_test_item(
+                    test_name, uuid, test_options, tags)
                 _test_item["results"][execution_name] = _result
-
-                if _full_class_name not in self.tests_list["tests"]:
-                    # there is no class name key, add it
-                    self.tests_list["tests"][_full_class_name] = []
-                self.tests_list["tests"][_full_class_name].append(_test_item)
+                self._append_test(_full_class_name, _test_item)
 
     def get_tests_for_class(self, class_name):
         if class_name in self.tests_list["tests"]:
@@ -397,7 +397,7 @@ for message: {2}
                 running_time = 0
                 for test in self.tests_list["tests"][class_name]:
                     if _execution in test["results"]:
-                        if test["results"][_execution]["time"].__len__() > 0:
+                        if len(test["results"][_execution]["time"]) > 0:
                             running_time += float(
                                 test["results"][_execution]["time"][:-1])
                 _time_str += "{0}s ".format(running_time)
@@ -431,7 +431,7 @@ for message: {2}
             for test in self.tests_list["tests"][_class]:
                 if execution_name in test["results"]:
                     total += 1
-                    if test["results"][execution_name]["time"].__len__() > 0:
+                    if len(test["results"][execution_name]["time"]) > 0:
                         running_time += float(
                             test["results"][execution_name]["time"][:-1])
                     if test["results"][execution_name]["result"] == "OK":
@@ -448,13 +448,5 @@ for message: {2}
         running_time, total, ok, fail, skip = self.get_summary_for_execution(
             _execution_name)
 
-        print(
-            "Tempest testrun {0}:"
-            " {1} executed: {2} passed, {3} failed, {4} skipped\n".format(
-                _execution_name,
-                total,
-                ok,
-                fail,
-                skip
-            )
-        )
+        log.info("Tempest testrun %s: %s executed: %s passed, %s failed, "
+                 "%s skipped", _execution_name, total, ok, fail, skip)

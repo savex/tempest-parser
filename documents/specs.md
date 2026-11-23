@@ -32,9 +32,12 @@ tparser [options] [inputfile]
 | `--omit-status S` | Leave tests with status `S` out of the reports. Can be repeated. |
 | `--force-single` | Treat every file in a folder as one run, named after the folder. |
 | `--config-file F` | Use config file `F` (absolute path) instead of the packaged one. |
+| `-q, --quiet` | Print errors only. |
 
-Exit codes: `0` on success; `1` for a missing path, an unsupported extension or `-f` value, a folder given
-with `-e`, or an unexpected pipe; `2` for invalid arguments (help is printed).
+Progress goes to stdout through `logging`; errors start with `Error:`.
+
+Exit codes: `0` on success; `1` for a missing path, an unsupported extension, a folder given with `-e`, or
+an unexpected pipe; `2` for invalid arguments, including an unknown `-f` value (usage is printed).
 
 ## 3. Input formats
 
@@ -83,12 +86,16 @@ The baseline run is the execution named `required`.
 ## 6. Reports
 
 - **Trending** (`templates/tempest_trending_report.html`): classes and tests as rows, runs as columns ordered
-  by date, with per-class totals and times. Messages are HTML-escaped. `-d` adds the traces.
+  by date, with per-class totals and times. `-d` adds the traces.
 - **Errors** (`templates/tempest_errors_report.html`): `FAIL` and `SKIP` results from one run, grouped by main
   message. The main message is the result message; if there is none, it is the `Details:` line of the
   trace; failing that, the trace lines that don't start with whitespace or `Trace`.
-- **CSV**: a header row of run dates (plus file names with `-d`), then a `Class,<name>` row for each class
-  followed by one row per test with a result per run.
+- **CSV** (`csv.writer`, quoted as needed): header `"", "class/test name"`, the required run's date or
+  `Required vs Added`, then each run's date (plus its file name with `-d`). Each class has a
+  `Class,<name>` row, followed by one row per test: number, name with options, `R`/`A` (or the required
+  result), then per run its result (plus, with `-d`, the message, and the trace for `FAIL`).
+- HTML reports are rendered with Jinja2 autoescaping; every field from the results is escaped, and line
+  breaks in messages become `<br />`. Reports never change the results they are given.
 
 ## 7. Configuration
 
@@ -108,7 +115,6 @@ The packaged resources are `res/*.list` (baseline lists) and `templates/*.html` 
 3. Importing an own CSV export reads only the first result column.
 4. The `log` parser expects the old testr console layout (class line, indented test lines, blank-line
    separated sections, `Slowest`, `====` failure blocks, `Ran N tests`).
-5. CSV export replaces `"` in messages and traces with `'`.
 
 ## 9. Requirements
 

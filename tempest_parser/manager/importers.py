@@ -1,36 +1,29 @@
-from __future__ import print_function
-
-from xml.etree.ElementTree import parse
-import json
 import csv
+import json
+import logging
 import os
 import re
 import time
-
+from xml.etree.ElementTree import parse
 
 from subunit import make_stream_binary
 from subunit.test_results import TestByTestResult
 from subunit.filters import run_tests_from_stream
 from testtools import StreamToExtendedDecorator
 
+log = logging.getLogger(__name__)
+
 CSV_OWN = 1
 CSV_XUNIT = 2
 
 
+# C0 and C1 control characters, DEL included
+_CONTROL_CHARS_RE = re.compile(
+    '[%s]' % re.escape(''.join(map(chr, [*range(0, 32), *range(127, 160)]))))
+
+
 def remove_control_chars(s):
-    # import unicodedata
-    # all_chars = (unichr(i) for i in xrange(0x110000))
-    # control_chars = ''.join(
-    #   c for c in all_chars if unicodedata.category(c) == 'Cc'
-    # )
-    control_chars = ''.join(
-        map(
-            chr,
-            list(range(0, 32)) + list(range(127, 160))
-        )
-    )
-    control_char_re = re.compile('[%s]' % re.escape(control_chars))
-    return control_char_re.sub('', s)
+    return _CONTROL_CHARS_RE.sub('', s)
 
 
 def get_date_from_source(source):
@@ -79,7 +72,7 @@ def k8s_slow_extract(_reason):
     return _m, _t
 
 
-class ImporterBase(object):
+class ImporterBase:
     def __init__(
         self,
         test_manager,
@@ -471,7 +464,9 @@ class CSVImporter(ImporterBase):
                 if row[2] in ['R', 'A']:
                     _status_index = 3
                 _status = row[_status_index]
-                _message = self._fix_message(row[_status_index+1])
+                _message = self._fix_message(
+                    row[_status_index + 1] if len(row) > _status_index + 1
+                    else '')
                 if _status in self.status_filters:
                     continue
                 self.tm.add_result_for_test(
@@ -561,7 +556,6 @@ class TParserResult(TestByTestResult):
         self.counter = 0
 
     def _on_test(self, test, status, start_time, stop_time, tags, details):
-        print(' '*6, end='\r')
         _test_name = "none"
         _uuid = ""
         _test_options = ""
@@ -602,7 +596,6 @@ class TParserResult(TestByTestResult):
             trace=_tb
         )
 
-        print("{:>5}".format(self.counter), end='')
         self.counter += 1
 
 
@@ -616,15 +609,15 @@ class SubunitImporter(ImporterBase):
         _execution_date, _unixtime = get_date_from_source(self.source)
         _execution_name = self.source.name + _execution_date
 
+        _result = TParserResult(
+            _execution_name, self.tm, status_filters=self.status_filters)
         run_tests_from_stream(
             self.source,
-            StreamToExtendedDecorator(TParserResult(
-                _execution_name, self.tm, status_filters=self.status_filters
-            )),
+            StreamToExtendedDecorator(_result),
             protocol_version=2,
             passthrough_subunit=False
         )
-        print("\n...done")
+        log.debug("%s: %d tests", _execution_name, _result.counter)
 
         self.add_execution(
             _execution_name,

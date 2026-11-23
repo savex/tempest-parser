@@ -1,51 +1,52 @@
-# test_template
-# result item list here consists of dicts with
-# execution_name as a key and result
-template_test_result = {
-    "result": "",
-    "time": "",
-    "slowest": False,
-    "setup_fail": False,
-    "trace": "",
-    "message": ""
-}
+"""Builders for the dicts that hold parsed results.
 
-template_test_item = {
-    # class names will be as a key
-    # "class_name": "",
-    "test_name": "",
-    "uuid": "",
-    "test_options": "",
-    "tags": [],
-    "results": {}
-}
+Each call returns a fresh dict, which is much cheaper than deep-copying a template.
+"""
 
-template_slowest_item = {
-    "time_total": "",
-    "count": 0,
-    "tests": []
-}
 
-template_summary_item = {
-    "total": 0,
-    "failed": 0,
-    "outcome": "",
-    "time": ""
-}
+def new_test_result(result="", time="", message="", trace=""):
+    """One test's result in one run."""
+    return {
+        "result": result,
+        "time": time,
+        "slowest": False,
+        "setup_fail": False,
+        "trace": trace,
+        "message": message,
+    }
 
-# Execution dict template
-execution_item_template = {
-    "execution_name": "",
-    "execution_date": "",
-    "unixtime": 0,
-    "slowest": template_slowest_item,
-    "summary": template_summary_item,
-    "raw": ""
-}
 
-tests_template = {
-    # class names
-    "tests": {},
-    # parsed execution names
-    "executions": {}
-}
+def new_test_item(test_name="", uuid="", test_options="", tags=None):
+    """One test; the class name is the key it is stored under."""
+    return {
+        "test_name": test_name,
+        "uuid": uuid,
+        "test_options": test_options,
+        "tags": tags if tags is not None else [],
+        # execution name -> result
+        "results": {},
+    }
+
+
+def new_slowest_item():
+    return {"time_total": "", "count": 0, "tests": []}
+
+
+def new_summary_item():
+    return {"total": 0, "failed": 0, "outcome": "", "time": ""}
+
+
+def new_execution_item():
+    return {
+        "execution_name": "",
+        "execution_date": "",
+        "unixtime": 0,
+        "slowest": new_slowest_item(),
+        "summary": new_summary_item(),
+        "raw": "",
+    }
+
+
+def new_tests_list():
+    """The whole structure: class name -> [test items], execution name -> [date, unixtime]."""
+    return {"tests": {}, "executions": {}}

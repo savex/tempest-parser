@@ -128,6 +128,7 @@ stestr last --subunit | tparser -r trending.html
 | `-d, --detailed` | Include messages and tracebacks. |
 | `-i, --include-required` | Add the baseline test list from the config as the first column. |
 | `--omit-status` | Leave tests with this status (`OK`, `FAIL`, `ERROR`, `SKIP`, ...) out. Repeatable. |
+| `-q, --quiet` | Print errors only. |
 | `--force-single` | Treat all files in a folder as a single run. |
 | `--config-file` | Use this config file (absolute path) instead of the packaged one. |
 

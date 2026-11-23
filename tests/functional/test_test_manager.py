@@ -1,3 +1,5 @@
+import random
+
 import pytest
 
 from tempest_parser.manager.test_manager import TestsManager
@@ -118,3 +120,48 @@ def test_class_errors_and_totals():
     _add(tm, "run1", "test_b", "FAIL")
     assert tm.is_class_has_errors(SERVERS)
     assert tm.get_totals_as_string_for_class(SERVERS) == "2/1, "
+
+
+def _linear_lookup(tests, test_name, uuid, test_options):
+    """The lookup rule as a plain scan, to check the index against."""
+    for position, test in enumerate(tests):
+        if test["test_name"] == test_name and test["test_options"] == test_options:
+            if uuid == '' or test["uuid"] == '' or test["uuid"] == uuid:
+                return position
+    return -1
+
+
+def test_lookup_index_matches_linear_scan():
+    rng = random.Random(7)
+    tm = TestsManager()
+    names = ["test_%d" % i for i in range(30)]
+    options = ["", "(ipv4)", "(ipv6)"]
+    uuids = ["", "id-1", "id-2", None]
+    for run in range(4):
+        for _ in range(200):
+            _add(tm, "run%d" % run, rng.choice(names), "OK",
+                 uuid=rng.choice(uuids[:3]), options=rng.choice(options))
+    tests = tm.get_tests_for_class(SERVERS)
+    for name in names + ["test_missing"]:
+        for option in options + [None]:
+            for uuid in uuids:
+                assert tm.test_name_lookup(SERVERS, name, uuid, option) == \
+                    _linear_lookup(tests, name, uuid, option)
+        bare = next((i for i, t in enumerate(tests) if t["test_name"] == name), -1)
+        assert tm.test_name_lookup_bare(SERVERS, name) == bare
+    assert tm.test_name_lookup("no.such.Class", "test_0", "", "") == -1
+    assert tm.test_name_lookup_bare("no.such.Class", "test_0") == -1
+
+
+def test_lookup_index_follows_outside_changes(data_dir):
+    tm = TestsManager()
+    _add(tm, "run1", "test_a", "OK")
+    assert tm.test_name_lookup(SERVERS, "test_b", "", "") == -1
+    # code that appends to tests_list directly
+    tm.get_tests_list()["tests"][SERVERS].append(
+        {"test_name": "test_b", "uuid": "", "test_options": "", "tags": [], "results": {}})
+    assert tm.test_name_lookup(SERVERS, "test_b", "", "") == 1
+    # add_required replaces the whole tests dict
+    tm.add_required(data_dir + "/baseline.list")
+    assert tm.test_name_lookup(SERVERS, "test_a", "", "") == -1
+    assert tm.test_name_lookup(SERVERS, "test_delete_server", "id-2222", "") == 1

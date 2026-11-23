@@ -89,7 +89,21 @@ def test_folder_force_single(tmp_path):
     assert len(_rows(out)) == 7
     with open(out) as f:
         header = next(csv.reader(f))
-    assert len([c for c in header if c.strip()]) == 2  # name column + one run
+    assert len(header) == 4  # number, name, required/added, one run
+
+
+def test_folder_force_single_detected_xml(tmp_path):
+    # without -f, .xml files are read as tempest XML; --force-single applies to them too
+    folder = tmp_path / "runs"
+    folder.mkdir()
+    shutil.copy(os.path.join(DATA_DIR, "tempest.xml"), folder / "a.xml")
+    shutil.copy(os.path.join(DATA_DIR, "tempest.xml"), folder / "b.xml")
+    out = tmp_path / "out.csv"
+    result = tparser("--force-single", "-c", out, folder)
+    assert result.returncode == 0, result.stderr
+    with open(out) as f:
+        header = next(csv.reader(f))
+    assert len(header) == 4  # number, name, required/added, one run
 
 
 def test_omit_status(tmp_path):
@@ -115,7 +129,6 @@ def test_include_required(tmp_path):
 
 
 @pytest.mark.parametrize("args, message", [
-    (["-f", "nope", os.path.join(DATA_DIR, "tempest.xml")], b"not supported"),
     (["/no/such/path"], b"not exists"),
     (["-e", "x.html", DATA_DIR], b"require single file"),
     ([os.path.join(DATA_DIR, "baseline.list")], b"not supported"),
@@ -124,3 +137,23 @@ def test_errors_exit_1(tmp_path, args, message):
     result = tparser(*args)
     assert result.returncode == 1
     assert message in result.stdout
+
+
+def test_unknown_format_exit_2():
+    result = tparser("-f", "nope", os.path.join(DATA_DIR, "tempest.xml"))
+    assert result.returncode == 2
+    assert b"invalid choice: 'nope'" in result.stderr
+
+
+def test_quiet_prints_nothing_on_success(tmp_path):
+    out = tmp_path / "out.csv"
+    result = tparser("-q", "-c", out, os.path.join(DATA_DIR, "tempest.xml"))
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == b""
+    assert _rows(out)
+
+
+def test_quiet_still_prints_errors():
+    result = tparser("-q", "/no/such/path")
+    assert result.returncode == 1
+    assert result.stdout.startswith(b"Error: Supplied path/file not exists")

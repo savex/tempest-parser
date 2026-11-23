@@ -1,12 +1,9 @@
-from __future__ import print_function
-
-import jinja2
-import six
 import abc
 import os
 import re
-import html
-from copy import deepcopy
+
+import jinja2
+from markupsafe import Markup, escape
 
 from tempest_parser import const
 
@@ -16,12 +13,11 @@ pkg_dir = os.path.normpath(pkg_dir)
 
 
 def line_breaks(text):
-    # replace python linebreaks with html breaks
-    return text.replace("\n", "<br />")
+    # escape the text, then turn python linebreaks into html breaks
+    return Markup("<br />").join(escape(text).split("\n"))
 
 
-@six.add_metaclass(abc.ABCMeta)
-class _Base(object):
+class _Base(abc.ABC):
     def __init__(self):
         self.jinja2_env = self.init_jinja2_env()
 
@@ -31,14 +27,17 @@ class _Base(object):
 
     @staticmethod
     def init_jinja2_env():
+        # autoescape: every value from the results is escaped when rendered
         return jinja2.Environment(
             loader=jinja2.FileSystemLoader(os.path.join(pkg_dir, 'templates')),
+            autoescape=True,
             trim_blocks=True,
             lstrip_blocks=True)
 
 
 class _TMPLBase(_Base):
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def tmpl(self):
         pass
 
@@ -93,8 +92,8 @@ class _TMPLBase(_Base):
         data.update({
             "executions": _ex,
             "detailed": detailed,
-            # reports escape messages, keep the source results intact
-            "tests": deepcopy(results['tests'])
+            # read only: reports must not change the results they are given
+            "tests": results['tests']
         })
         self._extend_data(data)
         self._count_totals(data)
@@ -124,14 +123,8 @@ class _TMPLBase(_Base):
                 const.STATUS_ADDED: 'Added'}}
 
     def _extend_data(self, data):
-        # Escape html symbols in messages
-        for item in data['executions']:
-            ex_name = item['name']
-            for test_class in data['tests']:
-                for test in data['tests'][test_class]:
-                    if ex_name in test['results']:
-                        _message = html.escape(test['results'][ex_name]['message'])
-                        test['results'][ex_name]['message'] = _message
+        # extra data for a report's template
+        pass
 
 
 # Trending report
@@ -152,6 +145,8 @@ class HTMLErrorsReport(_TMPLBase):
             ex_name = item['name']
             for test_class in data['tests']:
                 for test in data['tests'][test_class]:
+                    if ex_name not in test['results']:
+                        continue
 
                     _message = test['results'][ex_name]['message']
                     main_message = "" if _message is None else _message
@@ -175,19 +170,13 @@ class HTMLErrorsReport(_TMPLBase):
                             _trace_additional.append(line)
                     _trace_messages = ", ".join(_trace_additional)
 
-                    if _trace_details.__len__() == 0 \
-                            and main_message.__len__() == 0:
-                        if len(_trace_messages) > 0:
+                    if not _trace_details and not main_message:
+                        if _trace_messages:
                             main_message = _trace_messages.split(':')[0]
                         else:
                             main_message = "Fail message can't be extracted"
-                    elif main_message.__len__() == 0:
+                    elif not main_message:
                         main_message = _trace_messages.split(':')[0]
-
-
-                    main_message = html.escape(main_message)
-                    _trace_details = html.escape(_trace_details)
-                    _trace_messages = html.escape(_trace_messages)
 
                     _dict = {
                         'test_class': test_class,
@@ -213,7 +202,7 @@ class HTMLErrorsReport(_TMPLBase):
         data['uniqie_fails'] = failed_messages
 
 
-class ReportToFile(object):
+class ReportToFile:
     def __init__(self, report, target):
         self.report = report
         self.target = target
@@ -221,7 +210,7 @@ class ReportToFile(object):
     def __call__(self, payload, detailed=False):
         payload = self.report(payload, detailed)
 
-        if isinstance(self.target, six.string_types):
+        if isinstance(self.target, str):
             self._wrapped_dump(payload)
         else:
             self._dump(payload, self.target)

@@ -1,18 +1,33 @@
+import argparse
+import logging
 import os
 import sys
-import argparse
 
 from tempest_parser import const
-from tempest_parser.reports import reporter
-from tempest_parser.reports.csv_reporter import CSVReporter
+from tempest_parser.manager.importers import (
+    CSVImporter, JSONImporter, SubunitImporter, XMLImporter)
 from tempest_parser.manager.test_manager import TestsManager
 from tempest_parser.parser.tempest_log_parser import TempestLogParser
-from tempest_parser.manager.importers import XMLImporter, JSONImporter, \
-    CSVImporter, SubunitImporter
+from tempest_parser.reports import reporter
+from tempest_parser.reports.csv_reporter import CSVReporter
 from tempest_parser.utils.config import ParserConfigFile
 
-pkg_dir = os.path.dirname(__file__)
-pkg_dir = os.path.normpath(pkg_dir)
+pkg_dir = os.path.normpath(os.path.dirname(__file__))
+
+log = logging.getLogger("tempest_parser")
+
+# file extension -> input format, used when -f is not given
+EXTENSION_FORMATS = {
+    ".json": const.FMT_RALLY_JSON,
+    ".csv": const.FMT_CSV,
+    ".xml": const.FMT_XML_TEMPEST,
+    ".log": const.FMT_PYTEST,
+    ".subunit": const.FMT_SUBUNIT,
+}
+
+
+class CLIError(Exception):
+    """Stops the run with an error message and exit code 1."""
 
 
 class MyParser(argparse.ArgumentParser):
@@ -22,341 +37,190 @@ class MyParser(argparse.ArgumentParser):
         sys.exit(2)
 
 
-def help_message():
-    print("""
-    Please, supply pytest output file as a parameter. \n
-          ...or previously exported CSV file \n
-          ...or rally's tool exported JSON file \n
-          ...or subunit's exported XML file \n
-          ...or saved subunit output \n
-          ...or folder full of files with types mentioned.\n
-    """)
+class _Formatter(logging.Formatter):
+    """Plain messages; errors and warnings get a prefix."""
 
-    return
+    def format(self, record):
+        message = super().format(record)
+        if record.levelno >= logging.ERROR:
+            return "Error: " + message
+        if record.levelno >= logging.WARNING:
+            return "Warning: " + message
+        return message
 
 
-def detect_format_from_filename(filename, strict=True):
-    if filename.endswith(".json"):
-        # this is Rally's json file
-        return const.FMT_RALLY_JSON
-    elif filename.endswith(".csv"):
-        # this is simple csv file
-        return const.FMT_CSV
-    elif filename.endswith(".xml"):
-        # this is an xml file, parse it using specific importer
-        # default to tempest type
-        return const.FMT_XML_TEMPEST
-    elif filename.endswith(".log"):
-        # ..it is a bare testr output, parse it
-        return const.FMT_PYTEST
-    elif filename.endswith(".subunit"):
-        # ..it is a subunit stream saved as a file, pass it along
-        return const.FMT_SUBUNIT
-    elif strict:
-        print("Error: Input filename's extension is not supported")
-        sys.exit(1)
-    return None
+def setup_logging(quiet=False):
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(_Formatter("%(message)s"))
+    log.handlers[:] = [handler]
+    log.setLevel(logging.ERROR if quiet else logging.INFO)
+    log.propagate = False
+
+
+def detect_format_from_filename(filename):
+    """Input format for a file name, or None when the extension is not known."""
+    return EXTENSION_FORMATS.get(os.path.splitext(filename)[1])
+
+
+def make_importer(fmt, tm, source, force_single=None, filters=None):
+    filters = filters or []
+    if fmt == const.FMT_RALLY_JSON:
+        return JSONImporter(tm, source, status_filters=filters)
+    if fmt == const.FMT_CSV:
+        return CSVImporter(tm, source, status_filters=filters)
+    if fmt in (const.FMT_XML_TEMPEST, const.FMT_XML_RAW):
+        # raw XML keeps the test names as they are
+        return XMLImporter(tm, source,
+                           use_raw_names=fmt == const.FMT_XML_RAW,
+                           force_single_execution=force_single,
+                           status_filters=filters)
+    if fmt == const.FMT_PYTEST:
+        return TempestLogParser(tm, source, status_filters=filters)
+    if fmt == const.FMT_SUBUNIT:
+        return SubunitImporter(tm, source, status_filters=filters)
+    raise CLIError("Unknown input format: {}".format(fmt))
 
 
 def do_parse_file(source, tm, fmt=None, force_single=None, filters=None):
-    close_source = False
-    filename = "unknown/stdin"
-    if not hasattr(source, "read"):
+    """Import one file (a path) or stream (an open file, e.g. stdin)."""
+    if hasattr(source, "read"):
+        make_importer(fmt, tm, source, force_single, filters).parse()
+        log.info("Imported %s", getattr(source, "name", "unknown/stdin"))
+        return
+    if fmt is None:
+        fmt = detect_format_from_filename(source)
         if fmt is None:
-            fmt = detect_format_from_filename(source)
-        filename = source
-        source = open(source, "rt")
-        close_source = True
-
-    filters = filters or []
-    importer = None
-
-    if fmt == const.FMT_RALLY_JSON:
-        # this is Rally's json file
-        importer = JSONImporter(tm, source, status_filters=filters)
-    elif fmt == const.FMT_CSV:
-        # this is simple csv file
-        importer = CSVImporter(tm, source, status_filters=filters)
-    elif fmt == const.FMT_XML_TEMPEST:
-        # this is an xml file from tempest
-        # parse it using specific importer
-        importer = XMLImporter(tm, source, status_filters=filters)
-    elif fmt == const.FMT_XML_RAW:
-        # this is a raw xml file
-        # parse it and use test names as is
-        importer = XMLImporter(
-            tm,
-            source,
-            use_raw_names=True,
-            force_single_execution=force_single,
-            status_filters=filters
-        )
-    elif fmt == const.FMT_PYTEST:
-        # ..it is a bare testr output, parse it
-        importer = TempestLogParser(tm, source, status_filters=filters)
-    elif fmt == const.FMT_SUBUNIT:
-        # ..it is a subunit stream saved as a file, pass it along
-        importer = SubunitImporter(tm, source, status_filters=filters)
-
-    importer.parse()
-    print("Imported {}".format(filename))
-
-    if close_source:
-        source.close()
+            raise CLIError(
+                "Input filename's extension is not supported: '{}'".format(source))
+    with open(source, "rt") as stream:
+        make_importer(fmt, tm, stream, force_single, filters).parse()
+    log.info("Imported %s", source)
 
 
-# main
-def tempest_cli_parser_main():
+def build_parser():
     parser = MyParser(prog="Tempest CLI Parser")
-
     parser.add_argument(
         "inputfile", nargs="?", default=sys.stdin,
-        help="""
-    File with tempest results (CSV/LOG/XML/JSON) or folder full of these files
-    """)
-
+        help="File with test results or a folder of them; stdin when omitted")
     parser.add_argument(
-        "-f",
-        "--input-format",
-        help="""
-    Input format. Defaults to SUBUNIT for pipe.
-    Tries to detect from extension if filename is supplied
-    """)
-
+        "-f", "--input-format", choices=sorted(const.ALL_INPUT_FORMATS),
+        help="Input format. Detected from the file extension when not set; "
+             "stdin defaults to subunit")
     parser.add_argument(
-        "--omit-status",
-        action="append",
-        help="Do not include tests with target status in final report. "
-             "Option can be used multiple times."
-    )
-
+        "--omit-status", action="append", default=[], metavar="STATUS",
+        help="Leave tests with this status (OK, FAIL, ERROR, SKIP, ...) out of "
+             "the reports. Can be used several times")
     parser.add_argument(
-        "-d",
-        "--detailed",
-        action="store_true",
-        help="""
-    Include messages column with tracebacks and other messages.
-    Default comes from config
-    """)
-
+        "-d", "--detailed", action="store_true",
+        help="Include a messages column with tracebacks. Default comes from config")
     parser.add_argument(
-        "-i",
-        "--include-required",
-        action="store_true", default=False,
-        help="Initialise first column as baseline test list. I.e. required"
-    )
-
-    parser.add_argument(
-        "-c",
-        "--csv-file",
-        help="Force output to CSV"
-    )
-
+        "-i", "--include-required", action="store_true",
+        help="Add the baseline test list from the config as the first column")
+    parser.add_argument("-c", "--csv-file", help="Write the CSV report")
     parser.add_argument(
         "--config-file",
-        help="""
-    Use specific configuration file instead of standard.
-    Use absolute path, please.
-    """
-    )
-
+        help="Use this configuration file (absolute path) instead of the packaged one")
     parser.add_argument(
-        "--force-single",
-        action="store_true", default=False,
-        help="All files in folder treated as single execution"
-    )
-
+        "--force-single", action="store_true",
+        help="Treat all files in a folder as a single run (XML input)")
     parser.add_argument(
-        "-r",
-        "--html-trending-filename",
-        help="When set, creates HTML Trending Report"
-    )
-
+        "-r", "--html-trending-filename", help="Write the HTML trending report")
     parser.add_argument(
-        "-e",
-        "--html-errors-filename",
-        help="When set, creates HTML Errors Report"
-    )
+        "-e", "--html-errors-filename",
+        help="Write the HTML unique errors report (single file input only)")
+    parser.add_argument(
+        "-q", "--quiet", action="store_true", help="Print errors only")
+    return parser
 
-    args = parser.parse_args()
 
-    # Init Config
-    _config_file_path = os.path.join(pkg_dir, 'etc', 'tempest-parser.conf')
-    if args.config_file:
-        _config_file_path = args.config_file
-    config = ParserConfigFile(_config_file_path)
+def load_config(args):
+    path = args.config_file or os.path.join(pkg_dir, 'etc', 'tempest-parser.conf')
+    return ParserConfigFile(path)
 
-    # use config to set value for 'detailed' option
-    _config_detailed_default = config.get_detailed_column_default_value()
-    _args_detailed = args.detailed
 
-    do_detailed = _args_detailed if _args_detailed \
-        else _config_detailed_default
+def collect_inputs(args, input_fmt):
+    """[(source, format, force_single)] to import, in order."""
+    source = args.inputfile
+    if hasattr(source, "name"):
+        if source.name != "<stdin>":
+            raise CLIError("Unknown PIPE: '{}', '<stdin>' expected".format(source.name))
+        fmt = input_fmt if input_fmt is not None else const.FMT_SUBUNIT
+        if input_fmt is None:
+            log.info("No PIPE format set, defaulted to: '%s'", const.FORMAT_LABELS[fmt])
+        log.info("Reading '%s' from '%s'", const.FORMAT_LABELS[fmt], source.name)
+        return [(source, fmt, None)]
 
-    # prepare format
-    input_fmt = None
-    if args.input_format is None:
-        pass
-    else:
-        _fmt = args.input_format.strip()
-        if _fmt in const.ALL_INPUT_FORMATS:
-            input_fmt = const.ALL_INPUT_FORMATS[_fmt]
-        else:
-            print("Error: Supplied format is not supported: '{}', "
-                  "use one of: {}".format(
-                      args.input_format,
-                      ", ".join(sorted(const.ALL_INPUT_FORMATS))
-                  ))
-            sys.exit(1)
+    if not os.path.exists(source):
+        raise CLIError("Supplied path/file not exists, '{}'".format(source))
+    if os.path.isfile(source):
+        return [(source, input_fmt, None)]
+    if args.html_errors_filename:
+        raise CLIError(
+            "Errors report require single file, folder given: '{}'".format(source))
 
-    # prepare filter
-    if args.omit_status:
-        status_filters = args.omit_status
-    else:
-        status_filters = []
+    log.info("Importing tests from folder '%s'", source)
+    inputs = []
+    for name in sorted(os.listdir(source)):
+        if input_fmt is None:
+            if detect_format_from_filename(name) is None:
+                log.info("Skipped '%s', extension is not supported", name)
+                continue
+        elif not name.endswith(const.FORMAT_LABELS[input_fmt]):
+            log.info("Skipped '%s', extension not corresponds to given format (%s)",
+                     name, const.FORMAT_LABELS[input_fmt])
+            continue
+        inputs.append((os.path.join(source, name), input_fmt,
+                       source if args.force_single else None))
+    return inputs
 
-    pipe_fmt = None
-    # Detect pipe input, prior to handle args
-    # print("istty?={}, fifo?={}, fd?={}".format(
-    #     sys.stdin.isatty(),
-    #     S_ISFIFO(os.fstat(0).st_mode),
-    #     args.inputfile
-    # ))
-    if hasattr(args.inputfile, "name"):
-        if args.inputfile.name == "<stdin>":
-            if input_fmt is None:
-                pipe_fmt = const.FMT_SUBUNIT
-                print("No PIPE format set, defaulted to: '{}'".format(
-                    const.FORMAT_LABELS[pipe_fmt]
-                ))
-            else:
-                pipe_fmt = input_fmt
-        else:
-            print("Error: Unknown PIPE: '{}', '<stdin>' expected".format(
-                args.inputfile.name
-            ))
-            sys.exit(1)
-    else:
-        # Check for supplied folder/file to be exists
-        if not os.path.exists(args.inputfile):
-            print("Error: Supplied path/file not exists, '{}'".format(
-                args.inputfile
-            ))
-            sys.exit(1)
 
-        # Check if errors report is set and file is supplied
-        if not os.path.isfile(args.inputfile):
-            if args.html_errors_filename:
-                print("Error: Errors report require single file, "
-                      "folder given: '{}'".format(args.inputfile))
-                sys.exit(1)
+def write_reports(args, tests_manager, detailed):
+    results = tests_manager.get_tests_list()
+    if args.html_trending_filename:
+        log.info("Generating HTML Trending report...")
+        reporter.ReportToFile(reporter.HTMLTrendingReport(),
+                              args.html_trending_filename)(results, detailed=detailed)
+    if args.html_errors_filename:
+        log.info("Generating HTML Errors report...")
+        reporter.ReportToFile(reporter.HTMLErrorsReport(),
+                              args.html_errors_filename)(results)
+    if args.csv_file is not None:
+        log.info("Generating CSV report...")
+        CSVReporter(tests_manager).generate_to_file(args.csv_file, detailed=detailed)
 
-    if hasattr(args.inputfile, "name"):
-        print("Reading '{}' from '{}'".format(
-            const.FORMAT_LABELS[pipe_fmt],
-            args.inputfile.name
-        ))
 
-    # At this point we must load tests to combine executions with
-    # for now it will be all tests
+def run(args):
+    config = load_config(args)
+    detailed = args.detailed or config.get_detailed_column_default_value()
+    input_fmt = const.ALL_INPUT_FORMATS[args.input_format] if args.input_format else None
+
+    inputs = collect_inputs(args, input_fmt)
+
     tests_manager = TestsManager()
     if args.include_required and args.html_errors_filename is None:
-        _all_tests_filename = config.get_all_tests_list_filepath()
-        print("Preloading all tests from '{}'".format(
-            _all_tests_filename
-        ))
-        _use_raw_names = True if input_fmt == const.FMT_XML_RAW else False
+        baseline = config.get_all_tests_list_filepath()
+        log.info("Preloading all tests from '%s'", baseline)
         tests_manager.add_required(
-            _all_tests_filename,
-            use_raw_names=_use_raw_names
-        )
-    # # Parse objects from raw file
-    # # and Collect / sort objects into executions and parse them
-    if pipe_fmt is not None:
-        # this is a pipe input, pass file descriptor and format
-        do_parse_file(
-            args.inputfile,
-            tests_manager,
-            fmt=pipe_fmt,
-            filters=status_filters
-        )
-    elif os.path.isfile(args.inputfile):
-        # this is a file, parse it using supplied input format
-        do_parse_file(
-            args.inputfile,
-            tests_manager,
-            fmt=input_fmt,
-            filters=status_filters
-        )
-    else:
-        print("Importing tests from folder '{}'".format(args.inputfile))
-        # this is a folder, get files one by one
-        _folder_content = os.listdir(args.inputfile)
+            baseline, use_raw_names=input_fmt == const.FMT_XML_RAW)
 
-        for _file in sorted(_folder_content):
-            # parse files according to format
-            if input_fmt is None:
-                if detect_format_from_filename(_file, strict=False) is None:
-                    print("Skipped '{}', extension is not supported".format(
-                        _file
-                    ))
-                    continue
-            elif not _file.endswith(const.FORMAT_LABELS[input_fmt]):
-                print(
-                    "Skipped '{}', "
-                    "extension not corresponds to given format ({})".format(
-                        _file,
-                        const.FORMAT_LABELS[input_fmt]
-                    ))
-                continue
-            # if extension fits - process file
-            if args.force_single:
-                do_parse_file(
-                    os.path.join(
-                        args.inputfile,
-                        _file
-                    ),
-                    tests_manager,
-                    fmt=input_fmt,
-                    force_single=args.inputfile,
-                    filters=status_filters
-                )
-            else:
-                do_parse_file(
-                    os.path.join(
-                        args.inputfile,
-                        _file
-                    ),
-                    tests_manager,
-                    fmt=input_fmt,
-                    filters=status_filters
-                )
+    for source, fmt, force_single in inputs:
+        do_parse_file(source, tests_manager, fmt=fmt, force_single=force_single,
+                      filters=args.omit_status)
 
-    if args.html_trending_filename:
-        # prepare the reporting subsystem
-        trending_report = reporter.ReportToFile(
-            reporter.HTMLTrendingReport(),
-            args.html_trending_filename
-        )
-        # call-n-render report
-        print("Generating HTML Trending report...")
-        trending_report(tests_manager.get_tests_list(), detailed=do_detailed)
+    write_reports(args, tests_manager, detailed)
 
-    if args.html_errors_filename:
-        errors_report = reporter.ReportToFile(
-            reporter.HTMLErrorsReport(),
-            args.html_errors_filename
-        )
-        # call-n-render report
-        print("Generating HTML Errors report...")
-        errors_report(tests_manager.get_tests_list())
 
-    if args.csv_file is not None:
-        print("Generating CSV report...")
-        csv_reporter = CSVReporter(tests_manager)
-        csv_reporter.generate_to_file(args.csv_file, detailed=do_detailed)
+def tempest_cli_parser_main(argv=None):
+    """Console entry point; returns the exit code."""
+    args = build_parser().parse_args(argv)
+    setup_logging(args.quiet)
+    try:
+        run(args)
+    except CLIError as e:
+        log.error("%s", e)
+        return 1
+    return 0
 
 
 if __name__ == '__main__':
-    tempest_cli_parser_main()
-    sys.exit(0)
+    sys.exit(tempest_cli_parser_main())

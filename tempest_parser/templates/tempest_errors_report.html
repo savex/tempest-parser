@@ -212,7 +212,7 @@
     <tbody>
     <tr>
         <td colspan="3" class="header_text">
-            Unique fails: {{ uniqie_fails.__len__() }}
+            Unique fails: {{ uniqie_fails | length }}
         </td>
     </tr>
 
@@ -231,7 +231,7 @@
         </td>
         <td align="center">
             <div class="container">
-                <div class="counter">{{ uniqie_fails[failed_message].__len__() }}</div>
+                <div class="counter">{{ uniqie_fails[failed_message] | length }}</div>
                 <div class="button">
                     <a href="#" onclick="toggleClassByID('fail', '{{ test_group_counter }}')" id="fail_group_button{{ test_group_counter }}">&uarr;</a>
                 </div>
@@ -262,7 +262,7 @@
     <tbody>
     <tr>
         <td colspan="3" class="header_text">
-            Unique skips: {{ unique_skips.__len__() }}
+            Unique skips: {{ unique_skips | length }}
         </td>
     </tr>
 
@@ -281,7 +281,7 @@
         </td>
         <td align="center">
             <div class="container">
-                <div class="counter">{{ unique_skips[skip_message].__len__() }}</div>
+                <div class="counter">{{ unique_skips[skip_message] | length }}</div>
                 <div class="button">
                     <a href="#skip_group_button{{ test_group_counter }}" onclick="toggleClassByID('skip', '{{ test_group_counter }}')" id="skip_group_button{{ test_group_counter }}">&uarr;</a>
                 </div>

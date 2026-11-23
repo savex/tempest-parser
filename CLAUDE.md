@@ -33,7 +33,8 @@ matches tests across them and writes HTML trending / errors reports and CSV. Usa
 - Keep `documents/specs.md` in step with the code when CLI options, input formats, statuses, reports or
   config keys change.
 - Reports never change the `TestsManager` results they are given: copy first (see `_TMPLBase.__call__`).
-  HTML escaping happens in the reporter and templates, not in stored results.
+  HTML escaping is Jinja2 autoescaping in the reporter and templates, never in stored results; mark
+  trusted markup with `markupsafe.Markup`.
 - The wheel holds only `tempest_parser`. New data folders need `package_data` / `MANIFEST.in` entries and a
   check in `tests/integration/test_wheel.py`.
 - Versions come from `v*` git tags. Don't edit the version in `setup.py` by hand: use

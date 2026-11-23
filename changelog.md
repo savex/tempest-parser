@@ -14,14 +14,30 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
 ### Added
 - `CLAUDE.md` with the project layout and rules (changelog, checks before committing, test tags and
   data, specs, packaging, versioning).
+- `-q, --quiet`: print errors only.
 
 ### Changed
 - `setup.py`: requires Python 3.10+, classifiers for 3.10–3.13, `Apache-2.0` license expression, project
   URLs and a description that lists every input format; the empty `data_files` are gone.
 - `README.md`: CI badges, a status note and a Project status table; links are absolute for PyPI.
+- `-f` takes only the known formats; an unknown value now exits with code 2 and the argparse usage message
+  (was 1).
+- Progress and summaries go through `logging` (stdout, `Error:`/`Warning:` prefixes) instead of `print`;
+  the `log` parser's debug dump of parsed objects is gone from the normal output.
+- CSV report is written with `csv.writer`: fields are quoted as needed, so `"`, commas and line breaks in
+  messages survive (they used to be replaced with `'`). The header always has a required/added column, so
+  it lines up with the rows.
+- Test lookup in `TestsManager` uses an index per class instead of a linear scan; importing many large runs
+  of one class is about 10× faster. Result dicts are built directly instead of deep-copied from templates.
+- Python 2 leftovers removed (`six` dependency, `__future__` imports, `utils/file.py`).
 
 ### Fixed
 - The wheel no longer installs a top-level `tests` package (the 0.3.0 wheel on the GitHub release does).
+- `--force-single` also works for `.xml` files read as tempest XML (it applied only to `-f r_xml`).
+
+### Security
+- HTML reports use Jinja2 autoescaping: test names, classes, run names, messages and traces can no longer
+  inject markup. Escaping no longer copies the whole result set first.
 
 ## [0.3.0] - 2026-11-23
 
