@@ -30,13 +30,13 @@ jobs:
     name: Lint, package, version
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.15"
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: astral-sh/setup-uv@v10.4.0
         with:
           enable-cache: true
       - name: Install (locked)
@@ -65,13 +65,13 @@ jobs:
         os: ${{ fromJSON((github.event_name != 'workflow_dispatch' || inputs.os == 'all') && '["ubuntu-latest","macos-latest"]' || format('["{0}-latest"]', inputs.os)) }}
         python: ["3.11", "3.12", "3.13", "3.14", "3.15"]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python }}
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: astral-sh/setup-uv@v10.4.0
         with:
           enable-cache: true
       - name: Install (locked)
@@ -80,7 +80,7 @@ jobs:
         run: uv run pytest -m smoke --junitxml=junit-smoke.xml
       - name: Functional tests
         run: uv run pytest -m functional --junitxml=junit-functional.xml
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: junit-${{ matrix.os }}-py${{ matrix.python }}
@@ -90,18 +90,18 @@ jobs:
     name: Integration (built wheel)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.15"
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: astral-sh/setup-uv@v10.4.0
         with:
           enable-cache: true
       - name: Install dependencies, not the project (the test builds and installs the wheel)
         run: uv sync --locked --no-install-project
       - name: Integration tests
         run: uv run --no-sync pytest -m integration --junitxml=junit-integration.xml
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: junit-integration
