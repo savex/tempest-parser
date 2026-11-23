@@ -1,37 +1,34 @@
 #!/usr/bin/env bash
 # Tag-based versioning helper (adapted from the scribe repository). Tags are the source of truth:
-# vMAJOR.MINOR.PATCH[-PRERELEASE]; other tags (v0.1, v0.2.4RC) are ignored. The version in setup.py
-# and the newest section of changelog.md follow the latest release (both written by `Bump version`).
+# vMAJOR.MINOR.PATCH[-PRERELEASE]; other tags (v0.1, v0.2.4RC) are ignored. The package version is
+# read from the tag at build time (setuptools-scm); the newest section of changelog.md follows the
+# latest release (written by `Bump version`).
 # Versions are ordered by SemVer 2.0 precedence, so 0.3.0-rc.1 < 0.3.0 < 0.3.1.
 #
 #   scripts/version.sh current            version of this checkout, e.g. 0.3.0 or 0.3.0+3.gabc1234.dirty
 #   scripts/version.sh latest-tag         highest release tag in the repository (empty if none)
 #   scripts/version.sh nearest-tag        nearest release tag reachable from HEAD (empty if none)
-#   scripts/version.sh setup              version in setup.py
 #   scripts/version.sh changelog-version  newest released version in changelog.md (empty if none)
-#   scripts/version.sh highest            highest of the latest tag, setup.py and changelog.md
+#   scripts/version.sh highest            highest of the latest tag and changelog.md
 #   scripts/version.sh versions           all of the above and whether they agree; exit 1 if not
 #   scripts/version.sh next <major|minor|patch> [prerelease]
 #                                         next version after `highest`, e.g. `next minor rc.1`
 #   scripts/version.sh newer <version>    exit 1 unless <version> is newer than `highest` and untagged
 #   scripts/version.sh compare <a> <b>    print -1, 0 or 1 by SemVer precedence
 #   scripts/version.sh validate <version> exit 1 unless <version> is MAJOR.MINOR.PATCH[-PRERELEASE]
-#   scripts/version.sh set <version>      write <version> into setup.py
 #   scripts/version.sh changelog <version> [date]
 #                                         turn the Unreleased section of changelog.md into <version>
 #   scripts/version.sh notes <version>    print the changelog.md section of <version> (release notes)
-#   scripts/version.sh check [tag]        setup.py must match [tag], or not be older than the latest tag
+#   scripts/version.sh check [tag]        changelog.md must have a [tag] section, or not be older than
+#                                         the latest tag
 #
 # Works with the bash 3.2 that ships with macOS.
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-SETUP_PY="$ROOT/setup.py"
 CHANGELOG="$ROOT/changelog.md"
 REPO_URL="https://github.com/savex/tempest-parser"
 SEMVER_RE='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?$'
-# the `version="..."` argument of setup(), on its own line
-SETUP_VERSION_RE='^[[:space:]]*version[[:space:]]*=[[:space:]]*["'"'"']'
 
 die() { echo "version.sh: $*" >&2; exit 1; }
 
@@ -110,23 +107,19 @@ nearest_tag() {
 current() {
   local tag base count sha dirty="" meta=""
   tag=$(nearest_tag)
-  sha=$(git -C "$ROOT" rev-parse --short=7 HEAD 2>/dev/null) || { setup_version; return; }
+  sha=$(git -C "$ROOT" rev-parse --short=7 HEAD 2>/dev/null) || { changelog_version; return; }
   git -C "$ROOT" diff --quiet HEAD -- 2>/dev/null || dirty=1
   if [[ -n $tag ]]; then
     base=${tag#v}
     count=$(git -C "$ROOT" rev-list --count "$tag..HEAD")
     (( count > 0 )) && meta="$count.g$sha"
   else
-    base=$(setup_version)
+    base=$(changelog_version)
+    base=${base:-0.0.0}
     meta="g$sha"
   fi
   [[ -n $dirty ]] && meta="${meta:+$meta.}dirty"
   echo "$base${meta:++$meta}"
-}
-
-setup_version() {
-  [[ -f $SETUP_PY ]] || die "no $SETUP_PY"
-  grep -E "$SETUP_VERSION_RE" "$SETUP_PY" | head -1 | sed -E "s/$SETUP_VERSION_RE//; s/[\"'].*$//"
 }
 
 changelog_version() {
@@ -137,26 +130,22 @@ changelog_version() {
 highest() {
   local tag
   tag=$(latest_tag)
-  max_version "$(max_version "${tag#v}" "$(setup_version)")" "$(changelog_version)"
+  max_version "${tag#v}" "$(changelog_version)"
 }
 
 versions() {
-  local tag setup log high ok=1 nearest
-  tag=$(latest_tag); setup=$(setup_version); log=$(changelog_version); high=$(highest)
+  local tag log high ok=1 nearest
+  tag=$(latest_tag); log=$(changelog_version); high=$(highest)
   nearest=$(nearest_tag)
   echo "latest tag:      ${tag:-none}"
   echo "nearest tag:     ${nearest:-none}"
-  echo "setup.py:        $setup"
   echo "changelog.md:    ${log:-none}"
   echo "highest:         ${high:-none}"
-  if [[ -n $tag && ${tag#v} != "$setup" ]]; then
-    echo "out of sync: setup.py $setup is not the latest tag $tag"; ok=""
+  if [[ -n $tag && ${tag#v} != "$log" ]]; then
+    echo "out of sync: changelog.md's newest release ${log:-none} is not the latest tag $tag"; ok=""
   fi
-  if [[ -n $log && $log != "$setup" ]]; then
-    echo "out of sync: changelog.md's newest release $log is not setup.py $setup"; ok=""
-  fi
-  if [[ -z $tag && -n $high ]]; then
-    echo "out of sync: no release tag here, but setup.py / changelog.md say $high (tags not fetched or not pushed?)"; ok=""
+  if [[ -z $tag && -n $log ]]; then
+    echo "out of sync: no release tag here, but changelog.md says $log (tags not fetched or not pushed?)"; ok=""
   fi
   [[ -n $ok ]] && echo "in sync"
   [[ -n $ok ]]
@@ -194,27 +183,9 @@ newer() {
   fi
   high=$(highest)
   if [[ -n $high && $(compare "$version" "$high") != 1 ]]; then
-    die "$version is not newer than $high (the highest of the latest tag, setup.py and changelog.md); pick a higher version, e.g. with a pre-release label on the next patch"
+    die "$version is not newer than $high (the highest of the latest tag and changelog.md); pick a higher version, e.g. with a pre-release label on the next patch"
   fi
   echo "ok: $version is newer than ${high:-nothing}"
-}
-
-set_version() {
-  local version=$1 tmp
-  validate "$version"
-  tmp=$(mktemp)
-  awk -v v="$version" -v re="$SETUP_VERSION_RE" '
-    !done && $0 ~ re {
-      match($0, /^[[:space:]]*/); indent = substr($0, 1, RLENGTH)
-      comma = ($0 ~ /,[[:space:]]*$/) ? "," : ""
-      print indent "version=\"" v "\"" comma; done = 1; next
-    }
-    { print }
-  ' "$SETUP_PY" > "$tmp"
-  cat "$tmp" > "$SETUP_PY"
-  rm -f "$tmp"
-  [[ $(setup_version) == "$version" ]] || die "failed to update $SETUP_PY"
-  echo "$version"
 }
 
 # Unreleased entries become the <version> section; a fresh, empty Unreleased goes on top and the
@@ -253,22 +224,23 @@ notes() {
 }
 
 check() {
-  local setup tag=${1:-}
-  setup=$(setup_version)
-  validate "$setup"
+  local log tag=${1:-}
+  log=$(changelog_version)
   if [[ -n $tag ]]; then
-    [[ ${tag#v} == "$setup" ]] || die "tag $tag does not match setup.py version $setup"
-    echo "ok: $tag matches setup.py"
+    validate "${tag#v}"
+    grep -q "^## \[${tag#v}\]" "$CHANGELOG" 2>/dev/null \
+      || die "changelog.md has no ${tag#v} section for tag $tag"
+    echo "ok: changelog.md has a section for $tag"
     return
   fi
   tag=$(latest_tag)
   if [[ -z $tag ]]; then
-    echo "ok: no release tag yet, setup.py is $setup"
+    echo "ok: no release tag yet, changelog.md's newest release is ${log:-none}"
     return
   fi
-  [[ $(compare "$setup" "${tag#v}") != -1 ]] \
-    || die "setup.py version $setup is older than latest tag $tag"
-  echo "ok: setup.py $setup, latest tag $tag"
+  [[ -n $log && $(compare "$log" "${tag#v}") != -1 ]] \
+    || die "changelog.md's newest release ${log:-none} is older than latest tag $tag"
+  echo "ok: changelog.md ${log}, latest tag $tag"
 }
 
 cmd=${1:-current}
@@ -277,7 +249,6 @@ case $cmd in
   current)           current ;;
   latest-tag)        latest_tag ;;
   nearest-tag)       nearest_tag ;;
-  setup)             setup_version ;;
   changelog-version) changelog_version ;;
   highest)           highest ;;
   versions)          versions ;;
@@ -285,7 +256,6 @@ case $cmd in
   newer)             newer "${1:?version required}" ;;
   compare)           validate "${1:?a required}"; validate "${2:?b required}"; compare "$1" "$2" ;;
   validate)          validate "${1:?version required}"; echo "ok" ;;
-  set)               set_version "${1:?version required}" ;;
   changelog)         changelog_release "${1:?version required}" "${2:-}" ;;
   notes)             notes "${1:?version required}" ;;
   check)             check "$@" ;;

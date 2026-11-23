@@ -13,18 +13,23 @@ matches tests across them and writes HTML trending / errors reports and CSV. Usa
 - `tests/smoke`, `tests/functional`, `tests/integration`; sample inputs in `tests/data`
   (`tests/data/trending`: four `.log` runs for trending reports). `examples/`: reports rendered from
   them (commands in `examples/README.md`); regenerate them when report output changes.
-- `scripts/version.sh` (versions), `scripts/check-test-tags.py` (test tags); `.github/workflows/` (CI).
+- `pyproject.toml`: package metadata, dependencies, dependency groups (`test`, `lint`, `release`, `dev`)
+  and tool settings; `uv.lock` pins the development environment.
+- `scripts/version.sh` (versions), `scripts/check-test-tags.py` (test tags); `.github/workflows/` (CI),
+  `.github/dependabot.yml`.
 
 ## Rules
 
-- Python 3.11+ (`python_requires` in `setup.py`, ruff `target-version`); CI tests 3.11–3.15 on ubuntu and
-  macOS, and builds and releases on the newest. The minimum is the oldest CPython still supported upstream:
+- Python 3.11+ (`requires-python` in `pyproject.toml`, ruff `target-version`); CI tests 3.11–3.15 on
+  ubuntu and macOS, and builds and releases on the newest. The minimum is the oldest CPython still supported upstream:
   raise it when that version reaches end of life (or earlier if a dependency needs it), add each new
   release to CI and the classifiers, and say why in the changelog.
 - Every commit that changes behaviour, configuration, interfaces, tooling or documents adds a line to
   `changelog.md` under **Unreleased**, in the right section (Added, Changed, Fixed, ...).
-- Before committing: `ruff check .`, `pytest`, `python scripts/check-test-tags.py`. Workflow changes must
-  pass `actionlint`.
+- Dependencies live in `pyproject.toml` only. After changing them, run `uv lock` and commit `uv.lock`;
+  CI installs with `uv sync --locked`.
+- Before committing: `uv run ruff check .`, `uv run pytest`, `uv run python scripts/check-test-tags.py`.
+  Workflow changes must pass `uv run actionlint`.
 - Every test has exactly one tag, given by its folder: `smoke` (the `tparser` command end to end, in a
   subprocess), `functional` (one module or class), `integration` (the built and installed wheel). No tests
   outside these folders.
@@ -36,14 +41,15 @@ matches tests across them and writes HTML trending / errors reports and CSV. Usa
   customer data. Subunit streams are generated in `tests/conftest.py`, not committed.
 - Keep `documents/specs.md` in step with the code when CLI options, input formats, statuses, reports or
   config keys change.
-- Reports never change the `TestsManager` results they are given: copy first (see `_TMPLBase.__call__`).
+- Reports only read the `TestsManager` results they are given; they never change them.
   HTML escaping is Jinja2 autoescaping in the reporter and templates, never in stored results; mark
   trusted markup with `markupsafe.Markup`.
-- The wheel holds only `tempest_parser`. New data folders need `package_data` / `MANIFEST.in` entries and a
-  check in `tests/integration/test_wheel.py`.
-- Versions come from `v*` git tags. Don't edit the version in `setup.py` by hand: use
-  `scripts/version.sh` or the **Bump version** workflow, which also starts **Release**. Releases come from
-  `master` only. PyPI upload runs only when the repository variable `PYPI_PUBLISH` is `true`.
+- The wheel holds only `tempest_parser`. New data file types need a `[tool.setuptools.package-data]`
+  entry and a check in `tests/integration/test_wheel.py`.
+- Versions come from `v*` git tags through setuptools-scm; there is no version in the source. Release with
+  the **Bump version** workflow (it updates `changelog.md`, tags and starts **Release**), not by tagging
+  by hand. Releases come from `master` only. PyPI upload runs only when the repository variable
+  `PYPI_PUBLISH` is `true`.
 - Scripts in `scripts/` run on the bash 3.2 that ships with macOS.
 - `README.md` is also the PyPI page: use absolute links in it.
 - Work on a branch and fast-forward `master`; `master` is the default branch.

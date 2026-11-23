@@ -1,7 +1,7 @@
 # tempest-parser: specification
 
-Describes how the tool behaves (version `0.2.81` in `setup.py`, with the phase 1 fixes from
-[plan.md](plan.md)). Known limitations are listed in section 8. The tests in `tests/` check this behaviour.
+Describes how the tool behaves (written for version 0.2.81 with the phase 1 fixes from
+[plan.md](plan.md), kept up to date since). Known limitations are listed in section 8. The tests in `tests/` check this behaviour.
 
 ## 1. Purpose
 
@@ -118,6 +118,7 @@ The packaged resources are `res/*.list` (baseline lists) and `templates/*.html` 
 
 ## 9. Requirements
 
-- Python 3.11 or newer (`python_requires`); CI tests 3.11–3.15 on Linux and macOS.
-- Runtime dependencies: `jinja2`, `python-subunit`, `testtools`.
+- Python 3.11 or newer (`requires-python`); CI tests 3.11–3.15 on Linux and macOS.
+- Runtime dependencies (`pyproject.toml`): `jinja2>=3.1`, `markupsafe>=2.1`, `python-subunit>=1.4`,
+  `testtools>=2.5`.
 - Entry point: `tparser = tempest_parser.tparser:tempest_cli_parser_main`.

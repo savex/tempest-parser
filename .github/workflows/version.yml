@@ -1,5 +1,5 @@
 # Automatic: tracks the version on every push to master.
-# Fails if setup.py is behind the latest release tag; reports what the next releases would be.
+# Fails if changelog.md is behind the latest release tag; reports what the next releases would be.
 name: Version tracking
 
 on:
@@ -17,13 +17,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check setup.py against tags
+      - name: Check changelog.md against tags
         run: scripts/version.sh check
 
       - name: Report
         run: |
           current=$(scripts/version.sh current)
-          setup=$(scripts/version.sh setup)
           tag=$(scripts/version.sh latest-tag)
           since="n/a"
           [[ -n $tag ]] && since=$(git rev-list --count "$tag..HEAD")
@@ -32,7 +31,6 @@ jobs:
             echo "| | |"
             echo "|---|---|"
             echo "| This commit | \`$current\` |"
-            echo "| setup.py | \`$setup\` |"
             echo "| Latest release tag (highest) | \`${tag:-none}\` |"
             echo "| changelog.md | \`$(scripts/version.sh changelog-version)\` |"
             echo "| Commits since release | $since |"

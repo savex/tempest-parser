@@ -172,26 +172,42 @@ The plan is in [documents/plan.md](https://github.com/savex/tempest-parser/blob/
 
 ## Development
 
+With [uv](https://docs.astral.sh/uv/), which creates `.venv` from `uv.lock`:
+
 ```bash
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt -r test-requirements.txt -e .
-.venv/bin/pytest
-.venv/bin/ruff check .
-.venv/bin/python scripts/check-test-tags.py
+uv sync
 ```
+
+```bash
+uv run pytest
+```
+
+```bash
+uv run ruff check .
+```
+
+```bash
+uv run python scripts/check-test-tags.py
+```
+
+Without uv (pip 25.1 or newer): `python3 -m venv .venv`, then
+`.venv/bin/pip install -e . --group dev`.
+
+Dependencies are declared in `pyproject.toml`; after changing them, run `uv lock` and commit `uv.lock`.
+Dependabot proposes weekly updates for `uv.lock` and the GitHub Actions.
 
 Tests live in `tests/smoke`, `tests/functional` and `tests/integration`; the folder is the test's tag
 (`pytest -m smoke` runs one tag). Sample inputs are in `tests/data`.
 
-Versions come from `v*` git tags. `scripts/version.sh versions` shows the latest tag, the `setup.py`
-version and the newest `changelog.md` release, and whether they agree; see the script's header for the
-other commands. Don't edit the version in `setup.py` by hand.
+Versions come from `v*` git tags: setuptools-scm reads the tag when the package is built, and commits
+after a tag build as `X.Y.Z.devN`. `scripts/version.sh versions` shows the latest tag and the newest
+`changelog.md` release, and whether they agree; see the script's header for the other commands.
 
 CI (`.github/workflows`):
-- **Tests** runs on pull requests and pushes to `master`: ruff, package build and `twine check`,
+- **Tests** runs on pull requests and pushes to `master`: ruff, actionlint, package build and `twine check`,
   version and test-tag checks, then the tests on ubuntu and macOS with Python 3.11–3.15.
 - **Version tracking** reports the version on every push to `master`.
-- **Bump version** (manual) picks the next version, updates `setup.py` and `changelog.md`, commits
+- **Bump version** (manual) picks the next version, updates `changelog.md`, commits
   `Release vX.Y.Z`, tags it and starts **Release**.
 - **Release** builds the sdist and wheel, smoke-tests them and publishes a GitHub release with the
   changelog section as notes. PyPI upload runs only when the repository variable `PYPI_PUBLISH` is

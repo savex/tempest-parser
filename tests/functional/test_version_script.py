@@ -1,4 +1,4 @@
-"""scripts/version.sh, run in a throwaway git repository with its own setup.py and changelog.md."""
+"""scripts/version.sh, run in a throwaway git repository with its own changelog.md and tags."""
 import os
 import shutil
 import subprocess
@@ -13,15 +13,6 @@ for _shell in ("/bin/bash", shutil.which("bash")):
         SHELLS.setdefault(os.path.realpath(_shell), _shell)
 SHELLS = sorted(SHELLS.values())
 
-SETUP_PY = '''from setuptools import setup
-
-setup(
-    name="TempestParser",
-    version="{}",
-    license="Apache Licence, version 2",
-)
-'''
-
 CHANGELOG = '''# Changelog
 
 ## [Unreleased]
@@ -35,7 +26,6 @@ CHANGELOG = '''# Changelog
 def repo(request, tmp_path):
     (tmp_path / "scripts").mkdir()
     shutil.copy(os.path.join(ROOT, "scripts", "version.sh"), tmp_path / "scripts")
-    (tmp_path / "setup.py").write_text(SETUP_PY.format("0.2.81"))
     (tmp_path / "changelog.md").write_text(CHANGELOG)
     env = dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@example.com",
                GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@example.com")
@@ -57,12 +47,14 @@ def repo(request, tmp_path):
 
 
 def test_reads_versions(repo):
-    assert repo("setup")[1] == "0.2.81"
     assert repo("latest-tag")[1] == ""
     assert repo("changelog-version")[1] == ""
-    assert repo("highest")[1] == "0.2.81"
+    assert repo("highest")[1] == ""
     code, out, _ = repo("current")
-    assert code == 0 and out.startswith("0.2.81+g")
+    assert code == 0 and out.startswith("0.0.0+g")
+    repo.git("tag", "v0.2.81")
+    assert repo("highest")[1] == "0.2.81"
+    assert repo("current")[1] == "0.2.81"
 
 
 def test_ignores_non_semver_tags(repo):
@@ -78,7 +70,14 @@ def test_versions_out_of_sync(repo):
     repo.git("tag", "v0.2.55")
     code, out, _ = repo("versions")
     assert code == 1
-    assert "out of sync: setup.py 0.2.81 is not the latest tag v0.2.55" in out
+    assert "out of sync: changelog.md's newest release none is not the latest tag v0.2.55" in out
+
+
+def test_versions_without_tags(repo):
+    repo("changelog", "0.3.0", "2026-11-23")
+    code, out, _ = repo("versions")
+    assert code == 1
+    assert "no release tag here, but changelog.md says 0.3.0" in out
 
 
 @pytest.mark.parametrize("a, b, expected", [
@@ -98,6 +97,8 @@ def test_validate(repo, version, ok):
 
 
 def test_next(repo):
+    assert repo("next", "patch")[1] == "0.0.1"
+    repo.git("tag", "v0.2.81")
     assert repo("next", "patch")[1] == "0.2.82"
     assert repo("next", "minor")[1] == "0.3.0"
     assert repo("next", "major")[1] == "1.0.0"
@@ -105,24 +106,25 @@ def test_next(repo):
 
 
 def test_next_after_prerelease_finalizes(repo):
-    repo("set", "0.3.0-rc.1")
+    repo.git("tag", "v0.3.0-rc.1")
     assert repo("next", "minor")[1] == "0.3.0"
     assert repo("next", "patch")[1] == "0.3.0"
 
 
+def test_next_follows_changelog_ahead_of_tags(repo):
+    repo.git("tag", "v0.2.81")
+    repo("changelog", "0.3.0", "2026-11-23")
+    assert repo("highest")[1] == "0.3.0"
+    assert repo("next", "patch")[1] == "0.3.1"
+
+
 def test_newer(repo):
+    repo.git("tag", "v0.2.81")
     assert repo("newer", "0.3.0")[0] == 0
-    code, _, err = repo("newer", "0.2.81")
+    code, _, err = repo("newer", "0.2.80")
     assert code == 1 and "not newer" in err
     repo.git("tag", "v0.4.0")
     assert "already exists" in repo("newer", "0.4.0")[2]
-
-
-def test_set_keeps_the_rest_of_setup_py(repo):
-    assert repo("set", "0.3.0") == (0, "0.3.0", "")
-    text = (repo.path / "setup.py").read_text()
-    assert text == SETUP_PY.format("0.3.0")
-    assert repo("set", "nope")[0] == 1
 
 
 def test_changelog_release(repo):
@@ -144,14 +146,16 @@ def test_changelog_release(repo):
 
 def test_check(repo):
     assert repo("check")[0] == 0
-    assert repo("check", "v0.2.81")[0] == 0
-    assert "does not match" in repo("check", "v0.3.0")[2]
+    assert "no 0.3.0 section" in repo("check", "v0.3.0")[2]
+    repo("changelog", "0.3.0", "2026-11-23")
+    assert repo("check", "v0.3.0")[0] == 0
     repo.git("tag", "v0.3.0")
-    assert "older than latest tag" in repo("check")[2]
+    assert repo("check")[0] == 0
+    repo.git("tag", "v0.4.0")
+    assert "older than latest tag v0.4.0" in repo("check")[2]
 
 
 def test_in_sync_after_release(repo):
-    repo("set", "0.3.0")
     repo("changelog", "0.3.0", "2026-11-23")
     repo.git("commit", "-qam", "Release v0.3.0")
     repo.git("tag", "v0.3.0")
@@ -166,7 +170,7 @@ def test_in_sync_after_release(repo):
 
 def test_current_marks_dirty_tree(repo):
     repo.git("tag", "v0.2.81")
-    (repo.path / "setup.py").write_text(SETUP_PY.format("0.2.81") + "# edit\n")
+    (repo.path / "changelog.md").write_text(CHANGELOG + "- Edit.\n")
     assert repo("current")[1] == "0.2.81+dirty"
 
 

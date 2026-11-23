@@ -19,6 +19,7 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
   every run, tests missing from one run, tests new in runs 3 and 4), with a parser test.
 - `examples/`: trending reports of those four runs (detailed and brief) and an errors report of run 4,
   made with `tparser`.
+- Dependabot (`.github/dependabot.yml`): weekly grouped updates for GitHub Actions and `uv.lock`.
 
 ### Changed
 - `setup.py`: requires Python 3.10+, classifiers for 3.10–3.13, `Apache-2.0` license expression, project
@@ -37,10 +38,21 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
 - Requires Python 3.11+ (was 3.10+): Python 3.10 reached end of life in October 2026 and gets no more
   security fixes. CI tests 3.11–3.15 and builds, bumps and releases on 3.15; classifiers list 3.11–3.15.
 - ruff checks pyupgrade rules (`UP`) against Python 3.11: f-strings, `super()`, `datetime.UTC`.
+- Packaging moved from `setup.py`, `MANIFEST.in` and the requirements files to `pyproject.toml` (PEP 621
+  metadata, PEP 639 license, PEP 735 dependency groups `test`, `lint`, `release`, `dev`). The version is
+  read from the `v*` git tag by setuptools-scm; untagged commits build as `X.Y.Z.devN+g<sha>`.
+- `scripts/version.sh` compares tags with `changelog.md` only; `setup` and `set` are gone, and
+  `check <tag>` now needs a `changelog.md` section for the tag. **Bump version** no longer commits a
+  version into the source; **Release** compares the built package's version with the tag (PEP 440 form).
+- CI installs with uv from the new `uv.lock` (`uv sync --locked`) instead of pip, and the lint job runs
+  actionlint.
 
 ### Fixed
 - The wheel no longer installs a top-level `tests` package (the 0.3.0 wheel on the GitHub release does).
 - `--force-single` also works for `.xml` files read as tempest XML (it applied only to `-f r_xml`).
+- `markupsafe`, imported by the reports, is now a declared dependency (it came only through Jinja2), and
+  every dependency has a minimum version. Unused test tools (`mock`, `pytest-html`, `coverage`,
+  `pytest-cov`) are no longer installed.
 
 ### Security
 - HTML reports use Jinja2 autoescaping: test names, classes, run names, messages and traces can no longer

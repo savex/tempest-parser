@@ -1,4 +1,0 @@
-include README.md
-recursive-include tempest_parser/etc *
-recursive-include tempest_parser/res *
-recursive-include tempest_parser/templates *

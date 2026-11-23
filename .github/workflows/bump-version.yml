@@ -1,7 +1,7 @@
-# Manual: picks the next version after the highest one known (latest tag, setup.py, changelog.md),
-# writes it to setup.py, turns the changelog's Unreleased section into it, commits "Release vX.Y.Z"
-# to master, tags it and starts the Release workflow. Warns when the three versions disagree and
-# refuses a version that isn't newer than all of them.
+# Manual: picks the next version after the highest one known (latest tag, changelog.md), turns the
+# changelog's Unreleased section into it, commits "Release vX.Y.Z" to master, tags it and starts the
+# Release workflow (the package takes its version from the tag). Warns when the two versions
+# disagree and refuses a version that isn't newer than both.
 name: Bump version
 
 on:
@@ -48,10 +48,12 @@ jobs:
         with:
           python-version: "3.15"
 
+      - uses: astral-sh/setup-uv@v10.3.3
+
       - name: Fetch every tag
         run: git fetch --tags --force origin
 
-      - name: Compare tag, setup.py and changelog versions
+      - name: Compare tag and changelog versions
         run: |
           report=$(scripts/version.sh versions) && synced=1 || synced=""
           echo "$report"
@@ -87,17 +89,15 @@ jobs:
           echo "Highest known: $(scripts/version.sh highest) -> new version: $version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      - name: Update setup.py and changelog.md
+      - name: Update changelog.md
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          scripts/version.sh set "$VERSION"
           scripts/version.sh changelog "$VERSION"
           scripts/version.sh notes "$VERSION" > /dev/null \
             || { echo "::error::changelog.md has no entries for $VERSION"; exit 1; }
-          pip install -q build
-          python -m build --sdist --outdir dist . > /dev/null
-          scripts/version.sh versions || true
+          # the package must still build; its version comes from the tag made below
+          uv build --sdist --out-dir dist > /dev/null
           git diff
 
       - name: Commit and tag

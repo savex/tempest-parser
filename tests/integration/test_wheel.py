@@ -12,6 +12,8 @@ import pytest
 from ..conftest import DATA_DIR
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# the source copy has no .git, so setuptools-scm is given the version
+VERSION = "9.8.7"
 
 
 @pytest.fixture(scope="module")
@@ -26,9 +28,10 @@ def installed(tmp_path_factory):
             os.makedirs(os.path.join(str(src), os.path.dirname(name)), exist_ok=True)
             shutil.copy2(os.path.join(ROOT, name), os.path.join(str(src), name))
     dist = tmp_path_factory.mktemp("dist")
+    env = dict(os.environ, SETUPTOOLS_SCM_PRETEND_VERSION=VERSION)
     subprocess.run([sys.executable, "-m", "build", "--wheel", "--no-isolation",
                     "--outdir", str(dist), str(src)],
-                   check=True, capture_output=True, timeout=300)
+                   check=True, capture_output=True, timeout=300, env=env)
     wheel, = glob.glob(str(dist / "*.whl"))
     target = tmp_path_factory.mktemp("site")
     subprocess.run([sys.executable, "-m", "pip", "install", "--no-deps", "--no-index",
@@ -48,6 +51,12 @@ def test_wheel_contents(installed):
         assert path in names
     assert not [n for n in names if not n.startswith("tempest_parser")], \
         "only tempest_parser and its dist-info belong in the wheel"
+    assert os.path.basename(wheel).startswith(f"tempestparser-{VERSION}-")
+    metadata, = [n for n in meta if n.endswith("METADATA")]
+    text = zipfile.ZipFile(wheel).read(metadata).decode()
+    for line in ("Requires-Python: >=3.11", "License-Expression: Apache-2.0",
+                 "Requires-Dist: jinja2>=3.1", "Requires-Dist: markupsafe>=2.1"):
+        assert line in text
     entry_points, = [n for n in meta if n.endswith("entry_points.txt")]
     assert "tparser = tempest_parser.tparser:tempest_cli_parser_main" in \
         zipfile.ZipFile(wheel).read(entry_points).decode()
