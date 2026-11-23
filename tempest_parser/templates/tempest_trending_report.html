@@ -13,7 +13,14 @@
             font-size: xx-small;
             color: #550000;
             max-width: 500px;
-            overflow: scroll;
+            overflow: auto;
+        }
+
+        .tracemessage summary { cursor: pointer; }
+
+        .tracemessage pre {
+            margin: 2px 0 0;
+            white-space: pre-wrap;
         }
 
         .textlabel {
@@ -183,16 +190,17 @@
             <div class="label {{ Column.ADDED.css }}">added</div>
         </td>
         <!-- Repeatable -->
-    {% for index in range(executions|length) if executions[index].name != REQUIRED_RUN %}
+    {% for run in runs %}
+        {% set counts = totals[run.name] %}
         <td class="resultcolumn">
             <!-- SUM -->
-            <div class="label total">{{ totals[executions[index].name].total }}</div>
-            <div class="label {{ Column.PASS.css }}">{{ totals[executions[index].name][Column.PASS] }}</div>
-            <div class="label {{ Column.FAIL.css }}">{{ totals[executions[index].name][Column.FAIL] }}</div>
-            <div class="label {{ Column.ERROR.css }}">{{ totals[executions[index].name][Column.ERROR] }}</div>
-            <div class="label {{ Column.SKIP.css }}">{{ totals[executions[index].name][Column.SKIP] }}</div>
-            <div class="label {{ Column.NA.css }}">{{ totals[executions[index].name][Column.NA] }}</div>
-            <div class="label {{ Column.ADDED.css }}">{{ totals[executions[index].name][Column.ADDED] }}</div>
+            <div class="label total">{{ counts.total }}</div>
+            <div class="label {{ Column.PASS.css }}">{{ counts[Column.PASS] }}</div>
+            <div class="label {{ Column.FAIL.css }}">{{ counts[Column.FAIL] }}</div>
+            <div class="label {{ Column.ERROR.css }}">{{ counts[Column.ERROR] }}</div>
+            <div class="label {{ Column.SKIP.css }}">{{ counts[Column.SKIP] }}</div>
+            <div class="label {{ Column.NA.css }}">{{ counts[Column.NA] }}</div>
+            <div class="label {{ Column.ADDED.css }}">{{ counts[Column.ADDED] }}</div>
         </td>
         {% if detailed %}
         <td class="textlabel">
@@ -205,59 +213,30 @@
         <td>#</td>
         <td>Test name and parameters</td>
         <td>Required vs Added</td>
-        {% for index in range(executions|length) if executions[index].name != REQUIRED_RUN %}
-        <td>{{ executions[index].date_label }}</td>
+        {% for run in runs %}
+        <td>{{ run.date_label }}</td>
         {% if detailed %}
-        <td>{{ executions[index].filename }}</td>
+        <td>{{ run.filename }}</td>
         {% endif %}
     {%- endfor -%}
-{#    {% set counter = 1 %}#}
     </tr>
-    {% for test_class in tests | sort %}
+    {% set group_span = runs | length * (2 if detailed else 1) + 1 %}
+    {% for class_name, rows in classes %}
     <tr class="group">
-        <td colspan="2" class="name">Class {{ test_class }}</td>
-        <td colspan="1" class="blank"></td>
-    {% for index in range(executions|length) if executions[index].name != REQUIRED_RUN %}
-        {% if detailed %}
-        <td colspan="2" class="blank"></td>
-            {% else %}
-        <td colspan="1" class="blank"></td>
-            {% endif %}
-        {% endfor %}
-
+        <td colspan="2" class="name">Class {{ class_name }}</td>
+        <td colspan="{{ group_span }}" class="blank"></td>
     </tr>
-        {% for test in tests[test_class] | sort(attribute="test_name") %}
+        {% for number, test, cells in rows %}
     <tr>
-        <td>{{ counters.all_count + loop.index0 }}</td>
+        <td>{{ number }}</td>
         <td>
             <div class="test_name">{{ test.test_name }}</div>
             <div class="parameters">{{ test.uuid }} {{ test.test_options }}</div>
         </td>
-        {% if REQUIRED_RUN in test.results %}
-            {% if test.results[REQUIRED_RUN].result == 'R' -%}
-            <td class="status required">R</td>
-            {%- endif %}
-        {% else %}
-            <td class="status added">A</td>
-        {% endif %}
-    {% for index in range(executions|length) if executions[index].name != REQUIRED_RUN %}
-            {% set _name = executions[index].name %}
-            {% if _name in test.results %}
-        <td class="status {{ test.results[_name].result | lower }}">{{ test.results[_name].result }}</td>
-                {%  if detailed %}
-        <td class="tracemessage">{{ test.results[_name].message | linebreaks }}<br>{{ test.results[_name].trace }}</td>
-                {% endif %}
-            {% else %}
-        <td class="status blank"></td>
-                {%  if detailed %}
-        <td class="status blank"></td>
-                {% endif %}
-            {% endif %}
-            {%- endfor -%}
+        {{ cells }}
     </tr>
-        {%- endfor -%}
-        {% set _ = counters.update({'all_count': counters.all_count + tests[test_class] | length}) %}
-    {%- endfor -%}
+        {% endfor %}
+    {% endfor %}
     </tbody>
 </table>
 {{ cells_legend() }}

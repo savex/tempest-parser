@@ -72,7 +72,7 @@ or
 tparser -f t_xml -r trending.html folder1
 ```
 
-Add full traceback messages to the report with `-d`:
+Add messages and tracebacks to the report with `-d` (tracebacks are folded; click **Trace** to open one):
 
 ```bash
 tparser -f t_xml -r trending.html -d folder1
@@ -117,6 +117,12 @@ Results can be piped in as a subunit stream:
 stestr last --subunit | tparser -r trending.html
 ```
 
+In a CI pipeline, write a JSON summary of the runs and fail the step (exit code 3) when tests failed:
+
+```bash
+stestr last --subunit | tparser -r trending.html -j summary.json --fail-on FAIL --fail-on ERROR
+```
+
 ### Options
 
 | Option | Meaning |
@@ -125,6 +131,8 @@ stestr last --subunit | tparser -r trending.html
 | `-r, --html-trending-filename` | Write the HTML trending report. |
 | `-e, --html-errors-filename` | Write the HTML unique errors report (single file input only). |
 | `-c, --csv-file` | Write the CSV report. |
+| `-j, --json-file` | Write a JSON summary: per run its name, file, date, counts per status and total time. |
+| `--fail-on` | Exit with code 3 when any run has a test with this status (`FAIL`, `ERROR`, ...). Repeatable. |
 | `-d, --detailed` | Include messages and tracebacks. |
 | `-i, --include-required` | Add the baseline test list from the config as the first column. |
 | `--omit-status` | Leave tests with this status (`OK`, `FAIL`, `ERROR`, `SKIP`, ...) out. Repeatable. |

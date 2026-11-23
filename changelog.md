@@ -20,6 +20,10 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
 - `examples/`: trending reports of those four runs (detailed and brief) and an errors report of run 4,
   made with `tparser`.
 - Dependabot (`.github/dependabot.yml`): weekly grouped updates for GitHub Actions and `uv.lock`.
+- `-j, --json-file`: a JSON summary of the runs (name, file, ISO date, counts per status, time) for CI
+  pipelines.
+- `--fail-on STATUS` (repeatable): exit with code 3 when any run has a test with that status, after the
+  reports are written; the matching tests are logged.
 - `--run-name NAME` and `--run-date DATE` (ISO 8601, UTC unless an offset is given) name and date the run
   of a single file or stdin instead of the file name and modification time.
 
@@ -61,6 +65,11 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
   `log` parser prints the summary of its own run only, not of every run imported so far. Unused helpers
   (`get_time_for_class`, `get_totals_as_string_for_class`, `is_test_has_errors`) are removed and
   `is_class_has_errors` is now `class_has_errors`.
+- Trending report: result cells are built and escaped in the reporter instead of cell by cell in the
+  template, and reports are written to the file as they are rendered. For 10 runs × 3000 tests rendering
+  takes 0.33 s instead of 0.72 s (detailed) and 0.20 s instead of 0.48 s, the files are about 18% smaller
+  and the page is no longer held in memory. Traces in detailed reports are folded in `<details>`
+  elements and keep their line breaks (they ran together in one block).
 - The `log` parser reads the log line by line with regular expressions instead of splitting it into
   blank-line separated sections (`parser_strings.py` and `TestsManager.split_test_name_from_speed` are
   gone). It accepts any dotted class name (plugins), any upper-case status (`ERROR`), `FAIL: `/`ERROR: `

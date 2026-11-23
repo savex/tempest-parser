@@ -13,7 +13,14 @@
             font-size: xx-small;
             color: #550000;
             max-width: 500px;
-            overflow: scroll;
+            overflow: auto;
+        }
+
+        .tracemessage summary { cursor: pointer; }
+
+        .tracemessage pre {
+            margin: 2px 0 0;
+            white-space: pre-wrap;
         }
 
         .textlabel {
@@ -245,15 +252,10 @@
         <td>run_3.log</td>
         <td>23/11/2026 22:08 GMT</td>
         <td>run_4.log</td>
-    </tr>
+</tr>
     <tr class="group">
         <td colspan="2" class="name">Class tempest.api.compute.admin.test_quotas.QuotasAdminTestJSON</td>
-        <td colspan="1" class="blank"></td>
-        <td colspan="2" class="blank"></td>
-        <td colspan="2" class="blank"></td>
-        <td colspan="2" class="blank"></td>
-        <td colspan="2" class="blank"></td>
-
+        <td colspan="9" class="blank"></td>
     </tr>
     <tr>
         <td>1</td>
@@ -261,73 +263,40 @@
             <div class="test_name">test_delete_quota</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status blank"></td>
-        <td class="status blank"></td>
-        <td class="status blank"></td>
-        <td class="status blank"></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+        <td class="status added">A</td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>2</td>
         <td>
             <div class="test_name">test_get_default_quotas</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status blank"></td>
-        <td class="status blank"></td>
-        <td class="status blank"></td>
-        <td class="status blank"></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+        <td class="status added">A</td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>3</td>
         <td>
             <div class="test_name">test_get_updated_quotas</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status blank"></td>
-        <td class="status blank"></td>
-        <td class="status blank"></td>
-        <td class="status blank"></td>
-        <td class="status fail">FAIL</td>
-        <td class="tracemessage">Details: 5120 != 51200<br /><br>Traceback (most recent call last):
+        <td class="status added">A</td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status fail">FAIL</td><td class="tracemessage">Details: 5120 != 51200<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
   File &#34;tempest/api/compute/admin/test_quotas.py&#34;, line 88, in test_get_updated_quotas
     self.assertEqual(5120, quota_set[&#39;ram&#39;])
 MismatchError: 5120 != 51200
 Details: 5120 != 51200
-</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+</pre></details></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>4</td>
         <td>
             <div class="test_name">test_update_all_quota_resources_for_tenant</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status blank"></td>
-        <td class="status blank"></td>
-        <td class="status blank"></td>
-        <td class="status blank"></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr class="group">
+        <td class="status added">A</td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr class="group">
         <td colspan="2" class="name">Class tempest.api.compute.servers.test_servers.ServersTestJSON</td>
-        <td colspan="1" class="blank"></td>
-        <td colspan="2" class="blank"></td>
-        <td colspan="2" class="blank"></td>
-        <td colspan="2" class="blank"></td>
-        <td colspan="2" class="blank"></td>
-
+        <td colspan="9" class="blank"></td>
     </tr>
     <tr>
         <td>5</td>
@@ -335,123 +304,69 @@ Details: 5120 != 51200
             <div class="test_name">test_create_server_with_admin_password</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>6</td>
         <td>
             <div class="test_name">test_create_server_with_ipv6_addr_only</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status skip">SKIP</td>
-        <td class="tracemessage"><br></td>
-        <td class="status skip">SKIP</td>
-        <td class="tracemessage"><br></td>
-        <td class="status skip">SKIP</td>
-        <td class="tracemessage"><br></td>
-        <td class="status skip">SKIP</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+        <td class="status added">A</td><td class="status skip">SKIP</td><td class="tracemessage"></td><td class="status skip">SKIP</td><td class="tracemessage"></td><td class="status skip">SKIP</td><td class="tracemessage"></td><td class="status skip">SKIP</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>7</td>
         <td>
             <div class="test_name">test_create_specify_keypair</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>8</td>
         <td>
             <div class="test_name">test_create_with_existing_server_name</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>9</td>
         <td>
             <div class="test_name">test_update_access_server_address</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>10</td>
         <td>
             <div class="test_name">test_update_server_name</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>11</td>
         <td>
             <div class="test_name">test_update_server_name_in_stop_state</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status fail">FAIL</td>
-        <td class="tracemessage">Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s<br /><br>Traceback (most recent call last):
+        <td class="status added">A</td><td class="status fail">FAIL</td><td class="tracemessage">Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
   File &#34;tempest/api/compute/servers/test_servers.py&#34;, line 118, in test_update_server_name_in_stop_state
     self.client.wait_for_server_status(server_id, &#39;SHUTOFF&#39;)
 TimeoutException: Request timed out
 Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s
-</td>
-        <td class="status fail">FAIL</td>
-        <td class="tracemessage">Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s<br /><br>Traceback (most recent call last):
+</pre></details></td><td class="status fail">FAIL</td><td class="tracemessage">Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
   File &#34;tempest/api/compute/servers/test_servers.py&#34;, line 118, in test_update_server_name_in_stop_state
     self.client.wait_for_server_status(server_id, &#39;SHUTOFF&#39;)
 TimeoutException: Request timed out
 Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s
-</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr class="group">
+</pre></details></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr class="group">
         <td colspan="2" class="name">Class tempest.api.identity.admin.test_users.UsersTestJSON</td>
-        <td colspan="1" class="blank"></td>
-        <td colspan="2" class="blank"></td>
-        <td colspan="2" class="blank"></td>
-        <td colspan="2" class="blank"></td>
-        <td colspan="2" class="blank"></td>
-
+        <td colspan="9" class="blank"></td>
     </tr>
     <tr>
         <td>12</td>
@@ -459,163 +374,88 @@ Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s
             <div class="test_name">test_authentication_request_without_token</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>13</td>
         <td>
             <div class="test_name">test_create_user</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>14</td>
         <td>
             <div class="test_name">test_create_user_with_enabled</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>15</td>
         <td>
             <div class="test_name">test_delete_user</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status fail">FAIL</td>
-        <td class="tracemessage">Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}<br /><br>Traceback (most recent call last):
+        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status fail">FAIL</td><td class="tracemessage">Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
   File &#34;tempest/api/identity/admin/test_users.py&#34;, line 145, in test_delete_user
     self.client.delete_user(user[&#39;id&#39;])
 NotFound: Object not found
 Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}
-</td>
-</tr>    <tr>
+</pre></details></td>
+    </tr>
+    <tr>
         <td>16</td>
         <td>
             <div class="test_name">test_get_users</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>17</td>
         <td>
             <div class="test_name">test_list_users_for_tenant</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status blank"></td>
-        <td class="status blank"></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>18</td>
         <td>
             <div class="test_name">test_list_users_with_roles_for_tenant</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status skip">SKIP</td>
-        <td class="tracemessage"><br></td>
-        <td class="status blank"></td>
-        <td class="status blank"></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+        <td class="status added">A</td><td class="status skip">SKIP</td><td class="tracemessage"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>19</td>
         <td>
             <div class="test_name">test_update_user</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>20</td>
         <td>
             <div class="test_name">test_update_user_password</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status blank"></td>
-        <td class="status blank"></td>
-        <td class="status blank"></td>
-        <td class="status blank"></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+        <td class="status added">A</td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>21</td>
         <td>
             <div class="test_name">test_user_authentication</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status blank"></td>
-        <td class="status blank"></td>
-        <td class="status blank"></td>
-        <td class="status blank"></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr class="group">
+        <td class="status added">A</td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr class="group">
         <td colspan="2" class="name">Class tempest.api.network.test_networks.NetworksTestJSON</td>
-        <td colspan="1" class="blank"></td>
-        <td colspan="2" class="blank"></td>
-        <td colspan="2" class="blank"></td>
-        <td colspan="2" class="blank"></td>
-        <td colspan="2" class="blank"></td>
-
+        <td colspan="9" class="blank"></td>
     </tr>
     <tr>
         <td>22</td>
@@ -623,181 +463,104 @@ Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}
             <div class="test_name">test_create_delete_subnet_all_attributes</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>23</td>
         <td>
             <div class="test_name">test_create_delete_subnet_with_dhcp_enabled</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status fail">FAIL</td>
-        <td class="tracemessage">Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sample-subnet-2&#39;}<br /><br>Traceback (most recent call last):
+        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status fail">FAIL</td><td class="tracemessage">Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sample-subnet-2&#39;}<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
   File &#34;tempest/api/network/test_networks.py&#34;, line 233, in test_create_delete_subnet_with_dhcp_enabled
     self._create_verify_delete_subnet(enable_dhcp=True)
 Conflict: An object with that identifier already exists
 Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sample-subnet-2&#39;}
-</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status fail">FAIL</td>
-        <td class="tracemessage">Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sample-subnet-2&#39;}<br /><br>Traceback (most recent call last):
+</pre></details></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status fail">FAIL</td><td class="tracemessage">Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sample-subnet-2&#39;}<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
   File &#34;tempest/api/network/test_networks.py&#34;, line 233, in test_create_delete_subnet_with_dhcp_enabled
     self._create_verify_delete_subnet(enable_dhcp=True)
 Conflict: An object with that identifier already exists
 Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sample-subnet-2&#39;}
-</td>
-</tr>    <tr>
+</pre></details></td>
+    </tr>
+    <tr>
         <td>24</td>
         <td>
             <div class="test_name">test_create_delete_subnet_with_gw</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>25</td>
         <td>
             <div class="test_name">test_create_update_delete_network_subnet</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>26</td>
         <td>
             <div class="test_name">test_delete_network_with_subnet</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>27</td>
         <td>
             <div class="test_name">test_list_networks</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>28</td>
         <td>
             <div class="test_name">test_list_subnets</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>29</td>
         <td>
             <div class="test_name">test_show_network</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>30</td>
         <td>
             <div class="test_name">test_show_subnet</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status blank"></td>
-        <td class="status blank"></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>31</td>
         <td>
             <div class="test_name">test_show_subnet_fields</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status blank"></td>
-        <td class="status blank"></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr>    <tr>
+        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    <tr>
         <td>32</td>
         <td>
             <div class="test_name">test_update_subnet_gw_dns_host_routes_dhcp</div>
             <div class="parameters"> </div>
         </td>
-            <td class="status added">A</td>
-        <td class="status fail">FAIL</td>
-        <td class="tracemessage">Details: &#39;10.0.0.254&#39; != &#39;10.0.0.1&#39;<br /><br>Traceback (most recent call last):
+        <td class="status added">A</td><td class="status fail">FAIL</td><td class="tracemessage">Details: &#39;10.0.0.254&#39; != &#39;10.0.0.1&#39;<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
   File &#34;tempest/api/network/test_networks.py&#34;, line 301, in test_update_subnet_gw_dns_host_routes_dhcp
     self.assertEqual(new_gateway, updated_subnet[&#39;gateway_ip&#39;])
 MismatchError: &#39;10.0.0.254&#39; != &#39;10.0.0.1&#39;
 Details: &#39;10.0.0.254&#39; != &#39;10.0.0.1&#39;
-</td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-        <td class="status blank"></td>
-        <td class="status blank"></td>
-        <td class="status ok">OK</td>
-        <td class="tracemessage"><br></td>
-</tr></tbody>
+</pre></details></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+    </tr>
+    </tbody>
 </table>
 <table class="report">
     <caption>Legend</caption>

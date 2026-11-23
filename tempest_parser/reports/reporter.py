@@ -18,6 +18,24 @@ def line_breaks(text):
     return Markup("<br />").join(escape(text).split("\n"))
 
 
+# Cells are built as plain strings from escaped values and joined per row into one Markup:
+# much faster than rendering each cell through the template or Markup.format().
+_BLANK = '<td class="status blank"></td>'
+
+
+def _status_cell(result):
+    return f'<td class="status {escape(result.lower())}">{escape(result)}</td>'
+
+
+def _notes_cell(result):
+    """Message, then the trace folded in a <details> element."""
+    message = "<br />".join(escape(result.message).split("\n"))
+    if not result.trace:
+        return f'<td class="tracemessage">{message}</td>'
+    return (f'<td class="tracemessage">{message}<details><summary>Trace</summary>'
+            f'<pre>{escape(result.trace)}</pre></details></td>')
+
+
 class _Base(abc.ABC):
     def __init__(self):
         self.jinja2_env = self.init_jinja2_env()
@@ -67,7 +85,11 @@ class _TMPLBase(_Base):
         data['totals'] = totals
 
     def __call__(self, tests_manager, detailed=False):
-        """Render the report for a TestsManager's results; the results are only read."""
+        """The report for a TestsManager's results as a string; the results are only read."""
+        return "".join(self.generate(tests_manager, detailed))
+
+    def generate(self, tests_manager, detailed=False):
+        """The report as an iterator of text pieces, so it can be written as it is rendered."""
         data = self.common_data()
         data.update({
             "executions": tests_manager.get_sorted_executions(),
@@ -80,12 +102,11 @@ class _TMPLBase(_Base):
         self.jinja2_env.filters['linebreaks'] = line_breaks
 
         tmpl = self.jinja2_env.get_template(self.tmpl)
-        return tmpl.render(data)
+        return tmpl.generate(data)
 
     def common_data(self):
         return {
             'report': self,
-            'counters': {'all_count': 1},
             'Column': Column,
             'REQUIRED_RUN': REQUIRED_RUN,
         }
@@ -98,6 +119,41 @@ class _TMPLBase(_Base):
 # Trending report
 class HTMLTrendingReport(_TMPLBase):
     tmpl = "tempest_trending_report.html"
+
+    def _extend_data(self, data):
+        data['runs'] = [e for e in data['executions'] if e.name != REQUIRED_RUN]
+        data['classes'] = self._classes(data['tests'], [e.name for e in data['runs']],
+                                        data['detailed'])
+
+    @staticmethod
+    def _classes(tests, runs, detailed):
+        """(class name, rows) for each class, sorted; rows are made as the template reads
+        them. Each row's result cells are escaped here into one Markup string, which keeps
+        the per-cell work out of the template."""
+        blank = _BLANK + _BLANK if detailed else _BLANK
+        number = 0
+
+        def rows(cases):
+            nonlocal number
+            for case in sorted(cases, key=lambda c: c.test_name):
+                number += 1
+                required = case.results.get(REQUIRED_RUN)
+                if required is None:
+                    cells = ['<td class="status added">A</td>']
+                else:
+                    cells = [f'<td class="status required">{escape(required.result)}</td>']
+                for run in runs:
+                    result = case.results.get(run)
+                    if result is None:
+                        cells.append(blank)
+                        continue
+                    cells.append(_status_cell(result.result))
+                    if detailed:
+                        cells.append(_notes_cell(result))
+                yield number, case, Markup("".join(cells))
+
+        for class_name in sorted(tests):
+            yield class_name, rows(tests[class_name])
 
 
 class HTMLErrorsReport(_TMPLBase):
@@ -177,17 +233,10 @@ class ReportToFile:
         self.target = target
 
     def __call__(self, tests_manager, detailed=False):
-        payload = self.report(tests_manager, detailed)
-
+        """Write the report to a path or an open file as it is rendered."""
+        pieces = self.report.generate(tests_manager, detailed)
         if isinstance(self.target, str):
-            self._wrapped_dump(payload)
+            with open(self.target, "w") as target:
+                target.writelines(pieces)
         else:
-            self._dump(payload, self.target)
-
-    def _wrapped_dump(self, payload):
-        with open(self.target, "w") as target:
-            self._dump(payload, target)
-
-    @staticmethod
-    def _dump(payload, target):
-        target.write(payload)
+            self.target.writelines(pieces)

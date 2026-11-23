@@ -11,11 +11,15 @@ from tempest_parser.manager.test_manager import TestsManager
 from tempest_parser.parser.tempest_log_parser import TempestLogParser
 from tempest_parser.reports import reporter
 from tempest_parser.reports.csv_reporter import CSVReporter
+from tempest_parser.reports.json_reporter import JSONReporter, failing_results
 from tempest_parser.utils.config import ParserConfigFile
 
 pkg_dir = os.path.normpath(os.path.dirname(__file__))
 
 log = logging.getLogger("tempest_parser")
+
+# exit code when --fail-on finds results with the given statuses
+EXIT_FAILED_TESTS = 3
 
 class CLIError(Exception):
     """Stops the run with an error message and exit code 1."""
@@ -122,6 +126,12 @@ def build_parser():
         help="Add the baseline test list from the config as the first column")
     parser.add_argument("-c", "--csv-file", help="Write the CSV report")
     parser.add_argument(
+        "-j", "--json-file", help="Write a JSON summary of the runs (counts, times, dates)")
+    parser.add_argument(
+        "--fail-on", action="append", default=[], metavar="STATUS", type=str.upper,
+        help=f"Exit with code {EXIT_FAILED_TESTS} when any run has a test with this status "
+             "(FAIL, ERROR, ...). Can be used several times")
+    parser.add_argument(
         "--config-file",
         help="Use this configuration file (absolute path) instead of the packaged one")
     parser.add_argument(
@@ -200,6 +210,20 @@ def write_reports(args, tests_manager, detailed):
     if args.csv_file is not None:
         log.info("Generating CSV report...")
         CSVReporter(tests_manager).generate_to_file(args.csv_file, detailed=detailed)
+    if args.json_file is not None:
+        log.info("Generating JSON summary...")
+        JSONReporter(tests_manager).generate_to_file(args.json_file)
+
+
+def check_fail_on(statuses, tests_manager):
+    """Exit code for --fail-on: EXIT_FAILED_TESTS when a result has one of the statuses."""
+    found = failing_results(tests_manager, statuses)
+    if not found:
+        return 0
+    for run, class_name, test_name, status in found:
+        log.warning("%s: %s.%s %s", run, class_name, test_name, status)
+    log.error("%d test result(s) with status %s", len(found), ", ".join(sorted(set(statuses))))
+    return EXIT_FAILED_TESTS
 
 
 def run(args):
@@ -222,6 +246,7 @@ def run(args):
                       run_date=args.run_date)
 
     write_reports(args, tests_manager, detailed)
+    return check_fail_on(args.fail_on, tests_manager) if args.fail_on else 0
 
 
 def tempest_cli_parser_main(argv=None):
@@ -229,11 +254,10 @@ def tempest_cli_parser_main(argv=None):
     args = build_parser().parse_args(argv)
     setup_logging(args.quiet)
     try:
-        run(args)
+        return run(args)
     except CLIError as e:
         log.error("%s", e)
         return 1
-    return 0
 
 
 if __name__ == '__main__':

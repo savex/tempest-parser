@@ -1,5 +1,6 @@
 """Run the tparser command end to end on each sample format."""
 import csv
+import json
 import os
 import shutil
 import subprocess
@@ -180,3 +181,18 @@ def test_run_date_invalid():
     result = tparser("--run-date", "yesterday", os.path.join(DATA_DIR, "tempest.xml"))
     assert result.returncode == 2
     assert b"not an ISO 8601 date" in result.stderr
+
+
+def test_json_summary_and_fail_on(tmp_path):
+    out = tmp_path / "summary.json"
+    source = os.path.join(DATA_DIR, "tempest.xml")
+    result = tparser("-j", out, "--fail-on", "fail", source)
+    assert result.returncode == 3, result.stdout + result.stderr
+    assert b"1 test result(s) with status FAIL" in result.stdout
+    assert b"test_delete_server FAIL" in result.stdout
+    (run,) = json.loads(out.read_text())["runs"]
+    assert (run["total"], run["fail"]) == (4, 1)
+
+    assert tparser("--fail-on", "ERROR", source).returncode == 0
+    # left out with --omit-status, so not counted
+    assert tparser("--omit-status", "FAIL", "--fail-on", "FAIL", source).returncode == 0

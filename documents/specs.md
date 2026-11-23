@@ -27,6 +27,8 @@ tparser [options] [inputfile]
 | `-r, --html-trending-filename F` | Write the trending report to `F`. |
 | `-e, --html-errors-filename F` | Write the errors report to `F`. Needs a single file as input, not a folder. |
 | `-c, --csv-file F` | Write the CSV report to `F`. |
+| `-j, --json-file F` | Write the JSON summary (section 6) to `F`. |
+| `--fail-on S` | Exit with code `3` when a result in any run (not the `required` list) has status `S` (upper-cased). Can be repeated. Results left out with `--omit-status` don't count. The reports are written first; each matching result is logged as a warning. |
 | `-d, --detailed` | Add a messages/traceback column. Default from config `default_detailed`. |
 | `-i, --include-required` | Preload the baseline test list (config `default_test_list`) as a `required` column. Ignored with `-e`. |
 | `--omit-status S` | Leave tests with status `S` out of the reports. Can be repeated. |
@@ -40,7 +42,8 @@ Progress goes to stdout through `logging`; errors start with `Error:`.
 
 Exit codes: `0` on success; `1` for a missing path, an unsupported extension, a folder given with `-e`,
 `--run-name` or `--run-date`, or an unexpected pipe; `2` for invalid arguments, including an unknown `-f`
-value or a `--run-date` that is not ISO 8601 (usage is printed).
+value or a `--run-date` that is not ISO 8601 (usage is printed); `3` when `--fail-on` finds a result with
+one of its statuses.
 
 ## 3. Input formats
 
@@ -107,7 +110,10 @@ The baseline run is the execution named `required` (`const.REQUIRED_RUN`). Repor
 ## 6. Reports
 
 - **Trending** (`templates/tempest_trending_report.html`): classes and tests as rows, runs as columns ordered
-  by date, with per-class totals and times. `-d` adds the traces.
+  by date, with per-run totals. `-d` adds a notes column per run: the message, then the trace folded in a
+  `<details>` element (`<pre>`, line breaks kept). The result cells of each row are built and escaped in
+  the reporter (`markupsafe.escape`) and the page is written as it is rendered (`generate()`), so the
+  whole report is never held in memory.
 - **Errors** (`templates/tempest_errors_report.html`): `FAIL` and `SKIP` results from one run, grouped by main
   message. The main message is the result message; if there is none, it is the `Details:` line of the
   trace; failing that, the trace lines that don't start with whitespace or `Trace`.
@@ -115,6 +121,9 @@ The baseline run is the execution named `required` (`const.REQUIRED_RUN`). Repor
   `Required vs Added`, then each run's date (plus its file name with `-d`). Each class has a
   `Class,<name>` row, followed by one row per test: number, name with options, `R`/`A` (or the required
   result), then per run its result (plus, with `-d`, the message, and the trace for `FAIL`).
+- **JSON summary** (`reports/json_reporter.py`): `{"runs": [...]}`, runs ordered by date, each with `name`,
+  `file`, `date` (ISO 8601, UTC), `total`, `ok`, `fail`, `error`, `skip`, `time` (seconds) and `statuses`
+  (count of every status found). The `required` list is left out.
 - HTML reports are rendered with Jinja2 autoescaping; every field from the results is escaped, and line
   breaks in messages become `<br />`. Reports never change the results they are given.
 

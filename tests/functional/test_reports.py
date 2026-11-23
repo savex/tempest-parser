@@ -1,6 +1,10 @@
 import csv
+import io
+import json
 import os
 from datetime import UTC, datetime
+
+import re
 
 import pytest
 
@@ -10,6 +14,7 @@ from tempest_parser.manager.models import Case, Execution, Result
 from tempest_parser.manager.test_manager import TestsManager
 from tempest_parser.reports import reporter
 from tempest_parser.reports.csv_reporter import CSVReporter
+from tempest_parser.reports.json_reporter import JSONReporter, failing_results
 from tempest_parser.utils.config import ParserConfigFile
 
 from ..conftest import PORTS, SERVERS
@@ -204,3 +209,51 @@ def test_trending_report_totals():
     assert run1["total"] == 3 and run1[Column.PASS] == 1 and run1[Column.FAIL] == 1
     assert run1[Column.SKIP] == 1 and run1[Column.NA] == 0 and run1[Column.ADDED] == 3
     assert run2["total"] == 1 and run2[Column.ERROR] == 1 and run2[Column.NA] == 2
+
+
+def test_trending_report_folds_traces():
+    tm = TestsManager()
+    tm.add_execution("run1", DATE)
+    tm.add_result_for_test("run1", SERVERS, "test_a", "", "", "FAIL", 1.0,
+                           message="boom", trace="Traceback:\n  File x\nValueError")
+    tm.add_result_for_test("run1", SERVERS, "test_b", "", "", "OK", 1.0)
+    html = reporter.HTMLTrendingReport()(tm, detailed=True)
+    # the trace keeps its line breaks inside a closed <details> element
+    assert ("boom<details><summary>Trace</summary><pre>Traceback:\n  File x\nValueError"
+            "</pre></details>") in html
+    assert html.count("<details>") == 1
+    assert "<details>" not in reporter.HTMLTrendingReport()(tm)
+
+
+def test_trending_report_numbers_rows_across_classes(data_file):
+    html = reporter.HTMLTrendingReport()(_manager(data_file("tempest.xml")))
+    numbers = [int(n) for n in re.findall(r"<tr>\s*<td>(\d+)</td>", html)]
+    assert numbers == [1, 2, 3, 4]
+
+
+def test_report_to_open_file_streams(data_file):
+    tm = _manager(data_file("tempest.xml"))
+    target = io.StringIO()
+    reporter.ReportToFile(reporter.HTMLTrendingReport(), target)(tm, detailed=True)
+    assert target.getvalue() == reporter.HTMLTrendingReport()(tm, detailed=True)
+
+
+def test_json_summary(data_file, data_dir, tmp_path):
+    path = data_file("tempest.xml")
+    tm = _manager(path, required=os.path.join(data_dir, "baseline.list"))
+    target = tmp_path / "summary.json"
+    JSONReporter(tm).generate_to_file(str(target))
+    (run,) = json.loads(target.read_text())["runs"]
+    assert run["name"] == path and run["file"] == "tempest.xml"
+    assert (run["total"], run["ok"], run["fail"], run["error"], run["skip"]) == (4, 2, 1, 0, 1)
+    assert run["time"] == 3.5
+    assert run["statuses"] == {"FAIL": 1, "OK": 2, "SKIP": 1}
+    assert datetime.fromisoformat(run["date"]).tzinfo is not None
+
+
+def test_failing_results():
+    tm = _injected_manager()
+    run = next(iter(tm.executions))
+    found = failing_results(tm, ["FAIL", "ERROR"])
+    assert found == [(run, "pkg." + INJECTED, "test_fail" + INJECTED, "FAIL")]
+    assert failing_results(tm, ["ERROR"]) == []
