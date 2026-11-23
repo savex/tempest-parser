@@ -1,12 +1,13 @@
+import io
 import os
-import re
-import time
+from datetime import UTC, datetime
 
 import pytest
 
 from tempest_parser.manager import importers
 from tempest_parser.manager.importers import (
     CSVImporter, JSONImporter, SubunitImporter, XMLImporter)
+from tempest_parser.manager.models import file_date, parse_seconds
 from tempest_parser.manager.test_manager import TestsManager
 from tempest_parser.reports.csv_reporter import CSVReporter
 
@@ -21,16 +22,16 @@ def _import(cls, path, mode="rt", **kw):
 
 
 def _results(tm, run):
-    """{(class, test): result dict} for one run."""
+    """{(class, test): Result} for one run."""
     return {
-        (cls, t["test_name"]): t["results"][run]
-        for cls, tests in tm.get_tests_list()["tests"].items()
-        for t in tests if run in t["results"]
+        (cls, t.test_name): t.results[run]
+        for cls, tests in tm.tests.items()
+        for t in tests if run in t.results
     }
 
 
 def _statuses(tm, run):
-    return {key: r["result"] for key, r in _results(tm, run).items()}
+    return {key: r.result for key, r in _results(tm, run).items()}
 
 
 # XML (tempest)
@@ -45,12 +46,13 @@ def test_xml_tempest(data_file):
         (PORTS, "test_update_port"): "OK",
     }
     results = _results(tm, path)
-    assert "AssertionError: 1 != 2 <server>" in results[(SERVERS, "test_delete_server")]["trace"]
-    assert "<ports>" in results[(PORTS, "test_list_ports")]["message"]
-    assert results[(SERVERS, "test_create_server")]["time"] == "1.5s"
+    assert "AssertionError: 1 != 2 <server>" in results[(SERVERS, "test_delete_server")].trace
+    assert "<ports>" in results[(PORTS, "test_list_ports")].message
+    assert results[(SERVERS, "test_create_server")].time == 1.5
     test = tm.get_tests_for_class(SERVERS)[0]
-    assert (test["uuid"], test["tags"]) == ("id-1111", ["smoke"])
+    assert (test.uuid, test.tags) == ("id-1111", ["smoke"])
     assert path in tm.get_executions()
+    assert tm.executions[path].date == file_date(path)
 
 
 def test_xml_status_filter(data_file):
@@ -72,10 +74,10 @@ def test_xml_raw_k8s(data_file):
     results = _results(tm, path)
     suite = "Kubernetes e2e suite"
     dns = results[(suite, "[sig-network] DNS should provide DNS for services [Conformance]")]
-    assert dns["result"] == "FAIL"
-    assert "timed out waiting for the condition" in dns["message"]
+    assert dns.result == "FAIL"
+    assert "timed out waiting for the condition" in dns.message
     storage = "[sig-storage] PersistentVolumes should be mountable [Slow]"
-    assert results[(suite, storage)]["result"] == "SKIP"
+    assert results[(suite, storage)].result == "SKIP"
     assert len(results) == 3
 
 
@@ -90,14 +92,22 @@ def test_remove_control_chars():
     assert importers.remove_control_chars("a\x00b\x1fc\x7fd\te") == "abcde"
 
 
-def test_get_date_from_source(data_file):
+def test_file_date(data_file):
     path = data_file("tempest.xml")
     os.utime(path, (0, 86400))
-    date, struct = importers.get_date_from_source(path)
-    assert date == "02/01/1970 00:00 GMT"
-    assert time.mktime(struct) - time.mktime(time.gmtime(0)) == 86400
+    assert file_date(path) == datetime(1970, 1, 2, tzinfo=UTC)
     with open(path) as f:
-        assert importers.get_date_from_source(f)[0] == date
+        assert file_date(f) == datetime(1970, 1, 2, tzinfo=UTC)
+    # a stream with no file behind it is dated now
+    assert file_date(io.StringIO("x")).tzinfo is UTC
+
+
+@pytest.mark.parametrize("value, expected", [
+    ("1.5", 1.5), ("1.50s", 1.5), (" 2 s ", 2.0), (3, 3.0), (0.25, 0.25),
+    ("", None), ("n/a", None), (None, None),
+])
+def test_parse_seconds(value, expected):
+    assert parse_seconds(value) == expected
 
 
 # JSON (Rally)
@@ -111,9 +121,9 @@ def test_json_rally(data_file):
         (PORTS, "test_list_ports"): "SKIP",
     }
     fail = _results(tm, path)[(SERVERS, "test_delete_server")]
-    assert fail["message"] == "AssertionError: 1 != 2"
-    assert fail["trace"].startswith("Traceback")
-    assert fail["time"] == "0.500s"
+    assert fail.message == "AssertionError: 1 != 2"
+    assert fail.trace.startswith("Traceback")
+    assert fail.time == 0.5
 
 
 def test_json_status_filter(data_file):
@@ -157,7 +167,7 @@ def test_csv_own_round_trip(data_file, tmp_path):
 def test_csv_unknown_layout_imports_nothing(tmp_path):
     path = tmp_path / "other.csv"
     path.write_text("a,b\nc,d\n")
-    assert _import(CSVImporter, str(path)).get_tests_list()["tests"] == {}
+    assert _import(CSVImporter, str(path)).tests == {}
 
 
 # Subunit
@@ -175,9 +185,9 @@ def test_subunit(subunit_file):
         (PORTS, "test_create_port"): "OK",
     }
     results = _results(tm, run)
-    assert results[(SERVERS, "test_delete_server")]["trace"] == "Traceback: boom"
-    assert results[(PORTS, "test_list_ports")]["message"] == "ports <disabled>"
-    assert re.fullmatch(r"1\.5\d*s", results[(SERVERS, "test_create_server")]["time"])
+    assert results[(SERVERS, "test_delete_server")].trace == "Traceback: boom"
+    assert results[(PORTS, "test_list_ports")].message == "ports <disabled>"
+    assert results[(SERVERS, "test_create_server")].time == pytest.approx(1.5)
 
 
 def test_subunit_status_filter(subunit_file):

@@ -1,15 +1,20 @@
 import csv
 import os
+from datetime import UTC, datetime
 
 import pytest
 
+from tempest_parser.const import Column
 from tempest_parser.manager.importers import JSONImporter, XMLImporter
+from tempest_parser.manager.models import Case, Execution, Result
 from tempest_parser.manager.test_manager import TestsManager
 from tempest_parser.reports import reporter
 from tempest_parser.reports.csv_reporter import CSVReporter
 from tempest_parser.utils.config import ParserConfigFile
 
 from ..conftest import PORTS, SERVERS
+
+DATE = datetime(2026, 1, 1, tzinfo=UTC)
 
 
 def _manager(path, required=None):
@@ -23,7 +28,7 @@ def _manager(path, required=None):
 
 def test_trending_report(data_file):
     tm = _manager(data_file("tempest.xml"))
-    html = reporter.HTMLTrendingReport()(tm.get_tests_list(), detailed=True)
+    html = reporter.HTMLTrendingReport()(tm, detailed=True)
     assert SERVERS in html
     assert "test_delete_server" in html
     assert "tempest.xml" in html
@@ -31,24 +36,23 @@ def test_trending_report(data_file):
 
 def test_trending_report_escapes_messages(data_file):
     tm = _manager(data_file("tempest.xml"))
-    html = reporter.HTMLTrendingReport()(tm.get_tests_list(), detailed=True)
+    html = reporter.HTMLTrendingReport()(tm, detailed=True)
     assert "&lt;ports&gt;" in html
     assert "<ports>" not in html
 
 
 def test_reports_do_not_change_results(data_file):
     tm = _manager(data_file("tempest.xml"))
-    reporter.HTMLTrendingReport()(tm.get_tests_list())
-    reporter.HTMLTrendingReport()(tm.get_tests_list())
-    skip = next(t for t in tm.get_tests_list()["tests"][PORTS]
-                if t["test_name"] == "test_list_ports")
-    message = next(iter(skip["results"].values()))["message"]
+    reporter.HTMLTrendingReport()(tm)
+    reporter.HTMLTrendingReport()(tm)
+    skip = next(t for t in tm.tests[PORTS] if t.test_name == "test_list_ports")
+    message = next(iter(skip.results.values())).message
     assert "<ports>" in message
 
 
 def test_errors_report_groups_messages(data_file):
     tm = _manager(data_file("tempest.xml"))
-    html = reporter.HTMLErrorsReport()(tm.get_tests_list())
+    html = reporter.HTMLErrorsReport()(tm)
     assert "AssertionError" in html
     assert "&lt;ports&gt;" in html
 
@@ -56,13 +60,9 @@ def test_errors_report_groups_messages(data_file):
 def test_errors_report_details_line():
     report = reporter.HTMLErrorsReport()
     data = {
-        "executions": [{"name": "run1"}],
-        "tests": {SERVERS: [{
-            "test_name": "test_a", "uuid": "", "test_options": "",
-            "results": {"run1": {
-                "result": "FAIL", "message": "",
-                "trace": "Traceback:\n  File x\nDetails: <boom>\nValueError: bad"}},
-        }]},
+        "executions": [Execution("run1", DATE)],
+        "tests": {SERVERS: [Case("test_a", results={"run1": Result(
+            "FAIL", trace="Traceback:\n  File x\nDetails: <boom>\nValueError: bad")})]},
     }
     report._extend_data(data)
     (message, tests), = data["uniqie_fails"].items()
@@ -73,7 +73,7 @@ def test_errors_report_details_line():
 def test_report_to_file(data_file, tmp_path):
     target = str(tmp_path / "report.html")
     tm = _manager(data_file("tempest.xml"))
-    reporter.ReportToFile(reporter.HTMLTrendingReport(), target)(tm.get_tests_list())
+    reporter.ReportToFile(reporter.HTMLTrendingReport(), target)(tm)
     with open(target) as f:
         assert "test_create_server" in f.read()
 
@@ -95,7 +95,7 @@ def test_csv_report(data_file, data_dir, tmp_path):
 def test_csv_report_keeps_raw_messages(data_file, tmp_path):
     target = str(tmp_path / "out.csv")
     tm = _manager(data_file("tempest.xml"))
-    reporter.HTMLTrendingReport()(tm.get_tests_list())
+    reporter.HTMLTrendingReport()(tm)
     CSVReporter(tm).generate_to_file(target, detailed=True)
     with open(target) as f:
         text = f.read()
@@ -122,17 +122,17 @@ def test_trending_report_with_baseline_orders_runs(data_file, data_dir):
     tm = _manager(data_file("tempest.xml"), required=os.path.join(data_dir, "baseline.list"))
     with open(data_file("rally.json")) as source:
         JSONImporter(tm, source).parse()
-    html = reporter.HTMLTrendingReport()(tm.get_tests_list())
+    html = reporter.HTMLTrendingReport()(tm)
     assert "test_not_run" in html
-    assert all(isinstance(v[1], (int, float)) for v in tm.get_tests_list()["executions"].values())
+    assert [e.name for e in tm.get_sorted_executions()][0] == "required"
 
 
 def test_csv_report_quotes_in_messages(tmp_path):
     tm = TestsManager()
-    tm.add_execution({"execution_name": "run1", "execution_date": "d"}, unixtime=1)
-    tm.add_result_for_test("run1", SERVERS, "test_a", "", "", "FAIL", "1s",
+    tm.add_execution("run1", DATE)
+    tm.add_result_for_test("run1", SERVERS, "test_a", "", "", "FAIL", 1.0,
                            message='said "no"', trace='file "x"')
-    tm.add_result_for_test("run1", SERVERS, "test_b", "", "", "SKIP", "1s", message='"why"')
+    tm.add_result_for_test("run1", SERVERS, "test_b", "", "", "SKIP", 1.0, message='"why"')
     target = str(tmp_path / "out.csv")
     CSVReporter(tm).generate_to_file(target, detailed=True)
     with open(target) as f:
@@ -172,20 +172,35 @@ INJECTED = '<img src=x onerror="alert(1)">'
 def _injected_manager():
     tm = TestsManager()
     run = "/runs/" + INJECTED
-    tm.add_execution({"execution_name": run, "execution_date": INJECTED}, unixtime=1)
+    tm.add_execution(run, DATE)
     for name, result in (("test_fail", "FAIL"), ("test_skip", "SKIP")):
-        tm.add_result_for_test(run, "pkg." + INJECTED, name + INJECTED, "", INJECTED, result, "1s",
+        tm.add_result_for_test(run, "pkg." + INJECTED, name + INJECTED, "", INJECTED, result, 1.0,
                                message=INJECTED + "\nline2", trace=INJECTED)
     return tm
 
 
 @pytest.mark.parametrize("report", [reporter.HTMLTrendingReport, reporter.HTMLErrorsReport])
 def test_reports_escape_every_field(report):
-    html = report()(_injected_manager().get_tests_list(), detailed=True)
+    html = report()(_injected_manager(), detailed=True)
     assert "<img" not in html
     assert "&lt;img src=x onerror=&#34;alert(1)&#34;&gt;" in html
 
 
 def test_trending_report_keeps_line_breaks_in_messages():
-    html = reporter.HTMLTrendingReport()(_injected_manager().get_tests_list(), detailed=True)
+    html = reporter.HTMLTrendingReport()(_injected_manager(), detailed=True)
     assert "&gt;<br />line2" in html
+
+
+def test_trending_report_totals():
+    tm = TestsManager()
+    tm.add_execution("run1", DATE)
+    tm.add_execution("run2", DATE)
+    for test, result in (("test_a", "OK"), ("test_b", "FAIL"), ("test_c", "SKIP")):
+        tm.add_result_for_test("run1", SERVERS, test, "", "", result, 1.0)
+    tm.add_result_for_test("run2", SERVERS, "test_a", "", "", "ERROR", 1.0)
+    data = {"executions": tm.get_sorted_executions(), "tests": tm.tests}
+    reporter.HTMLTrendingReport._count_totals(data)
+    run1, run2 = data["totals"]["run1"], data["totals"]["run2"]
+    assert run1["total"] == 3 and run1[Column.PASS] == 1 and run1[Column.FAIL] == 1
+    assert run1[Column.SKIP] == 1 and run1[Column.NA] == 0 and run1[Column.ADDED] == 3
+    assert run2["total"] == 1 and run2[Column.ERROR] == 1 and run2[Column.NA] == 2

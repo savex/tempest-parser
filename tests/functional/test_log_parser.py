@@ -15,8 +15,8 @@ def _parse(path):
 
 
 def _result(tm, cls, name, run):
-    test = next(t for t in tm.get_tests_for_class(cls) if t["test_name"] == name)
-    return test["results"][run]
+    test = next(t for t in tm.get_tests_for_class(cls) if t.test_name == name)
+    return test.results[run]
 
 
 def test_log_results(data_file):
@@ -24,12 +24,14 @@ def test_log_results(data_file):
     tm = _parse(path)
     run = path.lower()
     assert list(tm.get_executions()) == [run]
-    assert _result(tm, SERVERS, "test_create_server", run)["result"] == "OK"
-    assert _result(tm, SERVERS, "test_create_server", run)["time"] == "1.50s"
-    assert _result(tm, SERVERS, "test_delete_server", run)["result"] == "FAIL"
-    assert _result(tm, PORTS, "test_list_ports", run)["result"] == "SKIP"
+    assert _result(tm, SERVERS, "test_create_server", run).result == "OK"
+    assert _result(tm, SERVERS, "test_create_server", run).time == 1.5
+    assert _result(tm, SERVERS, "test_delete_server", run).result == "FAIL"
+    assert _result(tm, PORTS, "test_list_ports", run).result == "SKIP"
     assert len(tm.get_tests_for_class(SERVERS)) == 2
-    assert tm.get_summary_for_execution(run)[1:] == (3, 1, 1, 1)
+    summary = tm.get_summary_for_execution(run)
+    assert (summary.total, summary.ok, summary.fail, summary.skip) == (3, 1, 1, 1)
+    assert summary.time == 2.0
 
 
 def test_log_fail_message_and_slowest(data_file):
@@ -37,9 +39,9 @@ def test_log_fail_message_and_slowest(data_file):
     tm = _parse(path)
     run = path.lower()
     fail = _result(tm, SERVERS, "test_delete_server", run)
-    assert "Details: 1 != 2" in fail["message"]
-    assert "Traceback (most recent call last):" in fail["trace"]
-    assert _result(tm, SERVERS, "test_create_server", run)["slowest"] is True
+    assert "Details: 1 != 2" in fail.message
+    assert "Traceback (most recent call last):" in fail.trace
+    assert _result(tm, SERVERS, "test_create_server", run).slowest is True
 
 
 def test_log_status_filter(data_file):
@@ -47,7 +49,7 @@ def test_log_status_filter(data_file):
     tm = TestsManager()
     with open(path) as source:
         TempestLogParser(tm, source, status_filters=["OK"]).parse()
-    names = [t["test_name"] for t in tm.get_tests_for_class(SERVERS)]
+    names = [t.test_name for t in tm.get_tests_for_class(SERVERS)]
     assert names == ["test_delete_server"]
 
 
@@ -70,14 +72,14 @@ def _parse_trending(tmp_path):
 
 
 def _runs_with(tm, cls, name, runs):
-    test = next(t for t in tm.get_tests_for_class(cls) if t["test_name"] == name)
-    return [runs.index(r) + 1 for r in runs if r in test["results"]]
+    test = next(t for t in tm.get_tests_for_class(cls) if t.test_name == name)
+    return [runs.index(r) + 1 for r in runs if r in test.results]
 
 
 def test_trending_runs(tmp_path):
     tm, runs = _parse_trending(tmp_path)
     assert sorted(tm.get_executions()) == runs
-    assert [tm.get_summary_for_execution(r)[1] for r in runs] == [26, 24, 29, 32]
+    assert [tm.get_summary_for_execution(r).total for r in runs] == [26, 24, 29, 32]
     # in every run
     assert _runs_with(tm, SERVERS, "test_update_server_name", runs) == [1, 2, 3, 4]
     # missing in one run
@@ -88,6 +90,20 @@ def test_trending_runs(tmp_path):
     assert len(tm.get_tests_for_class(QUOTAS)) == 4
     assert _runs_with(tm, QUOTAS, "test_delete_quota", runs) == [3, 4]
     # a failure fixed in run 3
-    results = [_result(tm, SERVERS, "test_update_server_name_in_stop_state", r)["result"]
+    results = [_result(tm, SERVERS, "test_update_server_name_in_stop_state", r).result
                for r in runs]
     assert results == ["FAIL", "FAIL", "OK", "OK"]
+
+
+def test_log_summary_only_for_its_own_run(tmp_path, caplog):
+    tm = TestsManager()
+    for name in TRENDING_RUNS[:2]:
+        shutil.copy(os.path.join(DATA_DIR, "trending", name), tmp_path / name)
+    with caplog.at_level("INFO", logger="tempest_parser"):
+        for name in TRENDING_RUNS[:2]:
+            with open(tmp_path / name) as source:
+                TempestLogParser(tm, source).parse()
+    lines = [r.getMessage() for r in caplog.records if r.getMessage().startswith("Tempest testrun")]
+    assert len(lines) == 2
+    assert "run_1.log: 26 executed" in lines[0]
+    assert "run_2.log: 24 executed" in lines[1]

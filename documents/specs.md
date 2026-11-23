@@ -52,7 +52,9 @@ an unexpected pipe; `2` for invalid arguments, including an unknown `-f` value (
 
 - In a folder, files are read in name order. With `-f`, only files whose extension matches the format are
   read; without it, each file's format is detected from its extension. Other files are skipped with a message.
-- Each file is one run. The run is named after the file, and its date is the file's modification time (GMT).
+- Each file is one run. The run is named after the file, and its date is the file's modification time
+  (UTC, shown as `dd/mm/YYYY HH:MM GMT`). The `log` format, stdin and the baseline list (`required` run)
+  are dated the same way; a stream without a file is dated now.
 - XML failures are recognised as k8s errors (Go error types, `k8s.io`, klog timestamps) or pytest errors
   (`E ` lines), and the main message is taken out of the traceback.
 
@@ -70,18 +72,23 @@ brackets). With raw names (`r_xml`) the full name is used as is.
 | `X_FAIL` / `X_OK` | Expected failure / unexpected success (Rally, CSV) |
 | `R` | Listed in the baseline (`required`) but not run |
 
-Each result also records the time, the slowest-test flag, a setup-failure flag, the message and the trace.
+The statuses are `const.Status`; results keep the status as a plain string, so values from imported CSV
+files that aren't listed still pass through. Each result also records the time (seconds, or none), the
+slowest-test flag, a setup-failure flag, the message and the trace.
 
 ## 5. Data model
 
-`TestsManager` holds one structure (`manager/structs.py`):
+`TestsManager` holds the results as dataclasses (`manager/models.py`):
 
-- `tests`: `{class_name: [test_item]}`; each test item has `test_name`, `uuid`, `test_options`, `tags` and
-  `results: {execution_name: result}`.
-- `executions`: `{execution_name: (date, unixtime, summary, ...)}`; the summary has total, failed, outcome and
-  time.
+- `tests`: `{class_name: [Case]}`; a `Case` has `test_name`, `uuid`, `test_options`, `tags` and
+  `results: {execution_name: Result}`. A `Result` has `result`, `time` (float seconds or `None`),
+  `message`, `trace`, `slowest` and `setup_fail`.
+- `executions`: `{execution_name: Execution}`; an `Execution` has the `name` and the `date` (UTC
+  `datetime`). Runs are ordered by date; runs with the same date keep the order they were imported in.
+- `summarize()` counts total, OK, FAIL, ERROR, SKIP and time for every run in one pass over the tests.
 
-The baseline run is the execution named `required`.
+The baseline run is the execution named `required` (`const.REQUIRED_RUN`). Reports take the
+`TestsManager` and only read it.
 
 ## 6. Reports
 

@@ -1,52 +1,65 @@
-import itertools
+"""Statuses, report columns and input formats, each defined once."""
+import os
+from enum import Enum, StrEnum
 
 
-_cnt = itertools.count()
-STATUS_PASS = next(_cnt)
-STATUS_FAIL = next(_cnt)
-STATUS_ERROR = next(_cnt)
-STATUS_SKIP = next(_cnt)
-STATUS_NA = next(_cnt)
-STATUS_ADDED = next(_cnt)
+class Status(StrEnum):
+    """Result of one test in one run, as stored and shown in the reports.
 
-ALL_KNOWN_STATUSES = {
-    STATUS_PASS,
-    STATUS_FAIL,
-    STATUS_ERROR,
-    STATUS_SKIP,
-    STATUS_NA,
-    STATUS_ADDED
-}
+    Results are kept as plain strings, so values read from files that aren't listed here
+    still work; these are the ones the importers produce and the reports look for.
+    """
+    OK = "OK"
+    FAIL = "FAIL"
+    ERROR = "ERROR"
+    SKIP = "SKIP"
+    X_FAIL = "X_FAIL"   # expected failure
+    X_OK = "X_OK"       # unexpected success
+    REQUIRED = "R"      # listed in the baseline test list (the "required" run)
+    ADDED = "A"         # not in the baseline test list (CSV reports)
 
-_cnt = itertools.count()
-VERBOSE_GENERIC = next(_cnt)
-VERBOSE_SHORT = next(_cnt)
-VERBOSE_DETAILS = next(_cnt)
 
-_cnt = itertools.count()
-FMT_SUBUNIT = next(_cnt)
-FMT_CSV = next(_cnt)
-FMT_RALLY_JSON = next(_cnt)
-FMT_XML_TEMPEST = next(_cnt)
-FMT_XML_RAW = next(_cnt)
-FMT_PYTEST = next(_cnt)
+class Column(Enum):
+    """Summary columns of the HTML reports; the value is the label."""
+    PASS = "Pass"
+    FAIL = "Fail"
+    ERROR = "Error"
+    NA = "NA"
+    SKIP = "Skip"
+    ADDED = "Added"
 
-ALL_INPUT_FORMATS = {
-    "subunit": FMT_SUBUNIT,
-    "csv": FMT_CSV,
-    "json": FMT_RALLY_JSON,
-    "t_xml": FMT_XML_TEMPEST,
-    "r_xml": FMT_XML_RAW,
-    "log": FMT_PYTEST
-}
+    @property
+    def css(self):
+        return self.value.lower()
 
-FORMAT_LABELS = {
-    FMT_SUBUNIT: "subunit",
-    FMT_CSV: "csv",
-    FMT_RALLY_JSON: "json",
-    FMT_XML_TEMPEST: "xml",
-    FMT_XML_RAW: "xml",
-    FMT_PYTEST: "log"
-}
 
-del _cnt
+class InputFormat(StrEnum):
+    """Input formats; the value is the `-f` option value."""
+    SUBUNIT = "subunit"
+    CSV = "csv"
+    RALLY_JSON = "json"
+    XML_TEMPEST = "t_xml"
+    XML_RAW = "r_xml"
+    LOG = "log"
+
+    @property
+    def label(self):
+        """File extension without the dot, as shown in messages."""
+        return "xml" if self in (InputFormat.XML_TEMPEST, InputFormat.XML_RAW) else self.value
+
+    @property
+    def extension(self):
+        return "." + self.label
+
+    @classmethod
+    def from_filename(cls, filename):
+        """Format for a file name by its extension (`.xml` is tempest XML), or None."""
+        extension = os.path.splitext(filename)[1]
+        for fmt in (cls.SUBUNIT, cls.CSV, cls.RALLY_JSON, cls.XML_TEMPEST, cls.LOG):
+            if fmt.extension == extension:
+                return fmt
+        return None
+
+
+# name of the run that holds the baseline test list (-i)
+REQUIRED_RUN = "required"

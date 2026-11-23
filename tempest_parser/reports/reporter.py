@@ -1,11 +1,12 @@
 import abc
+import dataclasses
 import os
 import re
 
 import jinja2
 from markupsafe import Markup, escape
 
-from tempest_parser import const
+from tempest_parser.const import REQUIRED_RUN, Column, Status
 
 pkg_dir = os.path.dirname(__file__)
 pkg_dir = os.path.join(pkg_dir, os.pardir)
@@ -43,57 +44,35 @@ class _TMPLBase(_Base):
 
     @staticmethod
     def _count_totals(data):
-        data['totals'] = {}
+        """{run name: {"total": n, Column: n}} in one pass over the tests."""
+        names = [execution.name for execution in data['executions']]
+        totals = {name: {'total': 0, **{column: 0 for column in Column}} for name in names}
+        by_status = {Status.OK: Column.PASS, Status.FAIL: Column.FAIL,
+                     Status.ERROR: Column.ERROR, Status.SKIP: Column.SKIP}
+        for tests in data['tests'].values():
+            for test in tests:
+                added = REQUIRED_RUN not in test.results
+                for name in names:
+                    result = test.results.get(name)
+                    counts = totals[name]
+                    if result is None:
+                        counts[Column.NA] += 1
+                        continue
+                    counts['total'] += 1
+                    column = by_status.get(result.result.upper())
+                    if column is not None:
+                        counts[column] += 1
+                    if added:
+                        counts[Column.ADDED] += 1
+        data['totals'] = totals
 
-        for ex_data in data['executions']:
-            ex_name = ex_data['name']
-            _total = _pass = _fail = _error = _na = _skip = 0
-            # classes = data['tests'].keys()
-            _added = 0
-            for test_class in data['tests']:
-                for test in data['tests'][test_class]:
-                    if ex_name in test['results']:
-                        _total += 1
-                        _result = test['results'][ex_name]['result'].lower()
-                        if _result == 'ok':
-                            _pass += 1
-                        elif _result == 'fail':
-                            _fail += 1
-                        elif _result == 'error':
-                            _error += 1
-                        elif _result == 'skip':
-                            _skip += 1
-                        if 'required' not in test['results']:
-                            _added += 1
-                    else:
-                        _na += 1
-
-            data['totals'][ex_name] = {
-                'total': _total,
-                const.STATUS_PASS: _pass,
-                const.STATUS_FAIL: _fail,
-                const.STATUS_ERROR: _error,
-                const.STATUS_NA: _na,
-                const.STATUS_ADDED: _added,
-                const.STATUS_SKIP: _skip
-            }
-
-    def __call__(self, results, detailed=False):
+    def __call__(self, tests_manager, detailed=False):
+        """Render the report for a TestsManager's results; the results are only read."""
         data = self.common_data()
-        _ex = []
-        for key, value in results['executions'].items():
-            _ex.append({
-                "name": key,
-                "date": value[0],
-                "unixtime": value[1],
-                "filename": os.path.basename(key)
-            })
-        _ex.sort(key=lambda item: item['unixtime'])
         data.update({
-            "executions": _ex,
+            "executions": tests_manager.get_sorted_executions(),
             "detailed": detailed,
-            # read only: reports must not change the results they are given
-            "tests": results['tests']
+            "tests": tests_manager.tests,
         })
         self._extend_data(data)
         self._count_totals(data)
@@ -107,20 +86,9 @@ class _TMPLBase(_Base):
         return {
             'report': self,
             'counters': {'all_count': 1},
-            'STATUS_PASS': const.STATUS_PASS,
-            'STATUS_FAIL': const.STATUS_FAIL,
-            'STATUS_ERROR': const.STATUS_ERROR,
-            'STATUS_NA': const.STATUS_NA,
-            'STATUS_SKIP': const.STATUS_SKIP,
-            'STATUS_ADDED': const.STATUS_ADDED,
-
-            'status_description': {
-                const.STATUS_PASS: 'Pass',
-                const.STATUS_FAIL: 'Fail',
-                const.STATUS_ERROR: 'Error',
-                const.STATUS_NA: 'NA',
-                const.STATUS_SKIP: 'Skip',
-                const.STATUS_ADDED: 'Added'}}
+            'Column': Column,
+            'REQUIRED_RUN': REQUIRED_RUN,
+        }
 
     def _extend_data(self, data):
         # extra data for a report's template
@@ -142,20 +110,21 @@ class HTMLErrorsReport(_TMPLBase):
 
         # Reverse source list and get unique errors
         for item in data['executions']:
-            ex_name = item['name']
+            ex_name = item.name
             for test_class in data['tests']:
                 for test in data['tests'][test_class]:
-                    if ex_name not in test['results']:
+                    if ex_name not in test.results:
                         continue
+                    result = test.results[ex_name]
 
-                    _message = test['results'][ex_name]['message']
+                    _message = result.message
                     main_message = "" if _message is None else _message
 
                     if main_message.startswith("Trace"):
                         _trace = main_message
                         main_message = ""
                     else:
-                        _trace = test['results'][ex_name]['trace'].rstrip()
+                        _trace = result.trace.rstrip()
                     # cut out unneeded text if present
                     _tindex = _trace.find("failure:")
                     _trace = _trace[_tindex+9:] if _tindex > 0 else _trace
@@ -180,20 +149,20 @@ class HTMLErrorsReport(_TMPLBase):
 
                     _dict = {
                         'test_class': test_class,
-                        'test_name': test['test_name'],
-                        'uuid': test['uuid'],
-                        'test_options': test['test_options'],
+                        'test_name': test.test_name,
+                        'uuid': test.uuid,
+                        'test_options': test.test_options,
                         'trace_details': _trace_details,
-                        'trace_additional': _trace_messages
+                        'trace_additional': _trace_messages,
+                        **dataclasses.asdict(result),
                     }
-                    _dict.update(test['results'][ex_name])
 
-                    if _dict['result'].lower() == 'skip':
+                    if _dict['result'].upper() == Status.SKIP:
                         if main_message not in skipped_messages:
                             skipped_messages[main_message] = []
                         skipped_messages[main_message].append(_dict)
 
-                    if _dict['result'].lower() == 'fail':
+                    if _dict['result'].upper() == Status.FAIL:
                         if main_message not in failed_messages:
                             failed_messages[main_message] = []
                         failed_messages[main_message].append(_dict)
@@ -207,8 +176,8 @@ class ReportToFile:
         self.report = report
         self.target = target
 
-    def __call__(self, payload, detailed=False):
-        payload = self.report(payload, detailed)
+    def __call__(self, tests_manager, detailed=False):
+        payload = self.report(tests_manager, detailed)
 
         if isinstance(self.target, str):
             self._wrapped_dump(payload)

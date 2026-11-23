@@ -1,15 +1,16 @@
 import csv
 import json
 import logging
-import os
 import re
-import time
 from xml.etree.ElementTree import parse
 
 from subunit import make_stream_binary
 from subunit.test_results import TestByTestResult
 from subunit.filters import run_tests_from_stream
 from testtools import StreamToExtendedDecorator
+
+from tempest_parser.const import Status
+from tempest_parser.manager.models import DATE_FORMAT, file_date, parse_seconds
 
 log = logging.getLogger(__name__)
 
@@ -24,27 +25,6 @@ _CONTROL_CHARS_RE = re.compile(f'[{re.escape(_CONTROL_CHARS)}]')
 
 def remove_control_chars(s):
     return _CONTROL_CHARS_RE.sub('', s)
-
-
-def get_date_from_source(source):
-    # filename handling
-    _fd = source
-    _stat = os.stat
-    # opened already, get descriptor
-    if hasattr(source, 'read'):
-        _stat = os.fstat
-        _fd = source.fileno()
-
-    (mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime) = _stat(_fd)
-    # we need to be closer to creation, so ctime is for us.
-    # Just leaving those here, in case needed
-    # _atime = time.strftime("%d/%m/%Y %H:%M", time.gmtime(atime))
-    # _mtime = time.strftime("%d/%m/%Y %H:%M", time.gmtime(mtime))
-    # _ctime = time.strftime("%d/%m/%Y %H:%M", time.gmtime(ctime))
-    return time.strftime(
-        "%d/%m/%Y %H:%M GMT",
-        time.gmtime(mtime)
-    ), time.gmtime(mtime)
 
 
 def k8s_slow_extract(_reason):
@@ -87,15 +67,8 @@ class ImporterBase:
         self.forced_execution_name = force_single_execution
         self.status_filters = status_filters or []
 
-    def add_execution(self, name, date, duration, unixtime):
-        self.tm.add_execution(
-            dict(
-                execution_name=name,
-                execution_date=date,
-                summary={'time': duration},
-            ),
-            unixtime=unixtime
-        )
+    def add_execution(self, name, date):
+        self.tm.add_execution(name, date)
 
 
 # Example of pytest4 xml structure
@@ -121,24 +94,25 @@ class ImporterBase:
 
 
 _error_status_map = {
-    'skipped': 'SKIP',
-    'failure': 'FAIL',
-    'error': 'ERROR',
-    'system-err': 'ERROR'
+    'skipped': Status.SKIP,
+    'failure': Status.FAIL,
+    'error': Status.ERROR,
+    'system-err': Status.ERROR
 }
 
 
 class XMLImporter(ImporterBase):
     @staticmethod
     def _parse_duration(duration):
-        _time_in_sec = float(duration) / 1000.0
-        return str(_time_in_sec) + 's'
+        # read as milliseconds (see known limitations in documents/specs.md)
+        seconds = parse_seconds(duration)
+        return None if seconds is None else seconds / 1000.0
 
     @staticmethod
     def _parse_status(status):
         # XML has one child node for status and text as a reason
         if not len(status):
-            return 'OK', "Test passed", ""
+            return Status.OK, "Test passed", ""
         else:
             _status = ""
             _reason = ""
@@ -147,7 +121,7 @@ class XMLImporter(ImporterBase):
             # cut system-out
             while len(status) > 0 and _idx < len(status):
                 if status[_idx].tag == 'system-out':
-                    _status = "OK"
+                    _status = Status.OK
                     _sysout = f"{status[_idx].tag}:\n{status[_idx].text}"
                     _ = status.pop(_idx)
                 else:
@@ -200,7 +174,7 @@ class XMLImporter(ImporterBase):
         tree = parse(self.source)
         root = tree.getroot()
 
-        _execution_date, _unixtime = get_date_from_source(self.source)
+        _execution_date = file_date(self.source)
         _all_testsuites = []
         # We should be ready for multiple test suites in one xml
         if root.tag == 'testsuite':
@@ -237,13 +211,7 @@ class XMLImporter(ImporterBase):
                         self.tm.split_test_name(
                             _class_name + "." + _test_name
                         )
-                _duration = "0s"
-                try:
-                    _duration = self._parse_duration(
-                        _test_node.attrib['time']
-                    )
-                except KeyError:
-                    pass
+                _duration = self._parse_duration(_test_node.attrib.get('time', '0'))
 
                 _status, _reason, _sysout = self._parse_status(
                     list(_test_node)
@@ -251,10 +219,10 @@ class XMLImporter(ImporterBase):
                 # _options = ''
                 _message = ""
                 _trace = ""
-                if _status == 'SKIP':
+                if _status == Status.SKIP:
                     # no trace present
                     _message = _reason if _reason else ""
-                elif _status == 'FAIL':
+                elif _status == Status.FAIL:
                     # Check if there is a inner Traceback present
                     # and prior to save the message, try to detect error type
                     _pytest_lines = self._detect_pytest_errors(_reason)
@@ -319,33 +287,32 @@ class XMLImporter(ImporterBase):
                     tags=_tags
                 )
 
-            self.add_execution(
-                _execution_name,
-                _execution_date,
-                self._parse_duration(_testsuite.attrib['time']),
-                _unixtime
-            )
+            self.add_execution(_execution_name, _execution_date)
 
         return True
+
+
+# Rally and xunit CSV statuses
+_rally_status_map = {
+    'success': Status.OK,
+    'fail': Status.FAIL,
+    'skip': Status.SKIP,
+    'xfail': Status.X_FAIL,
+    'usuccess': Status.X_OK
+}
 
 
 class JSONImporter(ImporterBase):
     @staticmethod
     def _parse_status(status):
-        return {
-            'success': 'OK',
-            'fail': 'FAIL',
-            'skip': 'SKIP',
-            'xfail': 'X_FAIL',
-            'usuccess': 'X_OK'
-        }[status]
+        return _rally_status_map[status]
 
     def parse(self):
         data = json.load(self.source)
 
         # Use filename as name for the execution
         _execution_name = self.source.name
-        _execution_date, _unixtime = get_date_from_source(self.source)
+        _execution_date = file_date(self.source)
 
         verification = next(iter(data['verifications']))
 
@@ -355,7 +322,7 @@ class JSONImporter(ImporterBase):
                 self.tm.split_test_name(_test_name)
             _test_value_results = _test_value['by_verification'][verification]
             _status = self._parse_status(_test_value_results['status'])
-            _duration = _test_value_results['duration'] + 's'
+            _duration = parse_seconds(_test_value_results['duration'])
             if 'details' in _test_value_results:
                 _message = _test_value_results['details']
             else:
@@ -364,16 +331,6 @@ class JSONImporter(ImporterBase):
                 'traceback'] if 'traceback' in _test_value_results else ''
             if _status in self.status_filters:
                 continue
-
-            # parsing tags
-            # if _test_value['tags'][0].find('(') > -1:
-            #     _tag = _test_value['tags'][0].split(']')[0]
-            #     _tags = '[{}]'.format(_tag)
-            #     _option = _test_value['tags'][0].split('(')[1]
-            #     _options = '({})'.format(_option)
-            # else:
-            #     _tags = '[{}]'.format(','.join(_test_value['tags']))
-            #     _options = ''
 
             self.tm.add_result_for_test(
                 _execution_name,
@@ -388,12 +345,7 @@ class JSONImporter(ImporterBase):
                 tags=_tags
             )
 
-        self.add_execution(
-            _execution_name,
-            _execution_date,
-            '0s',
-            _unixtime
-        )
+        self.add_execution(_execution_name, _execution_date)
         return _execution_name
 
 
@@ -424,13 +376,7 @@ class CSVImporter(ImporterBase):
 
     @staticmethod
     def _parse_status(status):
-        return {
-            'success': 'OK',
-            'fail': 'FAIL',
-            'skip': 'SKIP',
-            'xfail': 'X_FAIL',
-            'usuccess': 'X_OK'
-        }[status]
+        return _rally_status_map[status]
 
     def parse(self):
         if self.subtype == CSV_OWN:
@@ -440,7 +386,7 @@ class CSVImporter(ImporterBase):
 
     def parse_own_csv(self):
         _execution_name = self.source.name
-        _execution_date, _unixtime = get_date_from_source(self.source)
+        _execution_date = file_date(self.source)
 
         _class_name = ''
 
@@ -454,7 +400,7 @@ class CSVImporter(ImporterBase):
                 continue
             elif int(row[0].lower()) > 0:
                 _test_name = row[1]
-                if row[2] in ['R', 'A']:
+                if row[2] in (Status.REQUIRED, Status.ADDED):
                     _status_index = 3
                 _status = row[_status_index]
                 _message = self._fix_message(
@@ -469,7 +415,7 @@ class CSVImporter(ImporterBase):
                     '',
                     '',
                     _status,
-                    '',
+                    None,
                     message=_message,
                     test_name_bare=True,
                 )
@@ -484,17 +430,12 @@ class CSVImporter(ImporterBase):
                         "\t\t<number>,<test_name>,<status>,<message>")
                 )
 
-        self.add_execution(
-            _execution_name,
-            _execution_date,
-            'n/a',
-            _unixtime
-        )
+        self.add_execution(_execution_name, _execution_date)
         return _execution_name
 
     def parse_xunit_csv(self):
         _execution_name = self.source.name
-        _execution_date, _unixtime = get_date_from_source(self.source)
+        _execution_date = file_date(self.source)
 
         for row in self.rows:
             # parse the data, skip the header and other non-test rows
@@ -515,17 +456,12 @@ class CSVImporter(ImporterBase):
                 '',
                 '',
                 _status,
-                '',
+                None,
                 message=_message,
                 test_name_bare=True
             )
 
-        self.add_execution(
-            _execution_name,
-            _execution_date,
-            'n/a',
-            _unixtime
-        )
+        self.add_execution(_execution_name, _execution_date)
         return _execution_name
 
 
@@ -533,12 +469,12 @@ class TParserResult(TestByTestResult):
     @staticmethod
     def _parse_status(status):
         return {
-            'success': 'OK',
-            'failure': 'FAIL',
-            'error': 'ERROR',
-            'skip': 'SKIP',
-            'xfail': 'X_FAIL',
-            'uxsuccess': 'X_OK'
+            'success': Status.OK,
+            'failure': Status.FAIL,
+            'error': Status.ERROR,
+            'skip': Status.SKIP,
+            'xfail': Status.X_FAIL,
+            'uxsuccess': Status.X_OK
         }[status]
 
     def __init__(self, name, tm, status_filters=None):
@@ -567,14 +503,14 @@ class TParserResult(TestByTestResult):
         if _status in self.status_filters:
             return
 
-        if _status in ('FAIL', 'ERROR') and 'traceback' in details:
+        if _status in (Status.FAIL, Status.ERROR) and 'traceback' in details:
             _tb = details['traceback'].as_text()
-        elif _status == 'SKIP' and 'reason' in details:
+        elif _status == Status.SKIP and 'reason' in details:
             _message = details['reason'].as_text()
 
-        _time = ''
+        _time = None
         if start_time is not None and stop_time is not None:
-            _time = f"{(stop_time - start_time).total_seconds()}s"
+            _time = (stop_time - start_time).total_seconds()
 
         self.tm.add_result_for_test(
             self._execution_name,
@@ -599,8 +535,9 @@ class SubunitImporter(ImporterBase):
         self.source = make_stream_binary(source)
 
     def parse(self):
-        _execution_date, _unixtime = get_date_from_source(self.source)
-        _execution_name = self.source.name + _execution_date
+        _execution_date = file_date(self.source)
+        # path and date run together (see known limitations in documents/specs.md)
+        _execution_name = self.source.name + _execution_date.strftime(DATE_FORMAT)
 
         _result = TParserResult(
             _execution_name, self.tm, status_filters=self.status_filters)
@@ -612,11 +549,4 @@ class SubunitImporter(ImporterBase):
         )
         log.debug("%s: %d tests", _execution_name, _result.counter)
 
-        self.add_execution(
-            _execution_name,
-            _execution_date,
-            'n/a',
-            _unixtime
-        )
-
-        return
+        self.add_execution(_execution_name, _execution_date)

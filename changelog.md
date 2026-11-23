@@ -46,6 +46,19 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
   version into the source; **Release** compares the built package's version with the tag (PEP 440 form).
 - CI installs with uv from the new `uv.lock` (`uv sync --locked`) instead of pip, and the lint job runs
   actionlint.
+- Results are dataclasses (`manager/models.py`: `Result`, `Case`, `Execution`, `Summary`) instead of
+  dicts; `manager/structs.py` is gone. Times are stored as float seconds and run dates as UTC
+  `datetime`s; the reports format them. Reports (`HTMLTrendingReport`, `HTMLErrorsReport`,
+  `ReportToFile`) now take the `TestsManager` instead of `get_tests_list()`, which is removed.
+- `const.py` defines `Status`, `Column` (report summary columns) and `InputFormat` enums instead of
+  numbered constants and label dicts.
+- Every run is dated by its file's modification time in UTC and shown as `dd/mm/YYYY HH:MM GMT`. `log`
+  runs had no `GMT` and were ordered by the file's change time; the `required` column used the baseline
+  list's change time.
+- Summaries are counted in one pass over the tests (`TestsManager.summarize()`, report totals); the
+  `log` parser prints the summary of its own run only, not of every run imported so far. Unused helpers
+  (`get_time_for_class`, `get_totals_as_string_for_class`, `is_test_has_errors`) are removed and
+  `is_class_has_errors` is now `class_has_errors`.
 
 ### Fixed
 - The wheel no longer installs a top-level `tests` package (the 0.3.0 wheel on the GitHub release does).

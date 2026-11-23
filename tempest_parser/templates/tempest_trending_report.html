@@ -152,12 +152,12 @@
         <td>Added</td>
     </tr>
     <tr class="legend">
-        <td class="status {{ status_description[STATUS_PASS] | lower }}"></td>
-        <td class="status {{ status_description[STATUS_SKIP] | lower }}"></td>
-        <td class="status {{ status_description[STATUS_ERROR] | lower }}"></td>
-        <td class="status {{ status_description[STATUS_FAIL] | lower }}"></td>
-        <td class="status {{ status_description[STATUS_NA] | lower }}"></td>
-        <td class="status {{ status_description[STATUS_ADDED] | lower }}"></td>
+        <td class="status {{ Column.PASS.css }}"></td>
+        <td class="status {{ Column.SKIP.css }}"></td>
+        <td class="status {{ Column.ERROR.css }}"></td>
+        <td class="status {{ Column.FAIL.css }}"></td>
+        <td class="status {{ Column.NA.css }}"></td>
+        <td class="status {{ Column.ADDED.css }}"></td>
     </tr>
     </tbody>
 </table>
@@ -175,24 +175,24 @@
         <td class="labels">
             <!-- Labels for summary -->
             <div class="label total">total</div>
-            <div class="label {{ status_description[STATUS_PASS] | lower }}">pass</div>
-            <div class="label {{ status_description[STATUS_FAIL] | lower }}">fail</div>
-            <div class="label {{ status_description[STATUS_ERROR] | lower }}">error</div>
-            <div class="label {{ status_description[STATUS_SKIP] | lower }}">skip</div>
-            <div class="label {{ status_description[STATUS_NA] | lower }}">n/a</div>
-            <div class="label {{ status_description[STATUS_ADDED] | lower }}">added</div>
+            <div class="label {{ Column.PASS.css }}">pass</div>
+            <div class="label {{ Column.FAIL.css }}">fail</div>
+            <div class="label {{ Column.ERROR.css }}">error</div>
+            <div class="label {{ Column.SKIP.css }}">skip</div>
+            <div class="label {{ Column.NA.css }}">n/a</div>
+            <div class="label {{ Column.ADDED.css }}">added</div>
         </td>
         <!-- Repeatable -->
-    {% for index in range(executions|length) if executions[index]['name'] != 'required' %}
+    {% for index in range(executions|length) if executions[index].name != REQUIRED_RUN %}
         <td class="resultcolumn">
             <!-- SUM -->
-            <div class="label total">{{ totals[executions[index]['name']].total }}</div>
-            <div class="label {{ status_description[STATUS_PASS] | lower }}">{{ totals[executions[index]['name']][STATUS_PASS] }}</div>
-            <div class="label {{ status_description[STATUS_FAIL] | lower }}">{{ totals[executions[index]['name']][STATUS_FAIL] }}</div>
-            <div class="label {{ status_description[STATUS_ERROR] | lower }}">{{ totals[executions[index]['name']][STATUS_ERROR] }}</div>
-            <div class="label {{ status_description[STATUS_SKIP] | lower }}">{{ totals[executions[index]['name']][STATUS_SKIP] }}</div>
-            <div class="label {{ status_description[STATUS_NA] | lower }}">{{ totals[executions[index]['name']][STATUS_NA] }}</div>
-            <div class="label {{ status_description[STATUS_ADDED] | lower }}">{{ totals[executions[index]['name']][STATUS_ADDED] }}</div>
+            <div class="label total">{{ totals[executions[index].name].total }}</div>
+            <div class="label {{ Column.PASS.css }}">{{ totals[executions[index].name][Column.PASS] }}</div>
+            <div class="label {{ Column.FAIL.css }}">{{ totals[executions[index].name][Column.FAIL] }}</div>
+            <div class="label {{ Column.ERROR.css }}">{{ totals[executions[index].name][Column.ERROR] }}</div>
+            <div class="label {{ Column.SKIP.css }}">{{ totals[executions[index].name][Column.SKIP] }}</div>
+            <div class="label {{ Column.NA.css }}">{{ totals[executions[index].name][Column.NA] }}</div>
+            <div class="label {{ Column.ADDED.css }}">{{ totals[executions[index].name][Column.ADDED] }}</div>
         </td>
         {% if detailed %}
         <td class="textlabel">
@@ -205,10 +205,10 @@
         <td>#</td>
         <td>Test name and parameters</td>
         <td>Required vs Added</td>
-        {% for index in range(executions|length) if executions[index]['name'] != 'required' %}
-        <td>{{ executions[index]['date'] }}</td>
+        {% for index in range(executions|length) if executions[index].name != REQUIRED_RUN %}
+        <td>{{ executions[index].date_label }}</td>
         {% if detailed %}
-        <td>{{ executions[index]['filename'] }}</td>
+        <td>{{ executions[index].filename }}</td>
         {% endif %}
     {%- endfor -%}
 {#    {% set counter = 1 %}#}
@@ -217,7 +217,7 @@
     <tr class="group">
         <td colspan="2" class="name">Class {{ test_class }}</td>
         <td colspan="1" class="blank"></td>
-    {% for index in range(executions|length) if executions[index]['name'] != 'required' %}
+    {% for index in range(executions|length) if executions[index].name != REQUIRED_RUN %}
         {% if detailed %}
         <td colspan="2" class="blank"></td>
             {% else %}
@@ -233,19 +233,19 @@
             <div class="test_name">{{ test.test_name }}</div>
             <div class="parameters">{{ test.uuid }} {{ test.test_options }}</div>
         </td>
-        {% if "required" in test['results'] %}
-            {% if test['results']['required']['result'] == 'R' -%}
+        {% if REQUIRED_RUN in test.results %}
+            {% if test.results[REQUIRED_RUN].result == 'R' -%}
             <td class="status required">R</td>
             {%- endif %}
         {% else %}
             <td class="status added">A</td>
         {% endif %}
-    {% for index in range(executions|length) if executions[index]['name'] != 'required' %}
-            {% set _name = executions[index]['name'] %}
-            {% if _name in test['results'] %}
-        <td class="status {{ test['results'][_name]['result'] | lower }}">{{ test['results'][_name]['result'] }}</td>
+    {% for index in range(executions|length) if executions[index].name != REQUIRED_RUN %}
+            {% set _name = executions[index].name %}
+            {% if _name in test.results %}
+        <td class="status {{ test.results[_name].result | lower }}">{{ test.results[_name].result }}</td>
                 {%  if detailed %}
-        <td class="tracemessage">{{ test['results'][_name]['message'] | linebreaks }}<br>{{ test['results'][_name]['trace'] }}</td>
+        <td class="tracemessage">{{ test.results[_name].message | linebreaks }}<br>{{ test.results[_name].trace }}</td>
                 {% endif %}
             {% else %}
         <td class="status blank"></td>

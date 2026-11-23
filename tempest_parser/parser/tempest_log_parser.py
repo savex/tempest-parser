@@ -1,12 +1,21 @@
 import logging
-import os.path
 import re
-import time
 
-import tempest_parser.manager.structs as structs
 import tempest_parser.parser.parser_strings as strings
+from tempest_parser.manager.models import file_date, parse_seconds
 
 log = logging.getLogger(__name__)
+
+
+# the parser's own notes about one run in the log, used while parsing
+def _new_execution_item():
+    return {
+        "execution_name": "",
+        "execution_date": None,
+        "slowest": {"time_total": "", "count": 0, "tests": []},
+        "summary": {"total": 0, "failed": 0, "outcome": "", "time": ""},
+        "raw": "",
+    }
 
 
 class TempestLogParser:
@@ -47,16 +56,8 @@ class TempestLogParser:
     # divide it into objects
     def cli_parser(self):
         cli_objects_list = []
-        _file_m_date = time.strftime(
-            "%d/%m/%Y %H:%M",
-            time.gmtime(os.path.getmtime(self.source.name))
-        )
-        _file_c_date = time.strftime(
-            "%d/%m/%Y %H:%M",
-            time.gmtime(os.path.getctime(self.source.name))
-        )
-        _unixtime = time.gmtime(os.path.getctime(self.source.name))
-        log.debug("created: %s, last modified: %s", _file_c_date, _file_m_date)
+        # the log has no date: the run is dated by the file's modification time
+        _file_date = file_date(self.source)
 
         # load lines into list and pre-parse it by dividing into sections
         # each section is between double next line character: '\n'
@@ -149,10 +150,9 @@ class TempestLogParser:
             cli_objects_list.append(
                 {
                     "source": self.source.name,
-                    "created_date": _file_m_date,
+                    "created_date": _file_date,
                     "data": _data,
                     "type": _type,
-                    "unixtime": _unixtime
                 }
             )
             _index += 1
@@ -190,11 +190,10 @@ class TempestLogParser:
     # Parse object list with specifics about it's content
     def parse_execution_list(self, _object_list):
         # fill items
-        _execution_item = structs.new_execution_item()
+        _execution_item = _new_execution_item()
         for _object in _object_list:
             _execution_item["execution_name"] = _object["source"].lower()
             _execution_item["execution_date"] = _object["created_date"]
-            _execution_item["unixtime"] = _object["unixtime"]
             _execution_item["raw"] += _object["data"]
             if _object["type"] == strings.TEMPEST_EXECUTION_FLOW:
                 # do some specific parsing
@@ -288,9 +287,6 @@ class TempestLogParser:
 
                     if not _test_name or _result in self.status_filters:
                         continue
-                    # times are printed as bare seconds
-                    if _time and _time[-1].isdigit():
-                        _time += "s"
 
                     # we have a test_name and all of the results now,
                     # it is time to add this tests result
@@ -302,7 +298,7 @@ class TempestLogParser:
                         "",
                         _test_options,
                         _result,
-                        _time
+                        parse_seconds(_time)
                     )
             elif _object["type"] == strings.TEMPEST_FAIL_MESSAGE:
                 # do some specific parsing fail messages object
@@ -368,7 +364,7 @@ class TempestLogParser:
                 _lines = _object["data"].splitlines()
 
                 _class_name = ""
-                _slowest_item = structs.new_slowest_item()
+                _slowest_item = {"time_total": "", "count": 0, "tests": []}
 
                 for _line in _lines:
                     _line = _line.lstrip()
@@ -404,7 +400,7 @@ class TempestLogParser:
                 # do some specific parsing for summary section
                 _lines = _object["data"].splitlines()
 
-                _summary_item = structs.new_summary_item()
+                _summary_item = {"total": 0, "failed": 0, "outcome": "", "time": ""}
                 for _line in _lines:
                     if _line.startswith(strings.summary_ran_string):
                         _summary_list = _line.split(" ")
@@ -453,17 +449,15 @@ class TempestLogParser:
     # On return, we should have scenario
     # or scenarios dict with: execution, speed, fail and summary sections
     def object_parser(self, executions_list_raw):
+        names = []
         for _execution_raw in executions_list_raw:
             _execution_item = self.parse_execution_list(_execution_raw)
-            self.test_mgr.add_execution(
-                _execution_item,
-                unixtime=_execution_item["unixtime"]
-            )
+            name = _execution_item["execution_name"]
+            self.test_mgr.add_execution(name, _execution_item["execution_date"])
+            names.append(name)
 
-        for execution in sorted(self.test_mgr.get_executions()):
-            self.test_mgr.print_summary_for_execution(execution)
-
-        return self.test_mgr.get_tests_list()
+        # only the runs from this log
+        self.test_mgr.log_summaries(names)
 
     def parse(self):
         self.object_parser(self.cli_parser())
