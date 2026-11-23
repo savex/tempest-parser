@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Trending Report</title>
+    <style>
+        table {
+            font-family: Verdana, "Helvetica Neue", Arial, Helvetica, Geneva, sans-serif;
+            font-size: x-small;
+        }
+
+        .tracemessage {
+            font-size: xx-small;
+            color: #550000;
+            max-width: 500px;
+            overflow: scroll;
+        }
+
+        .textlabel {
+            text-align: center;
+        }
+
+        .parameters {
+            font-size: xx-small;
+            color: #777777;
+        }
+        .test_name {
+            font-weight: normal;
+            min-width: 600px;
+            text-align: left;
+            color: black;
+        }
+
+        table.labels {
+            border: 0 hidden;
+            margin: 0;
+            width: 100%;
+        }
+
+        table.labels td {
+            border: 0 hidden;
+        }
+
+        table.report table.labels {
+            border: 0 hidden;
+        }
+
+        table.report {
+            border-collapse: collapse;
+            border: 1px solid #777;
+            margin: 10px 0;
+        }
+        table.report th,
+        table.report td {
+            border: 1px solid #777;
+        }
+        table.report th.date {
+            vertical-align: top;
+            padding: 5px 0;
+            height: 145px;
+            font-weight: normal;
+        }
+
+        table > caption { text-align: left; }
+        table.report tr.legend > td { height: 1ex; }
+
+        tr.headers {
+            background: #105a10;
+            color: white;
+            font-size: smaller;
+            text-align: center;
+        }
+
+        tr.group > td.name {
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        td > div.test_name {
+            padding-left: 5px;
+        }
+
+        td > div.parameters {
+            padding-left: 10px;
+            white-space: normal;
+        }
+
+        td.status {
+            font-size: xx-small;
+            text-align: center;
+            vertical-align: middle;
+            color: black;
+            width: auto;
+            min-height: 20px;
+        }
+
+        td.labels {
+            border: 0 hidden;
+            padding: 0;
+            margin: 0;
+            width: 80px;
+        }
+
+        td.resultcolumn {
+            width: 45px;
+        }
+
+        td.status.pass { background: #6c6; }
+        td.status.ok { background: #6c6; }
+        td.status.fail { background: #a50000; color: white; }
+        td.status.skip { background: #ccb226; }
+        td.status.na { background: #777777; }
+        td.status.error { background: #e585a2; }
+        td.status.total { background: white; }
+        td.status.required { background: #aaa; }
+        td.status.added { background: #fcc; }
+
+        td > div.label {
+            font-size: xx-small;
+            text-align: center;
+            vertical-align: middle;
+            color: black;
+            width: auto;
+            min-height: 20px;
+            line-height: 20px;
+        }
+
+        td > div.label.pass { background: #6c6; }
+        td > div.label.fail { background: #a50000; color: white; }
+        td > div.label.skip { background: #ccb226; }
+        td > div.label.na { background: #777777; }
+        td > div.label.added { background: #fcc; }
+        td > div.label.error { background: #e585a2; }
+        td > div.label.total { background: white; }
+
+        th.separator,
+        td.separator { background: #777; }
+    </style>
+</head>
+<body>
+
+
+
+<table class="report">
+    <caption>Legend</caption>
+    <tbody>
+    <tr>
+        <td>Passed</td>
+        <td>Skipped</td>
+        <td>Setup Errors</td>
+        <td>Failed</td>
+        <td>NA</td>
+        <td>Added</td>
+    </tr>
+    <tr class="legend">
+        <td class="status pass"></td>
+        <td class="status skip"></td>
+        <td class="status error"></td>
+        <td class="status fail"></td>
+        <td class="status na"></td>
+        <td class="status added"></td>
+    </tr>
+    </tbody>
+</table>
+<table class="report">
+    <tbody>
+    <tr>
+        <!-- Headers with summary -->
+        <td colspan="2" class="textlabel">
+            Test results
+        </td>
+        <td class="labels">
+            <!-- Labels for summary -->
+            <div class="label total">total</div>
+            <div class="label pass">pass</div>
+            <div class="label fail">fail</div>
+            <div class="label error">error</div>
+            <div class="label skip">skip</div>
+            <div class="label na">n/a</div>
+            <div class="label added">added</div>
+        </td>
+        <!-- Repeatable -->
+        <td class="resultcolumn">
+            <!-- SUM -->
+            <div class="label total">26</div>
+            <div class="label pass">22</div>
+            <div class="label fail">2</div>
+            <div class="label error">0</div>
+            <div class="label skip">2</div>
+            <div class="label na">6</div>
+            <div class="label added">26</div>
+        </td>
+        <td class="resultcolumn">
+            <!-- SUM -->
+            <div class="label total">24</div>
+            <div class="label pass">21</div>
+            <div class="label fail">2</div>
+            <div class="label error">0</div>
+            <div class="label skip">1</div>
+            <div class="label na">8</div>
+            <div class="label added">24</div>
+        </td>
+        <td class="resultcolumn">
+            <!-- SUM -->
+            <div class="label total">29</div>
+            <div class="label pass">27</div>
+            <div class="label fail">1</div>
+            <div class="label error">0</div>
+            <div class="label skip">1</div>
+            <div class="label na">3</div>
+            <div class="label added">29</div>
+        </td>
+        <td class="resultcolumn">
+            <!-- SUM -->
+            <div class="label total">32</div>
+            <div class="label pass">29</div>
+            <div class="label fail">2</div>
+            <div class="label error">0</div>
+            <div class="label skip">1</div>
+            <div class="label na">0</div>
+            <div class="label added">32</div>
+        </td>
+</tr>
+    <tr class="headers">
+        <td>#</td>
+        <td>Test name and parameters</td>
+        <td>Required vs Added</td>
+        <td>23/11/2026 22:00</td>
+        <td>23/11/2026 22:00</td>
+        <td>23/11/2026 22:00</td>
+        <td>23/11/2026 22:00</td>
+    </tr>
+    <tr class="group">
+        <td colspan="2" class="name">Class tempest.api.compute.admin.test_quotas.QuotasAdminTestJSON</td>
+        <td colspan="1" class="blank"></td>
+        <td colspan="1" class="blank"></td>
+        <td colspan="1" class="blank"></td>
+        <td colspan="1" class="blank"></td>
+        <td colspan="1" class="blank"></td>
+
+    </tr>
+    <tr>
+        <td>1</td>
+        <td>
+            <div class="test_name">test_delete_quota</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status blank"></td>
+        <td class="status blank"></td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+</tr>    <tr>
+        <td>2</td>
+        <td>
+            <div class="test_name">test_get_default_quotas</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status blank"></td>
+        <td class="status blank"></td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+</tr>    <tr>
+        <td>3</td>
+        <td>
+            <div class="test_name">test_get_updated_quotas</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status blank"></td>
+        <td class="status blank"></td>
+        <td class="status fail">FAIL</td>
+        <td class="status ok">OK</td>
+</tr>    <tr>
+        <td>4</td>
+        <td>
+            <div class="test_name">test_update_all_quota_resources_for_tenant</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status blank"></td>
+        <td class="status blank"></td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+</tr>    <tr class="group">
+        <td colspan="2" class="name">Class tempest.api.compute.servers.test_servers.ServersTestJSON</td>
+        <td colspan="1" class="blank"></td>
+        <td colspan="1" class="blank"></td>
+        <td colspan="1" class="blank"></td>
+        <td colspan="1" class="blank"></td>
+        <td colspan="1" class="blank"></td>
+
+    </tr>
+    <tr>
+        <td>5</td>
+        <td>
+            <div class="test_name">test_create_server_with_admin_password</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+</tr>    <tr>
+        <td>6</td>
+        <td>
+            <div class="test_name">test_create_server_with_ipv6_addr_only</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status skip">SKIP</td>
+        <td class="status skip">SKIP</td>
+        <td class="status skip">SKIP</td>
+        <td class="status skip">SKIP</td>
+</tr>    <tr>
+        <td>7</td>
+        <td>
+            <div class="test_name">test_create_specify_keypair</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+</tr>    <tr>
+        <td>8</td>
+        <td>
+            <div class="test_name">test_create_with_existing_server_name</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+</tr>    <tr>
+        <td>9</td>
+        <td>
+            <div class="test_name">test_update_access_server_address</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+</tr>    <tr>
+        <td>10</td>
+        <td>
+            <div class="test_name">test_update_server_name</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+</tr>    <tr>
+        <td>11</td>
+        <td>
+            <div class="test_name">test_update_server_name_in_stop_state</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status fail">FAIL</td>
+        <td class="status fail">FAIL</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+</tr>    <tr class="group">
+        <td colspan="2" class="name">Class tempest.api.identity.admin.test_users.UsersTestJSON</td>
+        <td colspan="1" class="blank"></td>
+        <td colspan="1" class="blank"></td>
+        <td colspan="1" class="blank"></td>
+        <td colspan="1" class="blank"></td>
+        <td colspan="1" class="blank"></td>
+
+    </tr>
+    <tr>
+        <td>12</td>
+        <td>
+            <div class="test_name">test_authentication_request_without_token</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+</tr>    <tr>
+        <td>13</td>
+        <td>
+            <div class="test_name">test_create_user</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+</tr>    <tr>
+        <td>14</td>
+        <td>
+            <div class="test_name">test_create_user_with_enabled</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+</tr>    <tr>
+        <td>15</td>
+        <td>
+            <div class="test_name">test_delete_user</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status fail">FAIL</td>
+</tr>    <tr>
+        <td>16</td>
+        <td>
+            <div class="test_name">test_get_users</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+</tr>    <tr>
+        <td>17</td>
+        <td>
+            <div class="test_name">test_list_users_for_tenant</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status ok">OK</td>
+        <td class="status blank"></td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+</tr>    <tr>
+        <td>18</td>
+        <td>
+            <div class="test_name">test_list_users_with_roles_for_tenant</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status skip">SKIP</td>
+        <td class="status blank"></td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+</tr>    <tr>
+        <td>19</td>
+        <td>
+            <div class="test_name">test_update_user</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+</tr>    <tr>
+        <td>20</td>
+        <td>
+            <div class="test_name">test_update_user_password</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status blank"></td>
+        <td class="status blank"></td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+</tr>    <tr>
+        <td>21</td>
+        <td>
+            <div class="test_name">test_user_authentication</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status blank"></td>
+        <td class="status blank"></td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+</tr>    <tr class="group">
+        <td colspan="2" class="name">Class tempest.api.network.test_networks.NetworksTestJSON</td>
+        <td colspan="1" class="blank"></td>
+        <td colspan="1" class="blank"></td>
+        <td colspan="1" class="blank"></td>
+        <td colspan="1" class="blank"></td>
+        <td colspan="1" class="blank"></td>
+
+    </tr>
+    <tr>
+        <td>22</td>
+        <td>
+            <div class="test_name">test_create_delete_subnet_all_attributes</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+</tr>    <tr>
+        <td>23</td>
+        <td>
+            <div class="test_name">test_create_delete_subnet_with_dhcp_enabled</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status ok">OK</td>
+        <td class="status fail">FAIL</td>
+        <td class="status ok">OK</td>
+        <td class="status fail">FAIL</td>
+</tr>    <tr>
+        <td>24</td>
+        <td>
+            <div class="test_name">test_create_delete_subnet_with_gw</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+</tr>    <tr>
+        <td>25</td>
+        <td>
+            <div class="test_name">test_create_update_delete_network_subnet</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+</tr>    <tr>
+        <td>26</td>
+        <td>
+            <div class="test_name">test_delete_network_with_subnet</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+</tr>    <tr>
+        <td>27</td>
+        <td>
+            <div class="test_name">test_list_networks</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+</tr>    <tr>
+        <td>28</td>
+        <td>
+            <div class="test_name">test_list_subnets</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+</tr>    <tr>
+        <td>29</td>
+        <td>
+            <div class="test_name">test_show_network</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+</tr>    <tr>
+        <td>30</td>
+        <td>
+            <div class="test_name">test_show_subnet</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status blank"></td>
+        <td class="status ok">OK</td>
+</tr>    <tr>
+        <td>31</td>
+        <td>
+            <div class="test_name">test_show_subnet_fields</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status ok">OK</td>
+        <td class="status ok">OK</td>
+        <td class="status blank"></td>
+        <td class="status ok">OK</td>
+</tr>    <tr>
+        <td>32</td>
+        <td>
+            <div class="test_name">test_update_subnet_gw_dns_host_routes_dhcp</div>
+            <div class="parameters"> </div>
+        </td>
+            <td class="status added">A</td>
+        <td class="status fail">FAIL</td>
+        <td class="status ok">OK</td>
+        <td class="status blank"></td>
+        <td class="status ok">OK</td>
+</tr></tbody>
+</table>
+<table class="report">
+    <caption>Legend</caption>
+    <tbody>
+    <tr>
+        <td>Passed</td>
+        <td>Skipped</td>
+        <td>Setup Errors</td>
+        <td>Failed</td>
+        <td>NA</td>
+        <td>Added</td>
+    </tr>
+    <tr class="legend">
+        <td class="status pass"></td>
+        <td class="status skip"></td>
+        <td class="status error"></td>
+        <td class="status fail"></td>
+        <td class="status na"></td>
+        <td class="status added"></td>
+    </tr>
+    </tbody>
+</table>
+
+</body>
+</html>

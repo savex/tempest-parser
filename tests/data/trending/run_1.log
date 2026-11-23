@@ -1,0 +1,61 @@
+tempest.api.compute.servers.test_servers.ServersTestJSON
+    test_create_server_with_admin_password[gate]                OK    1.87
+    test_create_server_with_ipv6_addr_only[gate]                SKIP  0.00
+    test_create_specify_keypair[gate]                           OK    10.21
+    test_create_with_existing_server_name[gate]                 OK    9.24
+    test_update_access_server_address[gate]                     OK    3.28
+    test_update_server_name[gate]                               OK    6.10
+    test_update_server_name_in_stop_state[gate]                 FAIL  5.56
+tempest.api.network.test_networks.NetworksTestJSON
+    test_create_delete_subnet_all_attributes[gate,smoke]        OK    7.92
+    test_create_delete_subnet_with_dhcp_enabled[gate,smoke]     OK    9.53
+    test_create_delete_subnet_with_gw[gate,smoke]               OK    1.40
+    test_create_update_delete_network_subnet[gate,smoke]        OK    0.63
+    test_delete_network_with_subnet[gate,smoke]                 OK    10.08
+    test_list_networks[gate,smoke]                              OK    5.36
+    test_list_subnets[gate,smoke]                               OK    9.22
+    test_show_network[gate,smoke]                               OK    0.32
+    test_show_subnet[gate,smoke]                                OK    5.51
+    test_show_subnet_fields[gate,smoke]                         OK    8.74
+    test_update_subnet_gw_dns_host_routes_dhcp[gate,smoke]      FAIL  2.98
+tempest.api.identity.admin.test_users.UsersTestJSON
+    test_authentication_request_without_token[gate]             OK    11.36
+    test_create_user[gate,smoke]                                OK    10.85
+    test_create_user_with_enabled[gate,smoke]                   OK    0.66
+    test_delete_user[gate,smoke]                                OK    0.60
+    test_get_users[gate,smoke]                                  OK    6.63
+    test_update_user[gate,smoke]                                OK    11.29
+    test_list_users_for_tenant[gate]                            OK    4.76
+    test_list_users_with_roles_for_tenant[gate]                 SKIP  0.00
+
+Slowest 5 tests took 53.79 secs:
+tempest.api.compute.servers.test_servers.ServersTestJSON
+    test_create_specify_keypair[gate]   10.21
+tempest.api.identity.admin.test_users.UsersTestJSON
+    test_authentication_request_without_token[gate]   11.36
+    test_update_user[gate,smoke]   11.29
+    test_create_user[gate,smoke]   10.85
+tempest.api.network.test_networks.NetworksTestJSON
+    test_delete_network_with_subnet[gate,smoke]   10.08
+
+======================================================================
+tempest.api.compute.servers.test_servers.ServersTestJSON.test_update_server_name_in_stop_state[gate]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tempest/api/compute/servers/test_servers.py", line 118, in test_update_server_name_in_stop_state
+    self.client.wait_for_server_status(server_id, 'SHUTOFF')
+TimeoutException: Request timed out
+Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s
+
+======================================================================
+tempest.api.network.test_networks.NetworksTestJSON.test_update_subnet_gw_dns_host_routes_dhcp[gate,smoke]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tempest/api/network/test_networks.py", line 301, in test_update_subnet_gw_dns_host_routes_dhcp
+    self.assertEqual(new_gateway, updated_subnet['gateway_ip'])
+MismatchError: '10.0.0.254' != '10.0.0.1'
+Details: '10.0.0.254' != '10.0.0.1'
+
+Ran 26 tests in 144.100s
+
+FAILED (failures=2)

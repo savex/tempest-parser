@@ -105,3 +105,5 @@ ENV/
 
 # Test samples are tracked despite the *.xml / *.log rules above
 !tests/data/*
+!tests/data/**/*.log
+!examples/*.html

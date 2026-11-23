@@ -15,6 +15,10 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
 - `CLAUDE.md` with the project layout and rules (changelog, checks before committing, test tags and
   data, specs, packaging, versioning).
 - `-q, --quiet`: print errors only.
+- `tests/data/trending/run_{1..4}.log`: four made-up tempest console runs for trending reports (tests in
+  every run, tests missing from one run, tests new in runs 3 and 4), with a parser test.
+- `examples/`: trending reports of those four runs (detailed and brief) and an errors report of run 4,
+  made with `tparser`.
 
 ### Changed
 - `setup.py`: requires Python 3.10+, classifiers for 3.10–3.13, `Apache-2.0` license expression, project

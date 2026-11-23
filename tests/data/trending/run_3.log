@@ -1,0 +1,56 @@
+tempest.api.compute.servers.test_servers.ServersTestJSON
+    test_create_server_with_admin_password[gate]                OK    3.08
+    test_create_server_with_ipv6_addr_only[gate]                SKIP  0.00
+    test_create_specify_keypair[gate]                           OK    6.67
+    test_create_with_existing_server_name[gate]                 OK    4.63
+    test_update_access_server_address[gate]                     OK    7.37
+    test_update_server_name[gate]                               OK    7.62
+    test_update_server_name_in_stop_state[gate]                 OK    1.07
+tempest.api.network.test_networks.NetworksTestJSON
+    test_create_delete_subnet_all_attributes[gate,smoke]        OK    0.45
+    test_create_delete_subnet_with_dhcp_enabled[gate,smoke]     OK    10.10
+    test_create_delete_subnet_with_gw[gate,smoke]               OK    3.33
+    test_create_update_delete_network_subnet[gate,smoke]        OK    3.04
+    test_delete_network_with_subnet[gate,smoke]                 OK    11.95
+    test_list_networks[gate,smoke]                              OK    5.80
+    test_list_subnets[gate,smoke]                               OK    10.09
+    test_show_network[gate,smoke]                               OK    5.87
+tempest.api.identity.admin.test_users.UsersTestJSON
+    test_authentication_request_without_token[gate]             OK    7.78
+    test_create_user[gate,smoke]                                OK    2.06
+    test_create_user_with_enabled[gate,smoke]                   OK    7.73
+    test_delete_user[gate,smoke]                                OK    10.46
+    test_get_users[gate,smoke]                                  OK    6.42
+    test_update_user[gate,smoke]                                OK    8.97
+    test_list_users_for_tenant[gate]                            OK    8.16
+    test_list_users_with_roles_for_tenant[gate]                 OK    1.05
+    test_update_user_password[gate,smoke]                       OK    9.17
+    test_user_authentication[gate,smoke]                        OK    7.22
+tempest.api.compute.admin.test_quotas.QuotasAdminTestJSON
+    test_get_default_quotas[gate,smoke]                         OK    3.82
+    test_get_updated_quotas[gate]                               FAIL  0.66
+    test_update_all_quota_resources_for_tenant[gate]            OK    10.43
+    test_delete_quota[gate]                                     OK    5.83
+
+Slowest 5 tests took 53.03 secs:
+tempest.api.compute.admin.test_quotas.QuotasAdminTestJSON
+    test_update_all_quota_resources_for_tenant[gate]   10.43
+tempest.api.identity.admin.test_users.UsersTestJSON
+    test_delete_user[gate,smoke]   10.46
+tempest.api.network.test_networks.NetworksTestJSON
+    test_delete_network_with_subnet[gate,smoke]   11.95
+    test_create_delete_subnet_with_dhcp_enabled[gate,smoke]   10.10
+    test_list_subnets[gate,smoke]   10.09
+
+======================================================================
+tempest.api.compute.admin.test_quotas.QuotasAdminTestJSON.test_get_updated_quotas[gate]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tempest/api/compute/admin/test_quotas.py", line 88, in test_get_updated_quotas
+    self.assertEqual(5120, quota_set['ram'])
+MismatchError: 5120 != 51200
+Details: 5120 != 51200
+
+Ran 29 tests in 170.830s
+
+FAILED (failures=1)

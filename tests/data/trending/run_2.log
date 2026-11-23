@@ -1,0 +1,58 @@
+tempest.api.compute.servers.test_servers.ServersTestJSON
+    test_create_server_with_admin_password[gate]                OK    11.49
+    test_create_server_with_ipv6_addr_only[gate]                SKIP  0.00
+    test_create_specify_keypair[gate]                           OK    11.39
+    test_create_with_existing_server_name[gate]                 OK    0.96
+    test_update_access_server_address[gate]                     OK    1.29
+    test_update_server_name[gate]                               OK    10.08
+    test_update_server_name_in_stop_state[gate]                 FAIL  8.91
+tempest.api.network.test_networks.NetworksTestJSON
+    test_create_delete_subnet_all_attributes[gate,smoke]        OK    8.14
+    test_create_delete_subnet_with_dhcp_enabled[gate,smoke]     FAIL  3.91
+    test_create_delete_subnet_with_gw[gate,smoke]               OK    7.39
+    test_create_update_delete_network_subnet[gate,smoke]        OK    7.40
+    test_delete_network_with_subnet[gate,smoke]                 OK    7.10
+    test_list_networks[gate,smoke]                              OK    2.15
+    test_list_subnets[gate,smoke]                               OK    5.34
+    test_show_network[gate,smoke]                               OK    4.90
+    test_show_subnet[gate,smoke]                                OK    8.76
+    test_show_subnet_fields[gate,smoke]                         OK    11.94
+    test_update_subnet_gw_dns_host_routes_dhcp[gate,smoke]      OK    11.41
+tempest.api.identity.admin.test_users.UsersTestJSON
+    test_authentication_request_without_token[gate]             OK    6.67
+    test_create_user[gate,smoke]                                OK    5.50
+    test_create_user_with_enabled[gate,smoke]                   OK    3.44
+    test_delete_user[gate,smoke]                                OK    0.72
+    test_get_users[gate,smoke]                                  OK    0.62
+    test_update_user[gate,smoke]                                OK    5.74
+
+Slowest 5 tests took 56.31 secs:
+tempest.api.compute.servers.test_servers.ServersTestJSON
+    test_create_server_with_admin_password[gate]   11.49
+    test_create_specify_keypair[gate]   11.39
+    test_update_server_name[gate]   10.08
+tempest.api.network.test_networks.NetworksTestJSON
+    test_show_subnet_fields[gate,smoke]   11.94
+    test_update_subnet_gw_dns_host_routes_dhcp[gate,smoke]   11.41
+
+======================================================================
+tempest.api.compute.servers.test_servers.ServersTestJSON.test_update_server_name_in_stop_state[gate]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tempest/api/compute/servers/test_servers.py", line 118, in test_update_server_name_in_stop_state
+    self.client.wait_for_server_status(server_id, 'SHUTOFF')
+TimeoutException: Request timed out
+Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s
+
+======================================================================
+tempest.api.network.test_networks.NetworksTestJSON.test_create_delete_subnet_with_dhcp_enabled[gate,smoke]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tempest/api/network/test_networks.py", line 233, in test_create_delete_subnet_with_dhcp_enabled
+    self._create_verify_delete_subnet(enable_dhcp=True)
+Conflict: An object with that identifier already exists
+Details: {u'message': u'Unable to complete operation on subnet sample-subnet-2'}
+
+Ran 24 tests in 145.250s
+
+FAILED (failures=2)

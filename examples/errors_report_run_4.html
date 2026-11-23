@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tempest Presorted Errors Report</title>
+    <style>
+        table {
+            font-family: Verdana, "Helvetica Neue", Arial, Helvetica, Geneva, sans-serif;
+            font-size: x-small;
+        }
+
+        .tracemessage {
+            font-size: xx-small;
+            color: #550000;
+            max-width: 200px;
+            overflow: scroll;
+        }
+
+        .textlabel {
+            text-align: center;
+        }
+
+        .header_text {
+            font-size: small;
+        }
+
+        .parameters {
+            font-size: xx-small;
+            color: #777777;
+        }
+        .test_name {
+            font-weight: normal;
+            min-width: 600px;
+            text-align: left;
+            color: black;
+        }
+
+        table.labels {
+            border: 0 hidden;
+            margin: 0;
+            width: 100%;
+        }
+
+        table.labels td {
+            border: 0 hidden;
+        }
+
+        table.report table.labels {
+            border: 0 hidden;
+        }
+
+        table.report {
+            border-collapse: collapse;
+            border: 1px solid #777;
+            margin: 10px 0;
+            width: 100%;
+        }
+        table.report th,
+        table.report td {
+            border: 1px solid #777;
+        }
+        table.report th.date {
+            vertical-align: top;
+            padding: 5px 0;
+            height: 145px;
+            font-weight: normal;
+        }
+
+        table > caption { text-align: left; }
+        table.report tr.legend > td { height: 1ex; }
+
+        tr.headers {
+            background: #105a10;
+            color: white;
+            font-size: smaller;
+            text-align: center;
+        }
+
+        tr.group > td.name {
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .collapsable {
+            visibility: collapse;
+            display: none;
+        }
+
+        .collapsable.in {
+            visibility: visible;
+            display: table-row;
+        }
+
+
+
+        td > div.test_name {
+            padding-left: 5px;
+            white-space: normal;
+        }
+
+        td > div.error_name {
+            padding: 5px;
+            font-size: x-small;
+            color: white;
+            background-color: #922;
+            white-space: normal;
+        }
+
+        td > div.skip_name {
+            padding: 5px;
+            font-size: small;
+            color: black;
+            background-color: #ccb226;
+            white-space: normal;
+        }
+
+        td > div.parameters {
+            padding-left: 10px;
+            white-space: normal;
+        }
+
+        td > div.container {
+            align-content: center;
+            display: table;
+        }
+        div.container > div.counter {
+            font-size: small;
+            vertical-align: middle;
+            text-align: center;
+            width: 80%;
+            display: table-cell;
+        }
+        div.container > div.button {
+            width: 20%;
+            display: table-cell;
+        }
+
+        td.status {
+            font-size: xx-small;
+            text-align: center;
+            vertical-align: middle;
+            color: black;
+            width: auto;
+            min-height: 20px;
+        }
+
+        td.labels {
+            border: 0 hidden;
+            padding: 0;
+            margin: 0;
+            width: 80px;
+        }
+
+        td.resultcolumn {
+            width: 45px;
+        }
+
+        td.status.pass { background: #6c6; }
+        td.status.ok { background: #6c6; }
+        td.status.fail { background: #a50000; color: white; }
+        td.status.skip { background: #ccb226; }
+        td.status.na { background: #777777; }
+        td.status.error { background: #e585a2; }
+        td.status.total { background: white; }
+        td.status.required { background: #aaa; }
+        td.status.added { background: #faa; }
+
+        td > div.label {
+            font-size: xx-small;
+            text-align: center;
+            vertical-align: middle;
+            color: black;
+            width: auto;
+            min-height: 20px;
+            line-height: 20px;
+        }
+
+        td > div.label.pass { background: #6c6; }
+        td > div.label.fail { background: #a50000; color: white; }
+        td > div.label.skip { background: #ccb226; }
+        td > div.label.na { background: #777777; }
+        td > div.label.error { background: #e585a2; }
+        td > div.label.total { background: white; }
+
+        th.separator,
+        td.separator { background: #777; }
+    </style>
+    <script language="JavaScript">
+        function toggleClassByID(type, number) {
+            var elements = document.querySelectorAll("#"+type+"_group_"+number);
+            var ii = elements.length;
+            var button = document.querySelector("#"+type+"_group_button"+number);
+
+            while (ii--) {
+                if( elements[ii].className && elements[ii].className.indexOf("in") > -1 ) {
+                    elements[ii].classList.remove("in");
+                    button.innerHTML = "&uarr;"
+                }
+                else {
+                    elements[ii].classList.add("in");
+                    button.innerHTML = "&darr;"
+                }
+            }
+
+
+        }
+    </script>
+</head>
+<body>
+
+<table class="report">
+    <tbody>
+    <tr>
+        <td colspan="3" class="header_text">
+            Unique fails: 2
+        </td>
+    </tr>
+
+    <tr class="headers">
+        <td width="3%">#</td>
+        <td width="85%">Fail message</td>
+        <td width="12%" class="textlabel">
+            Tests count
+        </td>
+    </tr>
+    <tr class="group">
+        <td colspan="2">
+            <div class="error_name">Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sample-subnet-2&#39;}
+</div>
+        </td>
+        <td align="center">
+            <div class="container">
+                <div class="counter">1</div>
+                <div class="button">
+                    <a href="#" onclick="toggleClassByID('fail', '1')" id="fail_group_button1">&uarr;</a>
+                </div>
+            </div>
+        </td>
+    </tr>
+    <tr class="collapsable" id="fail_group_1">
+        <td>1</td>
+        <td colspan="2">
+            <div class="test_name">
+                tempest.api.network.test_networks.NetworksTestJSON.test_create_delete_subnet_with_dhcp_enabled
+            </div>
+            <div class="parameters">
+                {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sample-subnet-2&#39;}
+            </div>
+            <div class="parameters">
+                Conflict: An object with that identifier already exists
+            </div>
+        </td>
+    </tr>
+    <tr class="group">
+        <td colspan="2">
+            <div class="error_name">Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}
+</div>
+        </td>
+        <td align="center">
+            <div class="container">
+                <div class="counter">1</div>
+                <div class="button">
+                    <a href="#" onclick="toggleClassByID('fail', '2')" id="fail_group_button2">&uarr;</a>
+                </div>
+            </div>
+        </td>
+    </tr>
+    <tr class="collapsable" id="fail_group_2">
+        <td>1</td>
+        <td colspan="2">
+            <div class="test_name">
+                tempest.api.identity.admin.test_users.UsersTestJSON.test_delete_user
+            </div>
+            <div class="parameters">
+                {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}
+            </div>
+            <div class="parameters">
+                NotFound: Object not found
+            </div>
+        </td>
+    </tr>
+    </tbody>
+</table>
+
+<table class="report">
+    <tbody>
+    <tr>
+        <td colspan="3" class="header_text">
+            Unique skips: 1
+        </td>
+    </tr>
+
+    <tr class="headers">
+        <td width="3%">#</td>
+        <td width="85%">Skip message</td>
+        <td width="12%" class="textlabel">
+            Tests count
+        </td>
+    </tr>
+    <tr class="group">
+        <td colspan="2">
+            <div class="skip_name">Fail message can&#39;t be extracted</div>
+        </td>
+        <td align="center">
+            <div class="container">
+                <div class="counter">1</div>
+                <div class="button">
+                    <a href="#skip_group_button1" onclick="toggleClassByID('skip', '1')" id="skip_group_button1">&uarr;</a>
+                </div>
+            </div>
+        </td>
+    </tr>
+
+    <tr class="collapsable" id="skip_group_1">
+        <td>1</td>
+        <td colspan="2">
+            <div class="test_name">
+                tempest.api.compute.servers.test_servers.ServersTestJSON.test_create_server_with_ipv6_addr_only
+            </div>
+            <div class="parameters">
+                
+            </div>
+            <div class="parameters">
+                
+            </div>
+        </td>
+    </tr>
+
+    </tbody>
+</table>
+
+</body>
+</html>

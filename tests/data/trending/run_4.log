@@ -1,0 +1,67 @@
+tempest.api.compute.servers.test_servers.ServersTestJSON
+    test_create_server_with_admin_password[gate]                OK    3.06
+    test_create_server_with_ipv6_addr_only[gate]                SKIP  0.00
+    test_create_specify_keypair[gate]                           OK    1.51
+    test_create_with_existing_server_name[gate]                 OK    4.93
+    test_update_access_server_address[gate]                     OK    2.11
+    test_update_server_name[gate]                               OK    1.08
+    test_update_server_name_in_stop_state[gate]                 OK    5.00
+tempest.api.network.test_networks.NetworksTestJSON
+    test_create_delete_subnet_all_attributes[gate,smoke]        OK    11.04
+    test_create_delete_subnet_with_dhcp_enabled[gate,smoke]     FAIL  9.67
+    test_create_delete_subnet_with_gw[gate,smoke]               OK    9.25
+    test_create_update_delete_network_subnet[gate,smoke]        OK    2.90
+    test_delete_network_with_subnet[gate,smoke]                 OK    6.58
+    test_list_networks[gate,smoke]                              OK    3.54
+    test_list_subnets[gate,smoke]                               OK    2.32
+    test_show_network[gate,smoke]                               OK    1.54
+    test_show_subnet[gate,smoke]                                OK    2.81
+    test_show_subnet_fields[gate,smoke]                         OK    11.15
+    test_update_subnet_gw_dns_host_routes_dhcp[gate,smoke]      OK    10.00
+tempest.api.identity.admin.test_users.UsersTestJSON
+    test_authentication_request_without_token[gate]             OK    9.74
+    test_create_user[gate,smoke]                                OK    9.67
+    test_create_user_with_enabled[gate,smoke]                   OK    2.56
+    test_delete_user[gate,smoke]                                FAIL  3.93
+    test_get_users[gate,smoke]                                  OK    7.64
+    test_update_user[gate,smoke]                                OK    8.86
+    test_list_users_for_tenant[gate]                            OK    10.30
+    test_list_users_with_roles_for_tenant[gate]                 OK    10.60
+    test_update_user_password[gate,smoke]                       OK    1.31
+    test_user_authentication[gate,smoke]                        OK    7.39
+tempest.api.compute.admin.test_quotas.QuotasAdminTestJSON
+    test_get_default_quotas[gate,smoke]                         OK    8.16
+    test_get_updated_quotas[gate]                               OK    6.22
+    test_update_all_quota_resources_for_tenant[gate]            OK    2.38
+    test_delete_quota[gate]                                     OK    5.84
+
+Slowest 5 tests took 53.09 secs:
+tempest.api.identity.admin.test_users.UsersTestJSON
+    test_list_users_with_roles_for_tenant[gate]   10.60
+    test_list_users_for_tenant[gate]   10.30
+tempest.api.network.test_networks.NetworksTestJSON
+    test_show_subnet_fields[gate,smoke]   11.15
+    test_create_delete_subnet_all_attributes[gate,smoke]   11.04
+    test_update_subnet_gw_dns_host_routes_dhcp[gate,smoke]   10.00
+
+======================================================================
+tempest.api.network.test_networks.NetworksTestJSON.test_create_delete_subnet_with_dhcp_enabled[gate,smoke]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tempest/api/network/test_networks.py", line 233, in test_create_delete_subnet_with_dhcp_enabled
+    self._create_verify_delete_subnet(enable_dhcp=True)
+Conflict: An object with that identifier already exists
+Details: {u'message': u'Unable to complete operation on subnet sample-subnet-2'}
+
+======================================================================
+tempest.api.identity.admin.test_users.UsersTestJSON.test_delete_user[gate,smoke]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tempest/api/identity/admin/test_users.py", line 145, in test_delete_user
+    self.client.delete_user(user['id'])
+NotFound: Object not found
+Details: {u'message': u'Could not find user: sample-user-4'}
+
+Ran 32 tests in 183.090s
+
+FAILED (failures=2)

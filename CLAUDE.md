@@ -10,7 +10,9 @@ matches tests across them and writes HTML trending / errors reports and CSV. Usa
   `parser/tempest_log_parser.py`: `.log` parser. `manager/test_manager.py`: the shared results structure
   (`TestsManager`). `reports/`: HTML (Jinja2 templates in `templates/`) and CSV reports.
 - Package data: `etc/tempest-parser.conf`, `res/*.list` (baseline test lists), `templates/*.html`.
-- `tests/smoke`, `tests/functional`, `tests/integration`; sample inputs in `tests/data`.
+- `tests/smoke`, `tests/functional`, `tests/integration`; sample inputs in `tests/data`
+  (`tests/data/trending`: four `.log` runs for trending reports). `examples/`: reports rendered from
+  them (commands in `examples/README.md`); regenerate them when report output changes.
 - `scripts/version.sh` (versions), `scripts/check-test-tags.py` (test tags); `.github/workflows/` (CI).
 
 ## Rules
