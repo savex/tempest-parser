@@ -302,7 +302,6 @@
     self.assertEqual(5120, quota_set[&#39;ram&#39;])
 MismatchError: 5120 != 51200
 Details: 5120 != 51200
-
 </td>
         <td class="status ok">OK</td>
         <td class="tracemessage"><br></td>
@@ -433,7 +432,6 @@ Details: 5120 != 51200
     self.client.wait_for_server_status(server_id, &#39;SHUTOFF&#39;)
 TimeoutException: Request timed out
 Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s
-
 </td>
         <td class="status fail">FAIL</td>
         <td class="tracemessage">Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s<br /><br>Traceback (most recent call last):
@@ -441,7 +439,6 @@ Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s
     self.client.wait_for_server_status(server_id, &#39;SHUTOFF&#39;)
 TimeoutException: Request timed out
 Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s
-
 </td>
         <td class="status ok">OK</td>
         <td class="tracemessage"><br></td>
@@ -520,7 +517,6 @@ Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s
     self.client.delete_user(user[&#39;id&#39;])
 NotFound: Object not found
 Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}
-
 </td>
 </tr>    <tr>
         <td>16</td>
@@ -651,7 +647,6 @@ Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}
     self._create_verify_delete_subnet(enable_dhcp=True)
 Conflict: An object with that identifier already exists
 Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sample-subnet-2&#39;}
-
 </td>
         <td class="status ok">OK</td>
         <td class="tracemessage"><br></td>
@@ -661,7 +656,6 @@ Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sampl
     self._create_verify_delete_subnet(enable_dhcp=True)
 Conflict: An object with that identifier already exists
 Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sample-subnet-2&#39;}
-
 </td>
 </tr>    <tr>
         <td>24</td>
@@ -796,7 +790,6 @@ Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sampl
     self.assertEqual(new_gateway, updated_subnet[&#39;gateway_ip&#39;])
 MismatchError: &#39;10.0.0.254&#39; != &#39;10.0.0.1&#39;
 Details: &#39;10.0.0.254&#39; != &#39;10.0.0.1&#39;
-
 </td>
         <td class="status ok">OK</td>
         <td class="tracemessage"><br></td>

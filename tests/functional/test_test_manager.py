@@ -34,12 +34,6 @@ def test_split_test_name_raw_keeps_brackets():
     assert (test, uuid, options) == ("test_create_server[id-1111,smoke]", "", "")
 
 
-def test_split_test_name_from_speed():
-    assert TestsManager.split_test_name_from_speed(
-        SERVERS + ".test_create_server[id-1111,smoke] 1.50"
-    ) == (SERVERS, "test_create_server", "")
-
-
 def _add(tm, run, test, result, uuid="", options="", time=1.0, **kw):
     tm.add_result_for_test(run, SERVERS, test, uuid, options, result, time, **kw)
 

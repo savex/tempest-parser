@@ -20,6 +20,8 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
 - `examples/`: trending reports of those four runs (detailed and brief) and an errors report of run 4,
   made with `tparser`.
 - Dependabot (`.github/dependabot.yml`): weekly grouped updates for GitHub Actions and `uv.lock`.
+- `--run-name NAME` and `--run-date DATE` (ISO 8601, UTC unless an offset is given) name and date the run
+  of a single file or stdin instead of the file name and modification time.
 
 ### Changed
 - `setup.py`: requires Python 3.10+, classifiers for 3.10–3.13, `Apache-2.0` license expression, project
@@ -59,8 +61,21 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
   `log` parser prints the summary of its own run only, not of every run imported so far. Unused helpers
   (`get_time_for_class`, `get_totals_as_string_for_class`, `is_test_has_errors`) are removed and
   `is_class_has_errors` is now `class_has_errors`.
+- The `log` parser reads the log line by line with regular expressions instead of splitting it into
+  blank-line separated sections (`parser_strings.py` and `TestsManager.split_test_name_from_speed` are
+  gone). It accepts any dotted class name (plugins), any upper-case status (`ERROR`), `FAIL: `/`ERROR: `
+  failure heads and logs without a `Ran N tests` line. Failure messages keep their `"` and commas (they
+  were replaced with `'` and spaces), and traces no longer end with an extra blank line.
+- XML `time` attributes are read as seconds when any of them in the file has a decimal point, as jUnit
+  writes them; files with whole numbers only are still read as milliseconds (they were always divided
+  by 1000).
 
 ### Fixed
+- A subunit run is named after its file (`<stdin>` for a pipe); the date was appended to the name
+  without a separator, so the detailed reports showed only the date's tail as the file name.
+- `log`: a failure trace line starting with `tempest.` (an exception name) no longer starts a new failure
+  block, and `setUpClass` failure details are stored on the class's first test (they were dropped with a
+  "Test not found" warning).
 - The wheel no longer installs a top-level `tests` package (the 0.3.0 wheel on the GitHub release does).
 - `--force-single` also works for `.xml` files read as tempest XML (it applied only to `-f r_xml`).
 - **Release** checksums use `sha256sum -- *` (shellcheck SC2035), which failed the actionlint step in CI.

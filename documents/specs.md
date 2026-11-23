@@ -31,19 +31,22 @@ tparser [options] [inputfile]
 | `-i, --include-required` | Preload the baseline test list (config `default_test_list`) as a `required` column. Ignored with `-e`. |
 | `--omit-status S` | Leave tests with status `S` out of the reports. Can be repeated. |
 | `--force-single` | Treat every file in a folder as one run, named after the folder. |
+| `--run-name NAME` | Name the run `NAME` instead of after its file. Single file or stdin only. |
+| `--run-date DATE` | Date the run `DATE` (ISO 8601, e.g. `2026-11-23` or `2026-11-23T14:30+02:00`; UTC when no offset is given) instead of by the file's modification time. Single file or stdin only. |
 | `--config-file F` | Use config file `F` (absolute path) instead of the packaged one. |
 | `-q, --quiet` | Print errors only. |
 
 Progress goes to stdout through `logging`; errors start with `Error:`.
 
-Exit codes: `0` on success; `1` for a missing path, an unsupported extension, a folder given with `-e`, or
-an unexpected pipe; `2` for invalid arguments, including an unknown `-f` value (usage is printed).
+Exit codes: `0` on success; `1` for a missing path, an unsupported extension, a folder given with `-e`,
+`--run-name` or `--run-date`, or an unexpected pipe; `2` for invalid arguments, including an unknown `-f`
+value or a `--run-date` that is not ISO 8601 (usage is printed).
 
 ## 3. Input formats
 
 | `-f` value | Extension | Source | Importer |
 |---|---|---|---|
-| `log` | `.log` | Tempest/testr console output (lines starting with known markers; strip leading env vars and worker prefixes) | `TempestLogParser` |
+| `log` | `.log` | Tempest/testr console output (see below) | `TempestLogParser` |
 | `t_xml` | `.xml` | subunit/Tempest jUnit XML (v4 schema supported); names split into class, test, UUID and options | `XMLImporter` |
 | `r_xml` | — | Raw jUnit XML (k8s conformance, pytest); names used as is | `XMLImporter(use_raw_names=True)` |
 | `json` | `.json` | Rally JSON export | `JSONImporter` |
@@ -52,9 +55,20 @@ an unexpected pipe; `2` for invalid arguments, including an unknown `-f` value (
 
 - In a folder, files are read in name order. With `-f`, only files whose extension matches the format are
   read; without it, each file's format is detected from its extension. Other files are skipped with a message.
-- Each file is one run. The run is named after the file, and its date is the file's modification time
-  (UTC, shown as `dd/mm/YYYY HH:MM GMT`). The `log` format, stdin and the baseline list (`required` run)
-  are dated the same way; a stream without a file is dated now.
+- Each file is one run. The run is named after the file (stdin: `<stdin>`), and its date is the file's
+  modification time (UTC, shown as `dd/mm/YYYY HH:MM GMT`). The `log` format, stdin and the baseline list
+  (`required` run) are dated the same way; a stream without a file is dated now. `--run-name` and
+  `--run-date` replace both for a single input.
+- XML `time` attributes are seconds when any test case's time in the file has a decimal point; a file with
+  whole numbers only is read as milliseconds.
+- The `log` parser reads the console log line by line (`parser/tempest_log_parser.py`): a dotted class name
+  on its own line (`tempest.…`, plugin and other packages too), indented test lines
+  `test_name[id-…,tags](options)  RESULT  time` with any upper-case status, `setUpClass (Class) RESULT`
+  (the class name may wrap to the next line), a `Slowest N tests took …` block up to a blank line, failure
+  blocks (`====` line, head with optional `FAIL: `/`ERROR: ` prefix, `----` line, trace up to the next
+  `====` or `Ran N tests`) and the `Ran …` summary. The failure trace is stored as is; its `Details:` lines
+  are the message. Other lines are ignored. Several runs in one log import as one run; a log without a
+  `Ran` line is imported too.
 - XML failures are recognised as k8s errors (Go error types, `k8s.io`, klog timestamps) or pytest errors
   (`E ` lines), and the main message is taken out of the traceback.
 
@@ -117,11 +131,10 @@ The packaged resources are `res/*.list` (baseline lists) and `templates/*.html` 
 
 ## 8. Known limitations
 
-1. XML `time` attributes are divided by 1000, i.e. read as milliseconds; jUnit writes seconds.
-2. A subunit run is named after the file path and the date joined without a separator.
-3. Importing an own CSV export reads only the first result column.
-4. The `log` parser expects the old testr console layout (class line, indented test lines, blank-line
-   separated sections, `Slowest`, `====` failure blocks, `Ran N tests`).
+1. Importing an own CSV export reads only the first result column.
+2. The `log` parser needs indented test lines under a class line; logs with worker prefixes
+   (`{0} tempest.….test_x … ok`) or leading environment variables are not recognised.
+3. An XML file whose times are all whole numbers is read as milliseconds, even when they were seconds.
 
 ## 9. Requirements
 

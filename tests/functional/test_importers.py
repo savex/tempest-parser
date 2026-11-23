@@ -61,6 +61,30 @@ def test_xml_status_filter(data_file):
     assert set(_statuses(tm, path).values()) == {"FAIL", "SKIP"}
 
 
+@pytest.mark.parametrize("times, expected", [
+    # any decimal point: seconds
+    (("1.5", "2"), 1.5),
+    # whole numbers only: milliseconds
+    (("1500", "2000"), 1.5),
+])
+def test_xml_time_unit(tmp_path, times, expected):
+    path = tmp_path / "times.xml"
+    path.write_text(
+        '<testsuite>'
+        f'<testcase classname="{SERVERS}" name="test_create_server" time="{times[0]}"/>'
+        f'<testcase classname="{SERVERS}" name="test_delete_server" time="{times[1]}"/>'
+        '</testsuite>')
+    tm = _import(XMLImporter, str(path))
+    assert _results(tm, str(path))[(SERVERS, "test_create_server")].time == expected
+
+
+def test_xml_run_name_and_date(data_file):
+    date = datetime(2026, 1, 2, tzinfo=UTC)
+    tm = _import(XMLImporter, data_file("tempest.xml"), run_name="nightly", run_date=date)
+    assert list(tm.get_executions()) == ["nightly"]
+    assert tm.executions["nightly"].date == date
+
+
 def test_xml_force_single_names_run(data_file):
     tm = _import(XMLImporter, data_file("tempest.xml"), force_single_execution="folder")
     assert list(tm.get_executions()) == ["folder"]
@@ -175,7 +199,9 @@ def test_csv_unknown_layout_imports_nothing(tmp_path):
 def test_subunit(subunit_file):
     tm = _import(SubunitImporter, subunit_file, mode="rb")
     run = next(iter(tm.get_executions()))
-    assert run.startswith(subunit_file)
+    # named after the file only; the date is kept apart
+    assert run == subunit_file
+    assert tm.executions[run].date == file_date(subunit_file)
     assert _statuses(tm, run) == {
         (SERVERS, "test_create_server"): "OK",
         (SERVERS, "test_delete_server"): "FAIL",
@@ -194,6 +220,13 @@ def test_subunit_status_filter(subunit_file):
     tm = _import(SubunitImporter, subunit_file, mode="rb", status_filters=["OK", "FAIL"])
     run = next(iter(tm.get_executions()))
     assert sorted(_statuses(tm, run).values()) == ["SKIP", "X_FAIL"]
+
+
+def test_subunit_run_name_and_date(subunit_file):
+    date = datetime(2026, 1, 2, tzinfo=UTC)
+    tm = _import(SubunitImporter, subunit_file, mode="rb", run_name="nightly", run_date=date)
+    assert tm.executions["nightly"].date == date
+    assert len(_statuses(tm, "nightly")) == 6
 
 
 @pytest.mark.parametrize("status, expected", [

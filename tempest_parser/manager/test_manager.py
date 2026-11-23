@@ -107,21 +107,6 @@ class TestsManager:
 
         return _class, _test, _guid, _options, _tags
 
-    @staticmethod
-    def split_test_name_from_speed(full_test_name):
-        _class = full_test_name.rsplit(".", 2)[0]
-        _test = full_test_name.rsplit(".", 2)[1].split('[')[0]
-        _tmp = full_test_name.split(" ")[0].rsplit(".", 1)[1].split(']')
-        _options = ""
-        if len(_tmp) >= 2:
-            if len(_tmp[1]) > 0:
-                _options = _tmp[1]
-        return (
-            _class,
-            _test,
-            _options
-        )
-
     def _class_index(self, class_name):
         """Lookup indexes for one class's tests, or None if the class is unknown.
 

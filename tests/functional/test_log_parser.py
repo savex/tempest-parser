@@ -1,5 +1,6 @@
 import os
 import shutil
+from datetime import UTC, datetime
 
 from tempest_parser.manager.test_manager import TestsManager
 from tempest_parser.parser.tempest_log_parser import TempestLogParser
@@ -107,3 +108,78 @@ def test_log_summary_only_for_its_own_run(tmp_path, caplog):
     assert len(lines) == 2
     assert "run_1.log: 26 executed" in lines[0]
     assert "run_2.log: 24 executed" in lines[1]
+
+
+PLUGIN = "neutron_tempest_plugin.api.test_trunk.TrunkTestJSON"
+# made-up log in a newer layout: plugin classes, ERROR results, "FAIL: " heads and no summary
+NEW_LAYOUT_LOG = f"""\
+{PLUGIN}
+    test_create_trunk[id-5555]                        OK  0.20
+    test_delete_trunk[id-6666]                        ERROR  0.30
+    test_trunk_options[id-7777](vlan)                 FAIL  0.40
+setUpClass ({PORTS})                                   FAIL  0.00
+{PORTS}
+    test_list_ports[id-3333]                          OK  0.10
+
+======================================================================
+FAIL: {PLUGIN}.test_trunk_options[id-7777](vlan)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+tempest.lib.exceptions.NotFound: Object not found
+Details: {{"trunk": "missing, gone"}}
+
+======================================================================
+ERROR: setUpClass ({PORTS})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+Details: setup broke
+"""
+
+
+def _parse_text(tmp_path, text, **kw):
+    path = tmp_path / "new.log"
+    path.write_text(text)
+    tm = TestsManager()
+    with open(path) as source:
+        TempestLogParser(tm, source, **kw).parse()
+    return tm, str(path).lower()
+
+
+def test_log_new_layout(tmp_path):
+    tm, run = _parse_text(tmp_path, NEW_LAYOUT_LOG)
+    # imported although the log has no "Ran ..." summary
+    assert list(tm.get_executions()) == [run]
+    assert _result(tm, PLUGIN, "test_create_trunk", run).result == "OK"
+    assert _result(tm, PLUGIN, "test_delete_trunk", run).result == "ERROR"
+    fail = _result(tm, PLUGIN, "test_trunk_options", run)
+    assert fail.result == "FAIL"
+    assert tm.get_tests_for_class(PLUGIN)[2].test_options == "(vlan)"
+    # a traceback line that starts with "tempest." stays in the trace;
+    # the message keeps its quotes and commas
+    assert "tempest.lib.exceptions.NotFound: Object not found" in fail.trace
+    assert fail.message == 'Details: {"trunk": "missing, gone"}\n'
+
+
+def test_log_setup_class_failure_details(tmp_path):
+    text = f"""\
+{PORTS}
+    test_list_ports[id-3333]                          OK  0.10
+setUpClass ({PORTS})                                   FAIL  0.00
+
+======================================================================
+ERROR: setUpClass ({PORTS})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+Details: setup broke
+"""
+    tm, run = _parse_text(tmp_path, text)
+    first = tm.get_tests_for_class(PORTS)[0].results[run]
+    assert (first.result, first.setup_fail) == ("FAIL", True)
+    assert first.message == "Details: setup broke\n"
+
+
+def test_log_run_name_and_date(tmp_path):
+    date = datetime(2026, 1, 2, 3, 4, tzinfo=UTC)
+    tm, _ = _parse_text(tmp_path, NEW_LAYOUT_LOG, run_name="nightly", run_date=date)
+    assert list(tm.get_executions()) == ["nightly"]
+    assert tm.executions["nightly"].date == date

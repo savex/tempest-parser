@@ -157,3 +157,26 @@ def test_quiet_still_prints_errors():
     result = tparser("-q", "/no/such/path")
     assert result.returncode == 1
     assert result.stdout.startswith(b"Error: Supplied path/file not exists")
+
+
+def test_run_name_and_date(tmp_path):
+    out = tmp_path / "r.html"
+    result = tparser("--run-name", "nightly", "--run-date", "2026-01-02T03:04",
+                     "-d", "-r", out, os.path.join(DATA_DIR, "tempest.xml"))
+    assert result.returncode == 0, result.stdout + result.stderr
+    text = out.read_text()
+    assert "nightly" in text and "02/01/2026 03:04 GMT" in text
+    assert "tempest.xml" not in text
+
+
+def test_run_name_needs_single_file(tmp_path):
+    shutil.copy(os.path.join(DATA_DIR, "tempest.xml"), tmp_path / "tempest.xml")
+    result = tparser("--run-name", "nightly", "-c", tmp_path / "out.csv", tmp_path)
+    assert result.returncode == 1
+    assert b"--run-name and --run-date need a single file" in result.stdout
+
+
+def test_run_date_invalid():
+    result = tparser("--run-date", "yesterday", os.path.join(DATA_DIR, "tempest.xml"))
+    assert result.returncode == 2
+    assert b"not an ISO 8601 date" in result.stderr

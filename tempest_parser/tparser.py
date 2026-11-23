@@ -2,6 +2,7 @@ import argparse
 import logging
 import os
 import sys
+from datetime import UTC, datetime
 
 from tempest_parser.const import InputFormat
 from tempest_parser.manager.importers import (
@@ -52,29 +53,42 @@ def detect_format_from_filename(filename):
     return InputFormat.from_filename(filename)
 
 
-def make_importer(fmt, tm, source, force_single=None, filters=None):
-    filters = filters or []
+def parse_run_date(value):
+    """--run-date: an ISO 8601 date or date and time; without a time zone it is UTC."""
+    try:
+        date = datetime.fromisoformat(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"not an ISO 8601 date: '{value}' (e.g. 2026-11-23 or 2026-11-23T14:30)") from None
+    if date.tzinfo is None:
+        return date.replace(tzinfo=UTC)
+    return date.astimezone(UTC)
+
+
+def make_importer(fmt, tm, source, force_single=None, filters=None, run_name=None,
+                  run_date=None):
+    kw = {"status_filters": filters or [], "run_name": run_name, "run_date": run_date}
     if fmt == InputFormat.RALLY_JSON:
-        return JSONImporter(tm, source, status_filters=filters)
+        return JSONImporter(tm, source, **kw)
     if fmt == InputFormat.CSV:
-        return CSVImporter(tm, source, status_filters=filters)
+        return CSVImporter(tm, source, **kw)
     if fmt in (InputFormat.XML_TEMPEST, InputFormat.XML_RAW):
         # raw XML keeps the test names as they are
         return XMLImporter(tm, source,
                            use_raw_names=fmt == InputFormat.XML_RAW,
-                           force_single_execution=force_single,
-                           status_filters=filters)
+                           force_single_execution=force_single, **kw)
     if fmt == InputFormat.LOG:
-        return TempestLogParser(tm, source, status_filters=filters)
+        return TempestLogParser(tm, source, **kw)
     if fmt == InputFormat.SUBUNIT:
-        return SubunitImporter(tm, source, status_filters=filters)
+        return SubunitImporter(tm, source, **kw)
     raise CLIError(f"Unknown input format: {fmt}")
 
 
-def do_parse_file(source, tm, fmt=None, force_single=None, filters=None):
+def do_parse_file(source, tm, fmt=None, force_single=None, filters=None, run_name=None,
+                  run_date=None):
     """Import one file (a path) or stream (an open file, e.g. stdin)."""
     if hasattr(source, "read"):
-        make_importer(fmt, tm, source, force_single, filters).parse()
+        make_importer(fmt, tm, source, force_single, filters, run_name, run_date).parse()
         log.info("Imported %s", getattr(source, "name", "unknown/stdin"))
         return
     if fmt is None:
@@ -83,7 +97,7 @@ def do_parse_file(source, tm, fmt=None, force_single=None, filters=None):
             raise CLIError(
                 f"Input filename's extension is not supported: '{source}'")
     with open(source) as stream:
-        make_importer(fmt, tm, stream, force_single, filters).parse()
+        make_importer(fmt, tm, stream, force_single, filters, run_name, run_date).parse()
     log.info("Imported %s", source)
 
 
@@ -113,6 +127,13 @@ def build_parser():
     parser.add_argument(
         "--force-single", action="store_true",
         help="Treat all files in a folder as a single run (XML input)")
+    parser.add_argument(
+        "--run-name", metavar="NAME",
+        help="Name of the run in the reports instead of the file name (single input only)")
+    parser.add_argument(
+        "--run-date", metavar="DATE", type=parse_run_date,
+        help="Date of the run, ISO 8601 (2026-11-23 or 2026-11-23T14:30, UTC unless an "
+             "offset is given), instead of the file's modification time (single input only)")
     parser.add_argument(
         "-r", "--html-trending-filename", help="Write the HTML trending report")
     parser.add_argument(
@@ -147,6 +168,9 @@ def collect_inputs(args, input_fmt):
     if args.html_errors_filename:
         raise CLIError(
             f"Errors report require single file, folder given: '{source}'")
+    if args.run_name or args.run_date:
+        raise CLIError(
+            f"--run-name and --run-date need a single file, folder given: '{source}'")
 
     log.info("Importing tests from folder '%s'", source)
     inputs = []
@@ -194,7 +218,8 @@ def run(args):
 
     for source, fmt, force_single in inputs:
         do_parse_file(source, tests_manager, fmt=fmt, force_single=force_single,
-                      filters=args.omit_status)
+                      filters=args.omit_status, run_name=args.run_name,
+                      run_date=args.run_date)
 
     write_reports(args, tests_manager, detailed)
 

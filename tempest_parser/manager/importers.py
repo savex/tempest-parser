@@ -10,7 +10,7 @@ from subunit.filters import run_tests_from_stream
 from testtools import StreamToExtendedDecorator
 
 from tempest_parser.const import Status
-from tempest_parser.manager.models import DATE_FORMAT, file_date, parse_seconds
+from tempest_parser.manager.models import file_date, parse_seconds
 
 log = logging.getLogger(__name__)
 
@@ -59,13 +59,24 @@ class ImporterBase:
         source,
         use_raw_names=False,
         status_filters=None,
-        force_single_execution=None
+        force_single_execution=None,
+        run_name=None,
+        run_date=None,
     ):
         self.source = source
         self.tm = test_manager
         self.use_raw_names = use_raw_names
         self.forced_execution_name = force_single_execution
         self.status_filters = status_filters or []
+        # --run-name / --run-date: replace the name and date taken from the file
+        self.run_name = run_name
+        self.run_date = run_date
+
+    def execution_name(self, default):
+        return self.run_name or default
+
+    def execution_date(self):
+        return self.run_date or file_date(self.source)
 
     def add_execution(self, name, date):
         self.tm.add_execution(name, date)
@@ -102,11 +113,21 @@ _error_status_map = {
 
 
 class XMLImporter(ImporterBase):
+    # time attributes are seconds in jUnit XML, but some tools write whole milliseconds
+    time_scale = 1.0
+
     @staticmethod
-    def _parse_duration(duration):
-        # read as milliseconds (see known limitations in documents/specs.md)
+    def _detect_time_scale(root):
+        """1.0 (seconds) when any testcase time has a decimal point, else 1000.0: a file
+        of whole numbers only is read as milliseconds."""
+        times = [tc.get('time', '') for tc in root.iter('testcase')]
+        if any('.' in t for t in times) or not any(t.strip() for t in times):
+            return 1.0
+        return 1000.0
+
+    def _parse_duration(self, duration):
         seconds = parse_seconds(duration)
-        return None if seconds is None else seconds / 1000.0
+        return None if seconds is None else seconds / self.time_scale
 
     @staticmethod
     def _parse_status(status):
@@ -174,7 +195,8 @@ class XMLImporter(ImporterBase):
         tree = parse(self.source)
         root = tree.getroot()
 
-        _execution_date = file_date(self.source)
+        _execution_date = self.execution_date()
+        self.time_scale = self._detect_time_scale(root)
         _all_testsuites = []
         # We should be ready for multiple test suites in one xml
         if root.tag == 'testsuite':
@@ -185,10 +207,8 @@ class XMLImporter(ImporterBase):
         for _testsuite in _all_testsuites:
 
             # _execution_name = _testsuite.attrib['id']
-            if self.forced_execution_name is None:
-                _execution_name = self.source.name
-            else:
-                _execution_name = self.forced_execution_name
+            _execution_name = self.execution_name(
+                self.forced_execution_name or self.source.name)
 
             # iterate through tests
             for _test_node in _testsuite.findall('testcase'):
@@ -311,8 +331,8 @@ class JSONImporter(ImporterBase):
         data = json.load(self.source)
 
         # Use filename as name for the execution
-        _execution_name = self.source.name
-        _execution_date = file_date(self.source)
+        _execution_name = self.execution_name(self.source.name)
+        _execution_date = self.execution_date()
 
         verification = next(iter(data['verifications']))
 
@@ -385,8 +405,8 @@ class CSVImporter(ImporterBase):
             self.parse_xunit_csv()
 
     def parse_own_csv(self):
-        _execution_name = self.source.name
-        _execution_date = file_date(self.source)
+        _execution_name = self.execution_name(self.source.name)
+        _execution_date = self.execution_date()
 
         _class_name = ''
 
@@ -434,8 +454,8 @@ class CSVImporter(ImporterBase):
         return _execution_name
 
     def parse_xunit_csv(self):
-        _execution_name = self.source.name
-        _execution_date = file_date(self.source)
+        _execution_name = self.execution_name(self.source.name)
+        _execution_date = self.execution_date()
 
         for row in self.rows:
             # parse the data, skip the header and other non-test rows
@@ -535,9 +555,8 @@ class SubunitImporter(ImporterBase):
         self.source = make_stream_binary(source)
 
     def parse(self):
-        _execution_date = file_date(self.source)
-        # path and date run together (see known limitations in documents/specs.md)
-        _execution_name = self.source.name + _execution_date.strftime(DATE_FORMAT)
+        _execution_date = self.execution_date()
+        _execution_name = self.execution_name(getattr(self.source, "name", "<stdin>"))
 
         _result = TParserResult(
             _execution_name, self.tm, status_filters=self.status_filters)

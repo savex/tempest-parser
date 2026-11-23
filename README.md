@@ -130,14 +130,17 @@ stestr last --subunit | tparser -r trending.html
 | `--omit-status` | Leave tests with this status (`OK`, `FAIL`, `ERROR`, `SKIP`, ...) out. Repeatable. |
 | `-q, --quiet` | Print errors only. |
 | `--force-single` | Treat all files in a folder as a single run. |
+| `--run-name` | Name of the run in the reports instead of the file name (single file or stdin). |
+| `--run-date` | Date of the run, ISO 8601 (`2026-11-23T14:30`, UTC unless an offset is given), instead of the file's modification time (single file or stdin). |
 | `--config-file` | Use this config file (absolute path) instead of the packaged one. |
 
 ## Imported formats
 
 ### .log files
 Bare tempest output, captured with a redirect or by copying the numbered files from the `.testrepository`
-folder. The LOG parser anchors on lines that start with specific strings, so remove leading environment
-variables and worker report lines.
+folder. The parser reads class lines, indented test lines, the `Slowest` block, failure blocks and the
+`Ran N tests` summary; remove leading environment variables and worker prefixes (`{0}`) first. The log
+has no date: give one with `--run-date`, or the file's modification time is used.
 
 ### .xml files
 jUnit XML files exported from subunit (`t_xml`, the default for `.xml`), or raw jUnit XML from k8s

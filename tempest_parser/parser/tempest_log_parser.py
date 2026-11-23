@@ -1,463 +1,196 @@
+"""Parser for the tempest / testr console log (`.log` input).
+
+The log is read line by line. Its parts, in the order they appear:
+
+    tempest.api.compute.servers.test_servers.ServersTestJSON        <- class line
+        test_create_server[id-1111,smoke]            OK  1.50       <- test line
+        test_ipv6[id-3333](ipv6)                     FAIL  0.50     <- options in brackets
+    setUpClass (tempest.api.network.test_ports                      <- class setup failed,
+        PortsTestJSON)                               FAIL  0.00        name wrapped or not
+
+    Slowest 2 tests took 2.00 secs:                                 <- slowest tests,
+    tempest.api.compute.servers.test_servers.ServersTestJSON           up to a blank line
+        test_create_server[id-1111,smoke]   1.50
+
+    ======================================================================
+    FAIL: tempest.api.compute.servers.test_servers.ServersTestJSON.test_x[id-2222]
+    ----------------------------------------------------------------------  <- failure head
+    Traceback (most recent call last):                              <- trace, up to the next
+      ...                                                              head or the summary
+    Details: 1 != 2                                                 <- also the message
+
+    Ran 3 tests in 2.000s                                           <- summary
+    FAILED (failures=1)
+
+A log can hold several runs one after another; they all import into one run named after
+the file. The log has no date, so the run is dated by the file's modification time.
+"""
 import logging
 import re
 
-import tempest_parser.parser.parser_strings as strings
 from tempest_parser.manager.models import file_date, parse_seconds
 
 log = logging.getLogger(__name__)
 
+# a dotted name on a line of its own: tempest.api.compute.servers.test_servers.ServersTestJSON
+_CLASS_RE = re.compile(r"^[A-Za-z_]\w*(\.\w+)+$")
+# test_name[tags](options) RESULT time; the result and time are optional
+_TEST_RE = re.compile(
+    r"^(?P<name>test_[^\s\[(]*)(?P<tags>\[[^\]]*\])?(?P<options>\([^)]*\))?"
+    r"\s*(?P<result>[A-Z][A-Z_]*)?\s*(?P<time>\d+(\.\d+)?s?)?\s*$")
+# setUpClass (tempest.api.x.Class) FAIL 0.00, or with the class name wrapped to the next line
+_SETUP_RE = re.compile(r"^(?P<kind>setUpClass|tearDownClass) \((?P<prefix>[^)\s]*)(?P<rest>.*)$")
+_SLOWEST_RE = re.compile(r"^Slowest \d+ tests? took")
+_SUMMARY_RE = re.compile(r"^Ran \d+ tests? in ")
+# failure head prefixes written by some runners: "FAIL: tempest...."
+_HEAD_PREFIX_RE = re.compile(r"^(FAIL|ERROR): ")
 
-# the parser's own notes about one run in the log, used while parsing
-def _new_execution_item():
-    return {
-        "execution_name": "",
-        "execution_date": None,
-        "slowest": {"time_total": "", "count": 0, "tests": []},
-        "summary": {"total": 0, "failed": 0, "outcome": "", "time": ""},
-        "raw": "",
-    }
+FLOW, SLOWEST, FAIL_HEAD, FAIL_BODY = range(4)
+
+
+def _is_rule(line, char):
+    return len(line) >= 20 and line == char * len(line)
 
 
 class TempestLogParser:
-    def __init__(self, test_manager, source, status_filters=None):
+    def __init__(self, test_manager, source, status_filters=None, run_name=None, run_date=None):
         self.test_mgr = test_manager
         self.source = source
         self.status_filters = status_filters or []
+        self.run_name = run_name or getattr(source, "name", "<stdin>").lower()
+        self.run_date = run_date or file_date(source)
 
-    @staticmethod
-    def _split_options_from_test_name(_test_name_with_options):
-        # sample: "_test_some_func[gate,smoke](options)"
-        _options = ""
-
-        if _test_name_with_options.find("(") != -1:
-            # There is an option present
-            _test_name = _test_name_with_options.partition('[')[0]
-            _options = _test_name_with_options.partition(']')[2]
-        else:
-            # no options, just cut the '[]' part
-            _test_name = _test_name_with_options.partition('[')[0]
-
-        return _test_name, _options
-
-    @staticmethod
-    def _split_options_from_result(_options_with_result):
-        # sample: "(options)OK"
-        # detect if there is an option present
-        _optons = ""
-        if _options_with_result.find(")") != -1:
-            _tmp = _options_with_result.partition(')')
-            _optons = _tmp[0] + _tmp[1]
-            _result = _tmp[2]
-        else:
-            _result = _options_with_result
-        return _optons, _result
-
-    # method to do the first parsing of the cli log
-    # divide it into objects
-    def cli_parser(self):
-        cli_objects_list = []
-        # the log has no date: the run is dated by the file's modification time
-        _file_date = file_date(self.source)
-
-        # load lines into list and pre-parse it by dividing into sections
-        # each section is between double next line character: '\n'
-        _raw_data = self.source.read()
-        _search_criteria = "\n\n"
-
-        # Search for criteria and split
-        _data_list = _raw_data.split(_search_criteria)
-
-        _index = 0
-        # remove heading newlines
-        while _index < len(_data_list):
-            if len(_data_list[_index]) > 0:
-                while _data_list[_index][0] == '\n':
-                    _data_list[_index] = _data_list[_index].replace(
-                        "\n",
-                        "",
-                        1
-                    )
-            _index += 1
-
-        # Cut to separate lines or combine them
-        _fail_count = 0
-        _unknown_count = 0
-        _summary_count = 0
-        # _data = ""
-        _index = 0
-        while _index < len(_data_list):
-            # safety first, clear out and load data
-            _data = " "
-            _type = "empty"
-            _section = _data_list[_index]
-
-            # Detect what is it
-
-            # For summary we must cut OK\FAIL to previous line
-            if _section.startswith(strings.summary_ran_string):
-                # this is Summary, combine this with next one
-                # load test result in next section
-                _cutted_result = \
-                    _data_list[_index + 1][
-                        :_data_list[_index + 1].find("\n") + 1
-                    ]
-                # cut it from there
-                _data_list[_index + 1] = _data_list[_index + 1].replace(
-                    _cutted_result,
-                    ""
-                )
-                # form summary section
-                _data = _section + "\n" + _cutted_result
-                # set type
-                _type = strings.TEMPEST_EXECUTION_SUMMARY
-
-                _summary_count += 1
-            elif _section.startswith(strings.summary_ok_string) or \
-                    _section.startswith(strings.summary_fail_string):
-                # this one was combined with previous one
-                # should not be entering here actually :)
-                pass
-            # Fail section
-            elif _section.startswith(strings.fail_head_start_string):
-                # this is a fail reporting section
-                # search for next fail or end of section
-                (_fail_sec, _index) = self._fail_section_end_lookup(
-                    _index,
-                    _data_list
-                )
-                _data = _section + '\n\n' + _fail_sec
-
-                # _data = _section
-                _type = strings.TEMPEST_FAIL_MESSAGE
-
-                _fail_count += 1
-            # execution section
-            elif _section.startswith(strings.setupclass_start_string) or \
-                    _section.startswith(strings.test_start_string):
-                _data = _section
-                _type = strings.TEMPEST_EXECUTION_FLOW
-            elif _section.startswith(strings.speed_start_string):
-                _data = _section
-                _type = strings.TEMPEST_SPEED_SUMMARY
-            else:
-                # this is an unknown section,
-                # we should add it to previous one as a trace
-                cli_objects_list[len(cli_objects_list) - 1]["data"] += _section
-                _index += 1
-                continue
-
-            # Add to dictionary
-            cli_objects_list.append(
-                {
-                    "source": self.source.name,
-                    "created_date": _file_date,
-                    "data": _data,
-                    "type": _type,
-                }
-            )
-            _index += 1
-        log.debug("Found: %d obj, %d fails, %d summary, %d unknown",
-                  len(cli_objects_list), _fail_count, _summary_count, _unknown_count)
-
-        # breaking list into sections
-        # at this point objects (no matter of their type: flow, fail, etc)
-        # followed by each other.
-        # They are NOT logically connected to each other
-
-        # Normally, we should have this order: execution, speed, fail, summary
-        # So, break up...
-        execution_list_raw = []
-
-        _execution_section = []
-        _section_start_index = 0
-        for _index in range(0, len(cli_objects_list)):
-            # if _section_start_index == _index:
-            # continue
-
-            if cli_objects_list[_index]["type"] == \
-                    strings.TEMPEST_EXECUTION_SUMMARY:
-                # we passed through items and sound end of the section
-                # save it
-                for _section_index in range(_section_start_index, _index):
-                    _execution_section.append(cli_objects_list[_section_index])
-                _execution_section.append(cli_objects_list[_index])
-                _section_start_index = _index + 1
-                execution_list_raw.append(_execution_section)
-                _execution_section = []
-
-        return execution_list_raw
-
-    # Parse object list with specifics about it's content
-    def parse_execution_list(self, _object_list):
-        # fill items
-        _execution_item = _new_execution_item()
-        for _object in _object_list:
-            _execution_item["execution_name"] = _object["source"].lower()
-            _execution_item["execution_date"] = _object["created_date"]
-            _execution_item["raw"] += _object["data"]
-            if _object["type"] == strings.TEMPEST_EXECUTION_FLOW:
-                # do some specific parsing
-                _lines = _object["data"].splitlines()
-
-                _class_name = ""
-                _test_class_prefix = ""
-                _setUp_tearDown_class_failed = False
-
-                for _line in _lines:
-                    _line = _line.lstrip()
-                    # split into "words"
-                    # and remove multiple spaces in the process
-                    _line_s = re.sub(" +", " ", _line)
-
-
-                    # forwards for the data found,
-                    # class_name already found at this point
-                    _test_name = ""
-                    _test_options = ""
-                    _result = ""
-                    _time = ""
-
-                    _test = _line_s.split(" ")
-
-                    if _line.startswith(strings.test_start_string):
-                        _class_name = _line.strip()
-                        _setUp_tearDown_class_failed = False
-                        continue
-                    elif _line.startswith(strings.setupclass_start_string) or \
-                            _line.startswith(strings.teardown_start_string):
-                        _class_name = _line_s.split(" ")[0].strip()
-                        _test_class_prefix = _line_s.split("(")[1].strip()
-                        _setUp_tearDown_class_failed = True
-                        continue
-                    elif _line.startswith("test_"):
-                        if len(_test) == 1:
-                            # test name and result with no space, no time
-                            _test_name = _test[0].split("[")[0].strip()
-                            _test_options, _result = \
-                                self._split_options_from_result(
-                                    _test[0].split("]")[1].strip()
-                                )
-                        elif len(_test) == 2 and \
-                                _test[1][0].isdigit():
-                            # test name and result with no space,
-                            # followed by time
-                            _test_name = _test[0].split("[")[0].strip()
-                            _test_options, _result = \
-                                self._split_options_from_result(
-                                    _test[0].split("]")[1].strip()
-                                )
-                            _time = _test[1].strip()
-                        elif len(_test) == 2 and \
-                                (
-                                    _test[1].startswith("OK") or
-                                    _test[1].startswith("FAIL") or
-                                    _test[1].startswith("SKIP")
-                                ):
-                            # test name and result with a space between em',
-                            # no time
-                            _test_name, _test_options = \
-                                self._split_options_from_test_name(_test[0])
-                            _result = _test[1].strip()
-                        elif len(_test) > 2:
-                            # test name, result and time separated by space
-                            _test_name, _test_options = \
-                                self._split_options_from_test_name(_test[0])
-                            _result = _test[1].strip()
-                            _time = _test[2].strip()
-                    # if this is not a start of a subsection,
-                    # or start of a test, then, if class fail flag is set
-                    # we should load the result value
-                    # and do test name combining
-                    elif len(_line_s.split(")")) > 1 and \
-                            _setUp_tearDown_class_failed:
-                        # class name fail,
-                        # test class name remainder with a SKIP
-                        # as a result with a space between
-                        _test = _line_s.split(" ")
-                        # _class_name = "setupClass"
-                        _test_name = \
-                            _test_class_prefix + '.' + _test[0].strip()[:-1]
-                        _result = _test[1].strip()
-                        if len(_test) > 2:
-                            _time = _test[2].strip()
-                    else:
-                        # Unknown
-                        log.debug("Unknown text in line: %s", _line)
-                        continue
-
-                    if not _test_name or _result in self.status_filters:
-                        continue
-
-                    # we have a test_name and all of the results now,
-                    # it is time to add this tests result
-                    # lookup test in the list
-                    self.test_mgr.add_result_for_test(
-                        _execution_item["execution_name"],
-                        _class_name,
-                        _test_name,
-                        "",
-                        _test_options,
-                        _result,
-                        parse_seconds(_time)
-                    )
-            elif _object["type"] == strings.TEMPEST_FAIL_MESSAGE:
-                # do some specific parsing fail messages object
-                _lines = _object["data"].splitlines()
-
-                _class_name = ""
-                _test_name = ""
-                _test_options = ""
-                _message = ""
-                _trace = ""
-
-                # flag for extracting test fail message
-                _test_fail_head_found = False
-
-                for _line in _lines:
-                    _line_s = _line.lstrip()
-
-                    if _line_s.startswith(strings.fail_head_start_string) or \
-                            _line_s.startswith("----------------------------"):
-                        continue
-                    elif _line_s.startswith(strings.test_start_string):
-                        # this is a start of a new test fail,
-                        # we should save the old one
-                        if _test_fail_head_found:
-                            self.test_mgr.add_fail_data_for_test(
-                                _execution_item["execution_name"],
-                                _class_name,
-                                _test_name,
-                                _test_options,
-                                _trace,
-                                _message
-                            )
-                            _trace = ''
-                            _message = ''
-                        # extract nest one
-                        try:
-                            _full_name = _line_s.split(" ", 1)[1]
-                        except IndexError:
-                            _full_name = _line_s
-
-                        (_class_name, _test_name, _uuid, _test_options, _tags) = \
-                            self.test_mgr.split_test_name(_full_name)
-                        _test_fail_head_found = True
-                    elif _line_s.startswith("Details: "):
-                        _line_s = _line_s.replace('"', '\'')
-                        _line_s = _line_s.replace(',', ' ')
-
-                        _message += _line_s + '\n'
-                        _trace += _line + "\n"
-                    else:
-                        _trace += _line + "\n"
-
-                self.test_mgr.add_fail_data_for_test(
-                    _execution_item["execution_name"],
-                    _class_name,
-                    _test_name,
-                    _test_options,
-                    _trace,
-                    _message
-                )
-            elif _object["type"] == strings.TEMPEST_SPEED_SUMMARY:
-                # do some specific parsing for Slowest timings object
-                _lines = _object["data"].splitlines()
-
-                _class_name = ""
-                _slowest_item = {"time_total": "", "count": 0, "tests": []}
-
-                for _line in _lines:
-                    _line = _line.lstrip()
-                    _line_s = re.sub(" +", " ", _line)
-
-                    if _line.startswith(strings.speed_start_string):
-                        # parse timing header
-                        _slowest = _line.split(" ")
-                        _slowest_item["count"] = _slowest[1]
-                        _slowest_item["time_total"] = _slowest[4]
-                        continue
-                    elif _line.startswith(strings.test_start_string) or \
-                            _line.startswith(
-                                strings.setupclass_start_string
-                            ) or \
-                            _line.startswith(strings.teardown_start_string):
-                        _class_name = _line.strip()
-                        continue
-                    elif _line.startswith("test_"):
-                        _class_name, _test_name, _test_options = \
-                            self.test_mgr.split_test_name_from_speed(
-                                _class_name + '.' + _line_s
-                            )
-
-                        self.test_mgr.mark_slowest_test_in_execution_by_name(
-                            _execution_item["execution_name"],
-                            _class_name,
-                            _test_name,
-                            test_options=_test_options
-                        )
-                _execution_item["slowest"] = _slowest_item
-            elif _object["type"] == strings.TEMPEST_EXECUTION_SUMMARY:
-                # do some specific parsing for summary section
-                _lines = _object["data"].splitlines()
-
-                _summary_item = {"total": 0, "failed": 0, "outcome": "", "time": ""}
-                for _line in _lines:
-                    if _line.startswith(strings.summary_ran_string):
-                        _summary_list = _line.split(" ")
-
-                        _summary_item["total"] = _summary_list[1]
-                        _summary_item["time"] = _summary_list[4]
-                    elif _line.startswith(strings.summary_ok_string):
-                        _summary_item["outcome"] = _line.strip()
-                    elif _line.startswith(strings.summary_fail_string):
-                        _summary_list = _line.split(" ")
-
-                        _summary_item["outcome"] = _summary_list[0]
-                        _summary_item["failed"] = \
-                            _summary_list[1].split("=")[1][:-1]
-
-                _execution_item["summary"] = _summary_item
-            else:
-                log.debug("Empty or unknown section found:\n%s", _object["data"])
-
-        # We're done
-        return _execution_item
-
-    @staticmethod
-    def _fail_section_end_lookup(_index, _data_list):
-        """
-        Search for the end of FAIL section
-        :param _index:
-        :param _data_list:
-        :return:
-        """
-        _fail_section = ""
-        _local_index = _index + 1
-        for _fail_end_search_index in range(_index + 1, len(_data_list)):
-            _tmp = _data_list[_fail_end_search_index]
-
-            if _tmp.startswith(strings.fail_head_start_string) or \
-                    _tmp.startswith(strings.summary_ran_string):
-                _local_index = _fail_end_search_index - 1
-                break
-            else:
-                _fail_section += '\n\n' + _tmp
-        # return _fail_section
-        return _fail_section, _local_index
-
-    # apply parsing per object type
-    # On return, we should have scenario
-    # or scenarios dict with: execution, speed, fail and summary sections
-    def object_parser(self, executions_list_raw):
-        names = []
-        for _execution_raw in executions_list_raw:
-            _execution_item = self.parse_execution_list(_execution_raw)
-            name = _execution_item["execution_name"]
-            self.test_mgr.add_execution(name, _execution_item["execution_date"])
-            names.append(name)
-
-        # only the runs from this log
-        self.test_mgr.log_summaries(names)
+        self._state = FLOW
+        self._class_name = ""
+        # wrapped "setUpClass (prefix" line waiting for "ClassName) RESULT time"
+        self._setup_prefix = None
+        # tests left out by the status filters: their slowest and failure entries are ignored
+        self._filtered = set()
+        self._head = None
+        self._trace = []
 
     def parse(self):
-        self.object_parser(self.cli_parser())
+        for line in self.source:
+            self._feed(line.rstrip("\r\n"))
+        self._end_failure()
+        self.test_mgr.add_execution(self.run_name, self.run_date)
+        self.test_mgr.log_summaries([self.run_name])
+
+    def _feed(self, line):
+        stripped = line.strip()
+        if _is_rule(stripped, "="):
+            self._end_failure()
+            self._state = FAIL_HEAD
+            return
+        if _SUMMARY_RE.match(stripped):
+            self._end_failure()
+            self._state = FLOW
+            return
+        if self._state == FAIL_HEAD:
+            if _is_rule(stripped, "-"):
+                self._state = FAIL_BODY
+            elif stripped and self._head is None:
+                self._head = _HEAD_PREFIX_RE.sub("", stripped)
+            return
+        if self._state == FAIL_BODY:
+            self._trace.append(line)
+            return
+        if self._state == SLOWEST:
+            if stripped:
+                self._slowest_line(re.sub(" +", " ", stripped))
+            else:
+                self._state = FLOW
+            return
+        if _SLOWEST_RE.match(stripped):
+            self._state = SLOWEST
+            self._class_name = ""
+            return
+        if stripped:
+            self._flow_line(re.sub(" +", " ", stripped))
+
+    # results
+
+    def _flow_line(self, line):
+        setup = _SETUP_RE.match(line)
+        if setup:
+            self._class_name = ""
+            rest = setup.group("rest")
+            if rest.startswith(")"):
+                # the whole class name on one line
+                self._setup_result(setup.group("kind"), setup.group("prefix"), rest[1:])
+                self._setup_prefix = None
+            else:
+                self._setup_prefix = (setup.group("kind"), setup.group("prefix"))
+            return
+        if self._setup_prefix is not None and ")" in line:
+            kind, prefix = self._setup_prefix
+            self._setup_prefix = None
+            name, _, rest = line.partition(")")
+            self._setup_result(kind, prefix + "." + name.strip(), rest)
+            return
+        if _CLASS_RE.match(line):
+            self._class_name = line
+            self._setup_prefix = None
+            return
+        test = _TEST_RE.match(line)
+        if test and test.group("result") and self._class_name:
+            self._add_result(self._class_name, test.group("name"), test.group("options") or "",
+                             test.group("result"), test.group("time"))
+            return
+        log.debug("Unknown text in line: %s", line)
+
+    def _setup_result(self, kind, class_name, rest):
+        # "FAIL 0.00": the class setup or teardown failed
+        parts = rest.split()
+        if parts:
+            self._add_result(kind, class_name, "", parts[0], parts[1] if len(parts) > 1 else None)
+
+    def _add_result(self, class_name, test_name, options, result, time):
+        if result in self.status_filters:
+            self._filtered.add((class_name, test_name, options))
+            return
+        self.test_mgr.add_result_for_test(
+            self.run_name, class_name, test_name, "", options, result, parse_seconds(time))
+
+    # slowest tests
+
+    def _slowest_line(self, line):
+        if _CLASS_RE.match(line):
+            self._class_name = line
+            return
+        if _SETUP_RE.match(line):
+            self._class_name = ""
+            return
+        test = _TEST_RE.match(line)
+        if test is None or not self._class_name:
+            return
+        key = (self._class_name, test.group("name"), test.group("options") or "")
+        if key in self._filtered:
+            return
+        self.test_mgr.mark_slowest_test_in_execution_by_name(
+            self.run_name, key[0], key[1], test_options=key[2])
+
+    # failures
+
+    def _end_failure(self):
+        """Store the failure collected so far (head and trace) on its test."""
+        head, trace = self._head, self._trace
+        self._head, self._trace = None, []
+        if head is None:
+            return
+        while trace and not trace[-1].strip():
+            trace.pop()
+        message = "".join(line.lstrip() + "\n" for line in trace
+                          if line.lstrip().startswith("Details: "))
+        trace = "".join(line + "\n" for line in trace)
+
+        setup = _SETUP_RE.match(head)
+        if setup and setup.group("rest").startswith(")"):
+            class_name, test_name, options = setup.group("kind"), setup.group("prefix"), ""
+        else:
+            class_name, test_name, _, options, _ = \
+                self.test_mgr.split_test_name(head.split()[0])
+        if (class_name, test_name, options) in self._filtered:
+            return
+        self.test_mgr.add_fail_data_for_test(
+            self.run_name, class_name, test_name, options, trace, message)
