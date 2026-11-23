@@ -3,7 +3,7 @@
 Bring tempest-parser in line with the scribe repository: GitHub workflows, a tagged test suite,
 tag-based versioning, a README status line and project rules.
 
-Status: **phases 1–4 done**, phase 5 not started. Open decisions are listed at the end.
+Status: **done**, all five phases. Open decisions are listed at the end.
 
 ## 1. Review findings
 
@@ -110,12 +110,16 @@ Bugs and risks found by reading the code (not yet confirmed by running it):
 - Add `CLAUDE.md` with rules like scribe's: add a changelog line for every change, run ruff and
   pytest before committing, give every test exactly one marker, use only made-up test data, and
   change versions only through `version.sh` or the Bump version workflow.
+- Done. `CLAUDE.md` also covers the layout, keeping `documents/specs.md` current, reports not changing
+  shared results, wheel contents, bash 3.2 for scripts, absolute README links and the branch workflow.
+  The facts scribe keeps in a separate conventions skill fit in `CLAUDE.md` and the specs here, so there
+  is no skill.
 
 ## 4. Open decisions
 
-1. **When tests run:** scribe runs its tests only by hand. Recommendation: also run them on pull
-   requests and pushes to `master`, since they'll take well under a minute.
-2. **PyPI:** the README says `pip install tempestparser`. Should releases also upload to PyPI?
-   That needs a trusted publisher set up on PyPI.
+1. ~~**When tests run**~~: done as recommended, on pull requests, pushes to `master` and by hand.
+2. **PyPI (still open):** the Release workflow has an upload job, off until the repository variable
+   `PYPI_PUBLISH` is `true` and PyPI has a trusted publisher for `release.yml`, environment `pypi`.
+   PyPI still has 0.2.81.
 3. ~~**Starting version**~~: decided, `v0.2.81` back-filled; the next release is 0.3.0.
 4. ~~**Python versions**~~: decided, 3.10–3.13 (`python_requires=">=3.10"`).

@@ -164,7 +164,7 @@ Subunit v2 streams saved to a file.
 | Tests (smoke, functional, integration) and CI on Linux and macOS, Python 3.10–3.13 | Done |
 | Tag-based versioning, Bump version and Release workflows | Done; 0.3.0 was released through them |
 | Upload to PyPI from CI | Planned (off until PyPI trusts the Release workflow) |
-| Project rules for contributors (`CLAUDE.md`) | Next |
+| Project rules for contributors ([CLAUDE.md](https://github.com/savex/tempest-parser/blob/master/CLAUDE.md)) | Done |
 
 The plan is in [documents/plan.md](https://github.com/savex/tempest-parser/blob/master/documents/plan.md), the specification in
 [documents/specs.md](https://github.com/savex/tempest-parser/blob/master/documents/specs.md) and the changes in [changelog.md](https://github.com/savex/tempest-parser/blob/master/changelog.md).

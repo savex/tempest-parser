@@ -11,6 +11,10 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
 
 ## [Unreleased]
 
+### Added
+- `CLAUDE.md` with the project layout and rules (changelog, checks before committing, test tags and
+  data, specs, packaging, versioning).
+
 ### Changed
 - `setup.py`: requires Python 3.10+, classifiers for 3.10–3.13, `Apache-2.0` license expression, project
   URLs and a description that lists every input format; the empty `data_files` are gone.
