@@ -27,6 +27,18 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
 - An own CSV export imports every run, not only the first column: runs are dated from the header,
   named after their files (`-d` exports) and the baseline column comes back as the `required` run.
   Options are split back from the test name, and messages keep their quotes and commas.
+- `--html-layout grid`: the trending report laid out with CSS grid (every row a grid of one shared
+  column template; offscreen classes skipped with `content-visibility`, so 6000 tests open in a quarter
+  of a second): sticky header, class rows and name column, dark mode from the system, classes and times
+  hidden by CSS `:has()`. `table` stays the default. Example: `examples/trending_report_grid.html`.
+- Grid report: a colour scheme switch next to the title (small system / light / dark icons); the choice
+  is kept in the browser.
+- `--html-layout grid` also applies to the errors report (`-e`): each message is a collapsible
+  `<details>` group with its test count, tests and times, a filter and **Expand all** / **Collapse
+  all**; same colours and theme switch (shared `templates/grid_base.html`). Example:
+  `examples/errors_report_run_4_grid.html`.
+- `.gitignore` no longer ignores `tempest_parser/templates/*.html`: the wheel is built from the files
+  git tracks, so an ignored new template was left out.
 - Type annotations on the whole package, checked with `mypy --strict`; the wheel ships `py.typed`, so
   code that imports `tempest_parser` gets the types.
 - Trending report: test times under each status (the run's slowest in bold) and each class's total

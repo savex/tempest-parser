@@ -24,9 +24,6 @@ def line_breaks(text: str) -> Markup:
     return Markup("<br />").join(escape(text).split("\n"))
 
 
-# Cells are built as plain strings from escaped values and joined per row into one Markup:
-# much faster than rendering each cell through the template or Markup.format().
-_BLANK = '<td class="status blank"></td>'
 _FAILED = {Status.FAIL, Status.ERROR}
 
 
@@ -41,23 +38,43 @@ def _class_times(cases: list[Case], runs: list[str]) -> list[str]:
     return [format_seconds(totals[run]) for run in runs]
 
 
-def _status_cell(result: Result) -> str:
-    """Status, then the time on a line of its own (bold for the run's slowest tests)."""
-    time = format_seconds(result.time)
-    if time:
-        css = "time slowest" if result.slowest else "time"
-        time = f'<span class="{css}">{time}</span>'
-    status = result.result
-    return f'<td class="status {escape(status.lower())}">{escape(status)}{time}</td>'
+@dataclasses.dataclass(frozen=True, slots=True)
+class _Cells:
+    """Builds a row's result cells as plain strings from escaped values; the row joins them
+    into one Markup. Much faster than rendering each cell through the template or
+    Markup.format(). `start` opens a cell, `end` closes it: <td> for the table report,
+    <div role="cell"> for the grid one."""
+    start: str
+    end: str
+
+    def cell(self, css: str, content: str = "") -> str:
+        return f'<{self.start} class="{css}">{content}</{self.end}>'
+
+    def required(self, result: Result | None) -> str:
+        if result is None:
+            return self.cell("status added", "A")
+        return self.cell("status required", escape(result.result))
+
+    def status(self, result: Result) -> str:
+        """Status, then the time on a line of its own (bold for the run's slowest tests)."""
+        time = format_seconds(result.time)
+        if time:
+            css = "time slowest" if result.slowest else "time"
+            time = f'<span class="{css}">{time}</span>'
+        status = result.result
+        return self.cell(f"status {escape(status.lower())}", f"{escape(status)}{time}")
+
+    def notes(self, result: Result) -> str:
+        """Message, then the trace folded in a <details> element."""
+        message = "<br />".join(escape(result.message).split("\n"))
+        if result.trace:
+            message += (f"<details><summary>Trace</summary>"
+                        f"<pre>{escape(result.trace)}</pre></details>")
+        return self.cell("tracemessage", message)
 
 
-def _notes_cell(result: Result) -> str:
-    """Message, then the trace folded in a <details> element."""
-    message = "<br />".join(escape(result.message).split("\n"))
-    if not result.trace:
-        return f'<td class="tracemessage">{message}</td>'
-    return (f'<td class="tracemessage">{message}<details><summary>Trace</summary>'
-            f'<pre>{escape(result.trace)}</pre></details></td>')
+TABLE_CELLS = _Cells("td", "td")
+GRID_CELLS = _Cells('div role="cell"', "div")
 
 
 class _HTMLReport:
@@ -122,6 +139,7 @@ class _HTMLReport:
             'report': self,
             'Column': Column,
             'REQUIRED_RUN': REQUIRED_RUN,
+            'format_seconds': format_seconds,
         }
 
     def _extend_data(self, data: Data) -> None:
@@ -135,16 +153,18 @@ ClassRows = tuple[str, list[str], Iterator[Row]]
 
 
 class HTMLTrendingReport(_HTMLReport):
+    """Runs as columns of an HTML table."""
     tmpl = "tempest_trending_report.html"
+    cells = TABLE_CELLS
 
     def _extend_data(self, data: Data) -> None:
         data['runs'] = [e for e in data['executions'] if e.name != REQUIRED_RUN]
         data['classes'] = self._classes(data['tests'], [e.name for e in data['runs']],
-                                        data['detailed'])
+                                        data['detailed'], self.cells)
 
     @staticmethod
-    def _classes(tests: dict[str, list[Case]], runs: list[str],
-                 detailed: bool) -> Iterator[ClassRows]:
+    def _classes(tests: dict[str, list[Case]], runs: list[str], detailed: bool,
+                 cells_of: _Cells = TABLE_CELLS) -> Iterator[ClassRows]:
         """(class name, rows) for each class, sorted; rows are made as the template reads
         them. Each row's result cells are escaped here into one Markup string, which keeps
         the per-cell work out of the template.
@@ -152,18 +172,16 @@ class HTMLTrendingReport(_HTMLReport):
         A row is (number, test, cells, flags); flags are the letters the report's filters
         look for: "f" failed (FAIL or ERROR) in some run, "l" failed in the last run (runs are
         ordered by date), "c" the status differs between the runs the test ran in."""
-        blank = _BLANK + _BLANK if detailed else _BLANK
+        blank = cells_of.cell("status blank")
+        if detailed:
+            blank += blank
         number = 0
 
         def rows(cases: Iterable[Case]) -> Iterator[Row]:
             nonlocal number
             for case in sorted(cases, key=lambda c: c.test_name):
                 number += 1
-                required = case.results.get(REQUIRED_RUN)
-                if required is None:
-                    cells = ['<td class="status added">A</td>']
-                else:
-                    cells = [f'<td class="status required">{escape(required.result)}</td>']
+                cells = [cells_of.required(case.results.get(REQUIRED_RUN))]
                 statuses: set[str] = set()
                 result: Result | None = None
                 for run in runs:
@@ -172,9 +190,9 @@ class HTMLTrendingReport(_HTMLReport):
                         cells.append(blank)
                         continue
                     statuses.add(result.result)
-                    cells.append(_status_cell(result))
+                    cells.append(cells_of.status(result))
                     if detailed:
-                        cells.append(_notes_cell(result))
+                        cells.append(cells_of.notes(result))
                 flags = ("f" if statuses & _FAILED else "") + \
                     ("l" if result is not None and result.result in _FAILED else "") + \
                     ("c" if len(statuses) > 1 else "")
@@ -182,6 +200,13 @@ class HTMLTrendingReport(_HTMLReport):
 
         for class_name in sorted(tests):
             yield class_name, _class_times(tests[class_name], runs), rows(tests[class_name])
+
+
+class HTMLTrendingGridReport(HTMLTrendingReport):
+    """The trending report laid out with CSS grid: every row is a subgrid of one grid, so
+    the header and the first columns stay in view while scrolling."""
+    tmpl = "tempest_trending_grid.html"
+    cells = GRID_CELLS
 
 
 class HTMLErrorsReport(_HTMLReport):
@@ -253,6 +278,12 @@ class HTMLErrorsReport(_HTMLReport):
 
         data['unique_skips'] = skipped_messages
         data['uniqie_fails'] = failed_messages
+
+
+class HTMLErrorsGridReport(HTMLErrorsReport):
+    """The errors report laid out with CSS grid: each message is a <details> group that opens
+    to its tests, with a filter and the grid reports' theme switch."""
+    tmpl = "tempest_errors_grid.html"
 
 
 class ReportToFile:

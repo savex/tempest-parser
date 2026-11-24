@@ -61,6 +61,28 @@ def test_errors_report_groups_messages(data_file):
     assert "&lt;ports&gt;" in html
 
 
+def test_errors_grid_report():
+    html = reporter.HTMLErrorsGridReport()(_two_runs())
+    assert "<table" not in html and "<td" not in html
+    # run1: test_b failed ("boom"), test_c skipped in run2 ("why"); one group each
+    assert html.count('<details class="group">') == 2
+    assert '<span class="message">boom</span>' in html
+    assert '<span class="message">why</span>' in html
+    assert '<h2>Unique fails: 1</h2>' in html and '<h2>Unique skips: 1</h2>' in html
+    assert f'<span class="name">{SERVERS}.test_b</span>' in html
+    assert '<div class="time">1m 10s</div>' in html
+    assert 'id="theme-dark"' in html
+
+
+def test_errors_grid_report_without_errors():
+    tm = TestsManager()
+    tm.add_execution("run1", DATE)
+    tm.add_result_for_test("run1", SERVERS, "test_a", "", "", "OK", 1.0)
+    html = reporter.HTMLErrorsGridReport()(tm)
+    assert html.count('<p class="none">None</p>') == 2
+    assert "<details" not in html
+
+
 def test_errors_report_details_line():
     report = reporter.HTMLErrorsReport()
     data = {
@@ -186,7 +208,8 @@ def _injected_manager():
     return tm
 
 
-@pytest.mark.parametrize("report", [reporter.HTMLTrendingReport, reporter.HTMLErrorsReport])
+@pytest.mark.parametrize("report", [reporter.HTMLTrendingReport, reporter.HTMLTrendingGridReport,
+                                    reporter.HTMLErrorsReport, reporter.HTMLErrorsGridReport])
 def test_reports_escape_every_field(report):
     html = report()(_injected_manager(), detailed=True)
     assert "<img" not in html
@@ -231,6 +254,61 @@ def test_trending_report_numbers_rows_across_classes(data_file):
     html = reporter.HTMLTrendingReport()(_manager(data_file("tempest.xml")))
     numbers = [int(n) for n in re.findall(r'<tr class="test"[^>]*>\s*<td>(\d+)</td>', html)]
     assert numbers == [1, 2, 3, 4]
+
+
+def _two_runs():
+    tm = TestsManager()
+    tm.add_execution("run1", DATE)
+    tm.add_execution("run2", DATE)
+    tm.add_result_for_test("run1", SERVERS, "test_a", "", "", "OK", 1.5)
+    tm.add_result_for_test("run1", SERVERS, "test_b", "", "", "FAIL", 70.0,
+                           message="boom", trace="Traceback:\nValueError")
+    tm.add_result_for_test("run2", SERVERS, "test_b", "", "", "OK", 2.0)
+    tm.add_result_for_test("run2", PORTS, "test_c", "", "", "SKIP", None, message="why")
+    return tm
+
+
+@pytest.mark.parametrize("detailed", [False, True])
+def test_grid_cells_are_the_table_cells_as_divs(detailed):
+    tm = _two_runs()
+
+    def rows(cells):
+        return [(class_name, times, list(class_rows)) for class_name, times, class_rows in
+                reporter.HTMLTrendingReport._classes(tm.tests, ["run1", "run2"], detailed, cells)]
+
+    table, grid = rows(reporter.TABLE_CELLS), rows(reporter.GRID_CELLS)
+    assert len(grid) == len(table) == 2
+    for (name, times, table_rows), (grid_name, grid_times, grid_rows) in zip(table, grid,
+                                                                            strict=True):
+        assert (grid_name, grid_times) == (name, times)
+        for (number, case, cells, flags), grid_row in zip(table_rows, grid_rows, strict=True):
+            # str(): Markup.replace would escape the new tags
+            divs = str(cells).replace("<td ", '<div role="cell" ').replace("</td>", "</div>")
+            assert (grid_row[0], grid_row[1], str(grid_row[2]), grid_row[3]) == \
+                (number, case, divs, flags)
+            assert "<td" not in grid_row[2]
+
+
+@pytest.mark.parametrize("detailed", [False, True])
+def test_grid_report_layout(detailed):
+    html = reporter.HTMLTrendingGridReport()(_two_runs(), detailed=detailed)
+    assert "<table" not in html and "<td" not in html
+    assert ('class="report detailed"' in html) == detailed
+    assert 'style="--runs: 2"' in html
+    assert html.count('<section class="class" role="rowgroup">') == 2
+    assert html.count('<div class="row" role="row"') == 3
+    assert 'data-flags="fc"' in html  # test_b: failed in run 1, then OK
+    assert '<div role="cell" class="status ok">OK<span class="time">1.50s</span></div>' in html
+    assert ("<details>" in html) == detailed
+
+
+def test_grid_report_theme_switch():
+    html = reporter.HTMLTrendingGridReport()(_two_runs())
+    radios = re.findall(
+        r'<input type="radio" name="theme" id="theme-(\w+)" value="(\w+)"( checked)?>', html)
+    assert radios == [("auto", "auto", " checked"), ("light", "light", ""), ("dark", "dark", "")]
+    assert ":root:has(#theme-light:checked) { color-scheme: light; }" in html
+    assert ":root:has(#theme-dark:checked) { color-scheme: dark; }" in html
 
 
 def test_report_to_open_file_streams(data_file):

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{% endblock %}</title>
+<style>
+/* grid reports: shared colours, theme switch and page styles; each report adds its own */
+@layer tokens, base, layout, cells, filters, print;
+
+/* ---- colours: one set of tokens, light and dark from light-dark(); the colour scheme
+   follows the system, or the theme switch when it is set to light or dark ---- */
+@layer tokens {
+  :root:has(#theme-light:checked) { color-scheme: light; }
+  :root:has(#theme-dark:checked) { color-scheme: dark; }
+  :root {
+    color-scheme: light dark;
+    --bg: light-dark(#fff, #16181a);
+    --fg: light-dark(#111, #e6e6e6);
+    --muted: light-dark(#666, #9a9a9a);
+    --line: light-dark(#bbb, #3a3d40);
+    --head: light-dark(#105a10, #0d3f0d);
+    --pass: light-dark(#6c6, #2f7d2f);
+    --fail: light-dark(#a50000, #c83a3a);
+    --skip: light-dark(#ccb226, #8f7b12);
+    --error: light-dark(#e585a2, #a54563);
+    --na: #777;
+    --required: light-dark(#aaa, #555);
+    --added: light-dark(#fcc, #5b4660);
+  }
+}
+
+@layer base {
+  body {
+    margin: 0;
+    padding: 12px 16px;
+    background: var(--bg);
+    color: var(--fg);
+    font: clamp(11px, 0.25vw + 9px, 13px) / 1.35 Verdana, "Helvetica Neue", Arial, sans-serif;
+    accent-color: var(--head);
+  }
+  .top {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin: 0 0 8px;
+  }
+  h1 { font-size: 1.3em; margin: 0; }
+  .sr { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
+  /* theme switch: three icon radios in one pill; works without the script */
+  .theme {
+    display: inline-flex; margin: 0; padding: 2px; gap: 2px;
+    border: 1px solid var(--line); border-radius: 999px;
+    & input { position: absolute; opacity: 0; pointer-events: none; }
+    & label {
+      display: grid; place-items: center;
+      inline-size: 22px; block-size: 22px; border-radius: 50%;
+      color: var(--muted); cursor: pointer;
+      &:hover { color: var(--fg); background: color-mix(in oklab, var(--fg) 10%, transparent); }
+    }
+    & input:checked + label { color: #fff; background: var(--head); }
+    & input:focus-visible + label { outline: 2px solid var(--head); outline-offset: 1px; }
+    & svg { inline-size: 14px; block-size: 14px; }
+  }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0 0 8px; padding: 0; list-style: none;
+    & li { display: inline-flex; align-items: center; gap: 4px; }
+    & li::before {
+      content: ""; inline-size: 1.4em; block-size: 1em; background: var(--swatch);
+      border: 1px solid var(--line);
+    }
+  }
+}
+
+@layer print {
+  @media print {
+    .theme { display: none; }
+    :root { color-scheme: light; }
+  }
+}
+{% block style %}{% endblock %}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>{% block heading %}{% endblock %}</h1>
+  <fieldset class="theme" role="radiogroup" aria-label="Colour scheme">
+    <input type="radio" name="theme" id="theme-auto" value="auto" checked>
+    <label for="theme-auto" title="System colours">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 2a6 6 0 0 0 0 12z" fill="currentColor"/></svg>
+      <span class="sr">System</span>
+    </label>
+    <input type="radio" name="theme" id="theme-light" value="light">
+    <label for="theme-light" title="Light">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3" fill="currentColor"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6 13 13M3 13l1.4-1.4M11.6 4.4 13 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span class="sr">Light</span>
+    </label>
+    <input type="radio" name="theme" id="theme-dark" value="dark">
+    <label for="theme-dark" title="Dark">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 10A6 6 0 0 1 6 2.5a6 6 0 1 0 7.5 7.5z" fill="currentColor"/></svg>
+      <span class="sr">Dark</span>
+    </label>
+  </fieldset>
+  <script>
+  // remember the theme for this viewer; runs before the report is drawn, so no flash
+  (function () {
+    var key = "tparser-theme", saved = null;
+    try { saved = localStorage.getItem(key); } catch (e) {}
+    var input = saved && document.getElementById("theme-" + saved);
+    if (input) { input.checked = true; }
+    document.querySelectorAll('input[name="theme"]').forEach(function (radio) {
+      radio.addEventListener("change", function () {
+        try { localStorage.setItem(key, radio.value); } catch (e) {}
+      });
+    });
+  }());
+  </script>
+</div>
+{% block body %}{% endblock %}
+</body>
+</html>

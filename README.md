@@ -81,6 +81,14 @@ and each class row the class's total time per run. Add messages and tracebacks t
 tparser -f t_xml -r trending.html -d folder1
 ```
 
+`--html-layout grid` lays the same report out with CSS grid instead of a table: the header and the test
+names stay in view while scrolling, and it follows the system's dark mode or a light / dark switch
+next to the title. It needs a browser from 2024 or later:
+
+```bash
+tparser -r trending.html --html-layout grid folder1
+```
+
 To avoid scrolling the report back and forth, you can produce a unique errors report (see below).
 Note that it needs a single test run file:
 
@@ -89,6 +97,8 @@ tparser -e errors.html single_run.json
 ```
 
 This report groups FAILs and SKIPs by their main message to produce lists of unique errors and skips.
+With `--html-layout grid`, each message is a collapsible group with a filter, **Expand all** /
+**Collapse all** buttons and the same light / dark switch as the grid trending report.
 If there is no main message, it is taken from the trace: the line starting with `Details: ` becomes the main
 message, and additional lines are those that:
 - don't start with whitespace (regular expression `\s`)
@@ -132,6 +142,7 @@ stestr last --subunit | tparser -r trending.html -j summary.json --fail-on FAIL 
 |---|---|
 | `-f, --input-format` | `log`, `t_xml`, `r_xml`, `json`, `csv` or `subunit`. Detected from the extension when omitted; stdin defaults to `subunit`. |
 | `-r, --html-trending-filename` | Write the HTML trending report. |
+| `--html-layout` | HTML report layout (`-r` and `-e`): `table` (default) or `grid` (CSS grid, sticky headers, light / dark switch). |
 | `-e, --html-errors-filename` | Write the HTML unique errors report (single file input only). |
 | `-c, --csv-file` | Write the CSV report. |
 | `-j, --json-file` | Write a JSON summary: per run its name, file, date, counts per status and total time. |

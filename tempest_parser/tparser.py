@@ -137,6 +137,14 @@ def package_version() -> str:
         return "unknown (not installed)"
 
 
+# --html-layout: the (trending, errors) report classes for each layout
+HTML_LAYOUTS: dict[str, tuple[type[reporter.HTMLTrendingReport],
+                              type[reporter.HTMLErrorsReport]]] = {
+    "table": (reporter.HTMLTrendingReport, reporter.HTMLErrorsReport),
+    "grid": (reporter.HTMLTrendingGridReport, reporter.HTMLErrorsGridReport),
+}
+
+
 def build_parser() -> MyParser:
     parser = MyParser(prog="Tempest CLI Parser")
     parser.add_argument(
@@ -180,6 +188,10 @@ def build_parser() -> MyParser:
              "offset is given), instead of the file's modification time (single input only)")
     parser.add_argument(
         "-r", "--html-trending-filename", help="Write the HTML trending report")
+    parser.add_argument(
+        "--html-layout", choices=sorted(HTML_LAYOUTS), default="table",
+        help="Layout of the HTML reports: tables (default) or CSS grid (sticky headers, "
+             "light/dark switch, collapsible error groups)")
     parser.add_argument(
         "-e", "--html-errors-filename",
         help="Write the HTML unique errors report (single file input only)")
@@ -236,12 +248,13 @@ def write_reports(args: argparse.Namespace, tests_manager: TestsManager,
                   detailed: bool) -> None:
     if args.html_trending_filename:
         log.info("Generating HTML Trending report...")
-        reporter.ReportToFile(reporter.HTMLTrendingReport(),
-                              args.html_trending_filename)(tests_manager, detailed=detailed)
+        trending = HTML_LAYOUTS[args.html_layout][0]()
+        reporter.ReportToFile(trending, args.html_trending_filename)(
+            tests_manager, detailed=detailed)
     if args.html_errors_filename:
         log.info("Generating HTML Errors report...")
-        reporter.ReportToFile(reporter.HTMLErrorsReport(),
-                              args.html_errors_filename)(tests_manager)
+        errors = HTML_LAYOUTS[args.html_layout][1]()
+        reporter.ReportToFile(errors, args.html_errors_filename)(tests_manager)
     if args.csv_file is not None:
         log.info("Generating CSV report...")
         CSVReporter(tests_manager).generate_to_file(args.csv_file, detailed=detailed)

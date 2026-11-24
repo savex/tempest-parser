@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trending Report</title>
+<style>
+/* grid reports: shared colours, theme switch and page styles; each report adds its own */
+@layer tokens, base, layout, cells, filters, print;
+
+/* ---- colours: one set of tokens, light and dark from light-dark(); the colour scheme
+   follows the system, or the theme switch when it is set to light or dark ---- */
+@layer tokens {
+  :root:has(#theme-light:checked) { color-scheme: light; }
+  :root:has(#theme-dark:checked) { color-scheme: dark; }
+  :root {
+    color-scheme: light dark;
+    --bg: light-dark(#fff, #16181a);
+    --fg: light-dark(#111, #e6e6e6);
+    --muted: light-dark(#666, #9a9a9a);
+    --line: light-dark(#bbb, #3a3d40);
+    --head: light-dark(#105a10, #0d3f0d);
+    --pass: light-dark(#6c6, #2f7d2f);
+    --fail: light-dark(#a50000, #c83a3a);
+    --skip: light-dark(#ccb226, #8f7b12);
+    --error: light-dark(#e585a2, #a54563);
+    --na: #777;
+    --required: light-dark(#aaa, #555);
+    --added: light-dark(#fcc, #5b4660);
+  }
+}
+
+@layer base {
+  body {
+    margin: 0;
+    padding: 12px 16px;
+    background: var(--bg);
+    color: var(--fg);
+    font: clamp(11px, 0.25vw + 9px, 13px) / 1.35 Verdana, "Helvetica Neue", Arial, sans-serif;
+    accent-color: var(--head);
+  }
+  .top {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin: 0 0 8px;
+  }
+  h1 { font-size: 1.3em; margin: 0; }
+  .sr { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
+  /* theme switch: three icon radios in one pill; works without the script */
+  .theme {
+    display: inline-flex; margin: 0; padding: 2px; gap: 2px;
+    border: 1px solid var(--line); border-radius: 999px;
+    & input { position: absolute; opacity: 0; pointer-events: none; }
+    & label {
+      display: grid; place-items: center;
+      inline-size: 22px; block-size: 22px; border-radius: 50%;
+      color: var(--muted); cursor: pointer;
+      &:hover { color: var(--fg); background: color-mix(in oklab, var(--fg) 10%, transparent); }
+    }
+    & input:checked + label { color: #fff; background: var(--head); }
+    & input:focus-visible + label { outline: 2px solid var(--head); outline-offset: 1px; }
+    & svg { inline-size: 14px; block-size: 14px; }
+  }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0 0 8px; padding: 0; list-style: none;
+    & li { display: inline-flex; align-items: center; gap: 4px; }
+    & li::before {
+      content: ""; inline-size: 1.4em; block-size: 1em; background: var(--swatch);
+      border: 1px solid var(--line);
+    }
+  }
+}
+
+@layer print {
+  @media print {
+    .theme { display: none; }
+    :root { color-scheme: light; }
+  }
+}
+@layer tokens {
+  :root {
+    /* layout */
+    /* fixed track sizes (none from content), so every row's own grid gets the same columns */
+    --num-w: 5ch;
+    --name-w: clamp(36ch, 30vw, 60ch);
+    --req-w: 8ch;
+    --run-w: 9ch;
+    --notes-w: clamp(24ch, 22vw, 44ch);
+    --head-h: 3.2em;
+  }
+}
+
+/* ---- the grid: one column template, every row a grid of it ----
+   Rows are not a subgrid of one big grid: sizing one grid of every cell takes seconds on
+   thousands of tests, and content-visibility (layout containment) turns subgrid off.
+   With fixed track sizes, separate row grids line up and offscreen classes are skipped. */
+@layer layout {
+  .scroller {
+    overflow: auto;
+    max-block-size: calc(100vh - 110px);
+    border: 1px solid var(--line);
+  }
+  .report {
+    inline-size: max-content;
+    --cols:
+      [num] var(--num-w) [name] var(--name-w) [req] var(--req-w)
+      repeat(var(--runs), [run] var(--run-w));
+    &.detailed {
+      --cols:
+        [num] var(--num-w) [name] var(--name-w) [req] var(--req-w)
+        repeat(var(--runs), [run] var(--run-w) [notes] var(--notes-w));
+    }
+  }
+  :where(.summary, .header, .class-head, .row) {
+    display: grid;
+    grid-template-columns: var(--cols);
+  }
+  /* a class = its header row + its tests; offscreen classes skip layout and paint */
+  .class {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 30em;
+  }
+  /* summary: 7 label rows shared by the label column and every run's totals */
+  .summary {
+    grid-template-rows: repeat(7, auto);
+    & > * { grid-row: 1 / -1; }
+    & > .totals { display: grid; grid-template-rows: subgrid; }
+  }
+  .header {
+    position: sticky; inset-block-start: 0; z-index: 3;
+    min-block-size: var(--head-h);
+  }
+  .class-head {
+    position: sticky; inset-block-start: var(--head-h); z-index: 2;
+  }
+  /* the # and name columns stay while scrolling sideways */
+  :is(.header, .row) > :nth-child(-n + 2), .class-head > .name {
+    position: sticky; inset-inline-start: 0; z-index: 1;
+  }
+  :is(.header, .row) > :nth-child(2) { inset-inline-start: var(--num-w); }
+  /* the class name also takes the Required column */
+  .class-head > .name { grid-column: num / run; overflow-wrap: anywhere; }
+}
+
+@layer cells {
+  [role="cell"], [role="columnheader"] {
+    border-inline-end: 1px solid var(--line);
+    border-block-end: 1px solid var(--line);
+    padding: 2px 4px;
+    background: var(--cell-bg, var(--bg));
+    min-inline-size: 0;
+  }
+  .header > * {
+    --cell-bg: var(--head);
+    color: #fff;
+    display: grid; place-items: center; text-align: center;
+    font-size: 0.85em;
+  }
+  .summary > .title { display: grid; place-items: center; }
+  .summary > .lead { grid-column: num / req; }
+  .totals > div {
+    font-size: 0.8em; text-align: center; padding: 1px 0;
+    background: var(--cell-bg, var(--bg));
+  }
+  .class-head > * {
+    --cell-bg: color-mix(in oklab, var(--head) 12%, var(--bg));
+    font-weight: bold;
+  }
+  .class-head > .classtime { font-weight: normal; font-size: 0.8em; text-align: center; color: var(--muted); }
+  .num { text-align: end; color: var(--muted); }
+  .testname {
+    display: grid;
+    grid-template-areas: "test" "params";
+    overflow-wrap: anywhere;
+    & .params { font-size: 0.8em; color: var(--muted); padding-inline-start: 1ch; }
+  }
+  .status {
+    display: grid; place-content: center; text-align: center;
+    font-size: 0.8em; color: #000;
+  }
+  .time { display: block; font-size: 0.9em; opacity: 0.8; }
+  .time.slowest { font-weight: bold; opacity: 1; }
+  :is(.ok, .pass)   { --cell-bg: var(--pass); }
+  .fail             { --cell-bg: var(--fail); color: #fff; }
+  .skip             { --cell-bg: var(--skip); }
+  .error            { --cell-bg: var(--error); }
+  .na               { --cell-bg: var(--na); color: #fff; }
+  .required         { --cell-bg: var(--required); }
+  .added            { --cell-bg: var(--added); }
+  .total            { --cell-bg: var(--bg); }
+  .tracemessage {
+    font-size: 0.75em;
+    color: light-dark(#550000, #f0a0a0);
+    & summary { cursor: pointer; }
+    & pre { margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  }
+  /* hover: darken every cell of the row, whatever its status colour */
+  .row:hover > * {
+    background: color-mix(in oklab, var(--cell-bg, var(--bg)) 82%, var(--fg));
+  }
+}
+
+@layer filters {
+  form.filters {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 0 0 8px;
+    & input[type="search"] { inline-size: min(320px, 100%); }
+    & .count { color: var(--muted); }
+  }
+  .row[hidden] { display: none; }
+  /* no script needed to hide a class whose tests are all filtered out */
+  .class:not(:has(.row:not([hidden]))) { display: none; }
+  /* nor to hide the times */
+  body:has(#filter-times:not(:checked)) .time { display: none; }
+}
+
+@layer print {
+  @media print {
+    .scroller { overflow: visible; max-block-size: none; border: 0; }
+    .class { content-visibility: visible; }
+    :is(.header, .class-head, .row > *) { position: static; }
+    form.filters { display: none; }
+  }
+}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Trending report</h1>
+  <fieldset class="theme" role="radiogroup" aria-label="Colour scheme">
+    <input type="radio" name="theme" id="theme-auto" value="auto" checked>
+    <label for="theme-auto" title="System colours">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 2a6 6 0 0 0 0 12z" fill="currentColor"/></svg>
+      <span class="sr">System</span>
+    </label>
+    <input type="radio" name="theme" id="theme-light" value="light">
+    <label for="theme-light" title="Light">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3" fill="currentColor"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6 13 13M3 13l1.4-1.4M11.6 4.4 13 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span class="sr">Light</span>
+    </label>
+    <input type="radio" name="theme" id="theme-dark" value="dark">
+    <label for="theme-dark" title="Dark">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 10A6 6 0 0 1 6 2.5a6 6 0 1 0 7.5 7.5z" fill="currentColor"/></svg>
+      <span class="sr">Dark</span>
+    </label>
+  </fieldset>
+  <script>
+  // remember the theme for this viewer; runs before the report is drawn, so no flash
+  (function () {
+    var key = "tparser-theme", saved = null;
+    try { saved = localStorage.getItem(key); } catch (e) {}
+    var input = saved && document.getElementById("theme-" + saved);
+    if (input) { input.checked = true; }
+    document.querySelectorAll('input[name="theme"]').forEach(function (radio) {
+      radio.addEventListener("change", function () {
+        try { localStorage.setItem(key, radio.value); } catch (e) {}
+      });
+    });
+  }());
+  </script>
+</div>
+<ul class="legend" aria-label="Legend">
+  <li style="--swatch: var(--pass)">Passed</li>
+  <li style="--swatch: var(--skip)">Skipped</li>
+  <li style="--swatch: var(--error)">Setup errors</li>
+  <li style="--swatch: var(--fail)">Failed</li>
+  <li style="--swatch: var(--na)">NA</li>
+  <li style="--swatch: var(--added)">Added</li>
+</ul>
+
+<form id="filters" class="filters" hidden onsubmit="return false">
+  <input type="search" id="filter-text" placeholder="Filter by class or test name" aria-label="Filter by class or test name">
+  <label><input type="radio" name="filter-kind" value="" checked> All</label>
+  <label><input type="radio" name="filter-kind" value="f"> Failed in any run</label>
+  <label><input type="radio" name="filter-kind" value="l"> Failed in the last run</label>
+  <label><input type="radio" name="filter-kind" value="c"> Status changed</label>
+  <label><input type="checkbox" id="filter-times" checked> Times</label>
+  <span id="filter-count" class="count" aria-live="polite"></span>
+</form>
+
+<div class="scroller">
+<div class="report detailed" role="table" aria-label="Test results by run"
+     style="--runs: 4">
+
+  <div class="summary" role="row">
+    <div class="title lead" role="cell">Test results</div>
+    <div class="totals" role="cell">
+      <div class="total">total</div>
+      <div class="pass">pass</div>
+      <div class="fail">fail</div>
+      <div class="error">error</div>
+      <div class="skip">skip</div>
+      <div class="na">n/a</div>
+      <div class="added">added</div>
+    </div>
+    <div class="totals" role="cell">
+      <div class="total">26</div>
+      <div class="pass">22</div>
+      <div class="fail">2</div>
+      <div class="error">0</div>
+      <div class="skip">2</div>
+      <div class="na">6</div>
+      <div class="added">26</div>
+    </div>
+<div class="title" role="cell">Notes</div>    <div class="totals" role="cell">
+      <div class="total">24</div>
+      <div class="pass">21</div>
+      <div class="fail">2</div>
+      <div class="error">0</div>
+      <div class="skip">1</div>
+      <div class="na">8</div>
+      <div class="added">24</div>
+    </div>
+<div class="title" role="cell">Notes</div>    <div class="totals" role="cell">
+      <div class="total">29</div>
+      <div class="pass">27</div>
+      <div class="fail">1</div>
+      <div class="error">0</div>
+      <div class="skip">1</div>
+      <div class="na">3</div>
+      <div class="added">29</div>
+    </div>
+<div class="title" role="cell">Notes</div>    <div class="totals" role="cell">
+      <div class="total">32</div>
+      <div class="pass">29</div>
+      <div class="fail">2</div>
+      <div class="error">0</div>
+      <div class="skip">1</div>
+      <div class="na">0</div>
+      <div class="added">32</div>
+    </div>
+<div class="title" role="cell">Notes</div>  </div>
+
+  <div class="header" role="row">
+    <div role="columnheader">#</div>
+    <div role="columnheader">Test name and parameters</div>
+    <div role="columnheader">Required vs Added</div>
+    <div role="columnheader">23/11/2026 22:08 GMT</div>
+<div role="columnheader">run_1.log</div>    <div role="columnheader">23/11/2026 22:08 GMT</div>
+<div role="columnheader">run_2.log</div>    <div role="columnheader">23/11/2026 22:08 GMT</div>
+<div role="columnheader">run_3.log</div>    <div role="columnheader">23/11/2026 22:08 GMT</div>
+<div role="columnheader">run_4.log</div>  </div>
+
+  <section class="class" role="rowgroup">
+    <div class="class-head" role="row">
+      <div class="name" role="cell">Class tempest.api.compute.admin.test_quotas.QuotasAdminTestJSON</div>
+      <div class="classtime" role="cell"><span class="time"></span></div>
+<div role="cell"></div>      <div class="classtime" role="cell"><span class="time"></span></div>
+<div role="cell"></div>      <div class="classtime" role="cell"><span class="time">20.74s</span></div>
+<div role="cell"></div>      <div class="classtime" role="cell"><span class="time">22.60s</span></div>
+<div role="cell"></div>    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">1</div>
+      <div class="testname" role="cell">
+        <span class="test">test_delete_quota</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status blank"></div><div role="cell" class="status blank"></div><div role="cell" class="status blank"></div><div role="cell" class="status blank"></div><div role="cell" class="status ok">OK<span class="time">5.83s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">5.84s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">2</div>
+      <div class="testname" role="cell">
+        <span class="test">test_get_default_quotas</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status blank"></div><div role="cell" class="status blank"></div><div role="cell" class="status blank"></div><div role="cell" class="status blank"></div><div role="cell" class="status ok">OK<span class="time">3.82s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">8.16s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="fc">
+      <div class="num" role="cell">3</div>
+      <div class="testname" role="cell">
+        <span class="test">test_get_updated_quotas</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status blank"></div><div role="cell" class="status blank"></div><div role="cell" class="status blank"></div><div role="cell" class="status blank"></div><div role="cell" class="status fail">FAIL<span class="time">0.66s</span></div><div role="cell" class="tracemessage">Details: 5120 != 51200<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
+  File &#34;tempest/api/compute/admin/test_quotas.py&#34;, line 88, in test_get_updated_quotas
+    self.assertEqual(5120, quota_set[&#39;ram&#39;])
+MismatchError: 5120 != 51200
+Details: 5120 != 51200
+</pre></details></div><div role="cell" class="status ok">OK<span class="time">6.22s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">4</div>
+      <div class="testname" role="cell">
+        <span class="test">test_update_all_quota_resources_for_tenant</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status blank"></div><div role="cell" class="status blank"></div><div role="cell" class="status blank"></div><div role="cell" class="status blank"></div><div role="cell" class="status ok">OK<span class="time slowest">10.43s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">2.38s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+  </section>
+  <section class="class" role="rowgroup">
+    <div class="class-head" role="row">
+      <div class="name" role="cell">Class tempest.api.compute.servers.test_servers.ServersTestJSON</div>
+      <div class="classtime" role="cell"><span class="time">36.26s</span></div>
+<div role="cell"></div>      <div class="classtime" role="cell"><span class="time">44.12s</span></div>
+<div role="cell"></div>      <div class="classtime" role="cell"><span class="time">30.44s</span></div>
+<div role="cell"></div>      <div class="classtime" role="cell"><span class="time">17.69s</span></div>
+<div role="cell"></div>    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">5</div>
+      <div class="testname" role="cell">
+        <span class="test">test_create_server_with_admin_password</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status ok">OK<span class="time">1.87s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time slowest">11.49s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">3.08s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">3.06s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">6</div>
+      <div class="testname" role="cell">
+        <span class="test">test_create_server_with_ipv6_addr_only</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status skip">SKIP<span class="time">0.00s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status skip">SKIP<span class="time">0.00s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status skip">SKIP<span class="time">0.00s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status skip">SKIP<span class="time">0.00s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">7</div>
+      <div class="testname" role="cell">
+        <span class="test">test_create_specify_keypair</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status ok">OK<span class="time slowest">10.21s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time slowest">11.39s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">6.67s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">1.51s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">8</div>
+      <div class="testname" role="cell">
+        <span class="test">test_create_with_existing_server_name</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status ok">OK<span class="time">9.24s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">0.96s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">4.63s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">4.93s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">9</div>
+      <div class="testname" role="cell">
+        <span class="test">test_update_access_server_address</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status ok">OK<span class="time">3.28s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">1.29s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">7.37s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">2.11s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">10</div>
+      <div class="testname" role="cell">
+        <span class="test">test_update_server_name</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status ok">OK<span class="time">6.10s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time slowest">10.08s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">7.62s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">1.08s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="fc">
+      <div class="num" role="cell">11</div>
+      <div class="testname" role="cell">
+        <span class="test">test_update_server_name_in_stop_state</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status fail">FAIL<span class="time">5.56s</span></div><div role="cell" class="tracemessage">Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
+  File &#34;tempest/api/compute/servers/test_servers.py&#34;, line 118, in test_update_server_name_in_stop_state
+    self.client.wait_for_server_status(server_id, &#39;SHUTOFF&#39;)
+TimeoutException: Request timed out
+Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s
+</pre></details></div><div role="cell" class="status fail">FAIL<span class="time">8.91s</span></div><div role="cell" class="tracemessage">Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
+  File &#34;tempest/api/compute/servers/test_servers.py&#34;, line 118, in test_update_server_name_in_stop_state
+    self.client.wait_for_server_status(server_id, &#39;SHUTOFF&#39;)
+TimeoutException: Request timed out
+Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s
+</pre></details></div><div role="cell" class="status ok">OK<span class="time">1.07s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">5.00s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+  </section>
+  <section class="class" role="rowgroup">
+    <div class="class-head" role="row">
+      <div class="name" role="cell">Class tempest.api.identity.admin.test_users.UsersTestJSON</div>
+      <div class="classtime" role="cell"><span class="time">46.15s</span></div>
+<div role="cell"></div>      <div class="classtime" role="cell"><span class="time">22.69s</span></div>
+<div role="cell"></div>      <div class="classtime" role="cell"><span class="time">1m 09s</span></div>
+<div role="cell"></div>      <div class="classtime" role="cell"><span class="time">1m 12s</span></div>
+<div role="cell"></div>    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">12</div>
+      <div class="testname" role="cell">
+        <span class="test">test_authentication_request_without_token</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status ok">OK<span class="time slowest">11.36s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">6.67s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">7.78s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">9.74s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">13</div>
+      <div class="testname" role="cell">
+        <span class="test">test_create_user</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status ok">OK<span class="time slowest">10.85s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">5.50s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">2.06s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">9.67s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">14</div>
+      <div class="testname" role="cell">
+        <span class="test">test_create_user_with_enabled</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status ok">OK<span class="time">0.66s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">3.44s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">7.73s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">2.56s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="flc">
+      <div class="num" role="cell">15</div>
+      <div class="testname" role="cell">
+        <span class="test">test_delete_user</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status ok">OK<span class="time">0.60s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">0.72s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time slowest">10.46s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status fail">FAIL<span class="time">3.93s</span></div><div role="cell" class="tracemessage">Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
+  File &#34;tempest/api/identity/admin/test_users.py&#34;, line 145, in test_delete_user
+    self.client.delete_user(user[&#39;id&#39;])
+NotFound: Object not found
+Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}
+</pre></details></div>
+    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">16</div>
+      <div class="testname" role="cell">
+        <span class="test">test_get_users</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status ok">OK<span class="time">6.63s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">0.62s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">6.42s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">7.64s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">17</div>
+      <div class="testname" role="cell">
+        <span class="test">test_list_users_for_tenant</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status ok">OK<span class="time">4.76s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status blank"></div><div role="cell" class="status blank"></div><div role="cell" class="status ok">OK<span class="time">8.16s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time slowest">10.30s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="c">
+      <div class="num" role="cell">18</div>
+      <div class="testname" role="cell">
+        <span class="test">test_list_users_with_roles_for_tenant</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status skip">SKIP<span class="time">0.00s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status blank"></div><div role="cell" class="status blank"></div><div role="cell" class="status ok">OK<span class="time">1.05s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time slowest">10.60s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">19</div>
+      <div class="testname" role="cell">
+        <span class="test">test_update_user</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status ok">OK<span class="time slowest">11.29s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">5.74s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">8.97s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">8.86s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">20</div>
+      <div class="testname" role="cell">
+        <span class="test">test_update_user_password</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status blank"></div><div role="cell" class="status blank"></div><div role="cell" class="status blank"></div><div role="cell" class="status blank"></div><div role="cell" class="status ok">OK<span class="time">9.17s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">1.31s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">21</div>
+      <div class="testname" role="cell">
+        <span class="test">test_user_authentication</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status blank"></div><div role="cell" class="status blank"></div><div role="cell" class="status blank"></div><div role="cell" class="status blank"></div><div role="cell" class="status ok">OK<span class="time">7.22s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">7.39s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+  </section>
+  <section class="class" role="rowgroup">
+    <div class="class-head" role="row">
+      <div class="name" role="cell">Class tempest.api.network.test_networks.NetworksTestJSON</div>
+      <div class="classtime" role="cell"><span class="time">1m 02s</span></div>
+<div role="cell"></div>      <div class="classtime" role="cell"><span class="time">1m 18s</span></div>
+<div role="cell"></div>      <div class="classtime" role="cell"><span class="time">50.63s</span></div>
+<div role="cell"></div>      <div class="classtime" role="cell"><span class="time">1m 11s</span></div>
+<div role="cell"></div>    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">22</div>
+      <div class="testname" role="cell">
+        <span class="test">test_create_delete_subnet_all_attributes</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status ok">OK<span class="time">7.92s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">8.14s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">0.45s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time slowest">11.04s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="flc">
+      <div class="num" role="cell">23</div>
+      <div class="testname" role="cell">
+        <span class="test">test_create_delete_subnet_with_dhcp_enabled</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status ok">OK<span class="time">9.53s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status fail">FAIL<span class="time">3.91s</span></div><div role="cell" class="tracemessage">Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sample-subnet-2&#39;}<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
+  File &#34;tempest/api/network/test_networks.py&#34;, line 233, in test_create_delete_subnet_with_dhcp_enabled
+    self._create_verify_delete_subnet(enable_dhcp=True)
+Conflict: An object with that identifier already exists
+Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sample-subnet-2&#39;}
+</pre></details></div><div role="cell" class="status ok">OK<span class="time slowest">10.10s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status fail">FAIL<span class="time">9.67s</span></div><div role="cell" class="tracemessage">Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sample-subnet-2&#39;}<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
+  File &#34;tempest/api/network/test_networks.py&#34;, line 233, in test_create_delete_subnet_with_dhcp_enabled
+    self._create_verify_delete_subnet(enable_dhcp=True)
+Conflict: An object with that identifier already exists
+Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sample-subnet-2&#39;}
+</pre></details></div>
+    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">24</div>
+      <div class="testname" role="cell">
+        <span class="test">test_create_delete_subnet_with_gw</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status ok">OK<span class="time">1.40s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">7.39s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">3.33s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">9.25s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">25</div>
+      <div class="testname" role="cell">
+        <span class="test">test_create_update_delete_network_subnet</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status ok">OK<span class="time">0.63s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">7.40s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">3.04s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">2.90s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">26</div>
+      <div class="testname" role="cell">
+        <span class="test">test_delete_network_with_subnet</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status ok">OK<span class="time slowest">10.08s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">7.10s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time slowest">11.95s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">6.58s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">27</div>
+      <div class="testname" role="cell">
+        <span class="test">test_list_networks</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status ok">OK<span class="time">5.36s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">2.15s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">5.80s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">3.54s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">28</div>
+      <div class="testname" role="cell">
+        <span class="test">test_list_subnets</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status ok">OK<span class="time">9.22s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">5.34s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time slowest">10.09s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">2.32s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">29</div>
+      <div class="testname" role="cell">
+        <span class="test">test_show_network</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status ok">OK<span class="time">0.32s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">4.90s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">5.87s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">1.54s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">30</div>
+      <div class="testname" role="cell">
+        <span class="test">test_show_subnet</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status ok">OK<span class="time">5.51s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time">8.76s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status blank"></div><div role="cell" class="status blank"></div><div role="cell" class="status ok">OK<span class="time">2.81s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="">
+      <div class="num" role="cell">31</div>
+      <div class="testname" role="cell">
+        <span class="test">test_show_subnet_fields</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status ok">OK<span class="time">8.74s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status ok">OK<span class="time slowest">11.94s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status blank"></div><div role="cell" class="status blank"></div><div role="cell" class="status ok">OK<span class="time slowest">11.15s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+    <div class="row" role="row" data-flags="fc">
+      <div class="num" role="cell">32</div>
+      <div class="testname" role="cell">
+        <span class="test">test_update_subnet_gw_dns_host_routes_dhcp</span>
+        <span class="params"> </span>
+      </div>
+      <div role="cell" class="status added">A</div><div role="cell" class="status fail">FAIL<span class="time">2.98s</span></div><div role="cell" class="tracemessage">Details: &#39;10.0.0.254&#39; != &#39;10.0.0.1&#39;<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
+  File &#34;tempest/api/network/test_networks.py&#34;, line 301, in test_update_subnet_gw_dns_host_routes_dhcp
+    self.assertEqual(new_gateway, updated_subnet[&#39;gateway_ip&#39;])
+MismatchError: &#39;10.0.0.254&#39; != &#39;10.0.0.1&#39;
+Details: &#39;10.0.0.254&#39; != &#39;10.0.0.1&#39;
+</pre></details></div><div role="cell" class="status ok">OK<span class="time slowest">11.41s</span></div><div role="cell" class="tracemessage"></div><div role="cell" class="status blank"></div><div role="cell" class="status blank"></div><div role="cell" class="status ok">OK<span class="time slowest">10.00s</span></div><div role="cell" class="tracemessage"></div>
+    </div>
+  </section>
+</div>
+</div>
+
+<script>
+// Rows carry data-flags ("f" failed in a run, "l" failed in the last run, "c" status changed).
+// Class sections and the times hide through CSS :has(); the script only marks rows.
+(function () {
+  var text = document.getElementById("filter-text");
+  var kinds = document.getElementsByName("filter-kind");
+  var count = document.getElementById("filter-count");
+  var classes = document.querySelectorAll(".class");
+
+  function apply() {
+    var words = text.value.toLowerCase().split(/\s+/).filter(Boolean);
+    var flag = (document.querySelector('[name="filter-kind"]:checked') || {}).value || "";
+    var shown = 0, total = 0;
+    classes.forEach(function (cls) {
+      var className = cls.querySelector(".class-head .name").textContent.toLowerCase();
+      cls.querySelectorAll(".row").forEach(function (row) {
+        total++;
+        var name = className + " " + row.querySelector(".testname").textContent.toLowerCase();
+        var show = (!flag || row.dataset.flags.indexOf(flag) > -1) &&
+          words.every(function (word) { return name.indexOf(word) > -1; });
+        row.hidden = !show;
+        if (show) { shown++; }
+      });
+    });
+    count.textContent = shown === total ? total + " tests" : shown + " of " + total + " tests";
+  }
+
+  text.addEventListener("input", apply);
+  for (var i = 0; i < kinds.length; i++) { kinds[i].addEventListener("change", apply); }
+  document.getElementById("filters").hidden = false;
+  apply();
+}());
+</script>
+</body>
+</html>

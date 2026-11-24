@@ -1,0 +1,202 @@
+{% extends "grid_base.html" %}
+{% block title %}Errors Report{% endblock %}
+{% block heading %}Errors report{% endblock %}
+{% block style %}
+@layer tokens {
+  :root {
+    /* fixed track sizes, so every row's own grid gets the same columns */
+    --num-w: 5ch;
+    --time-w: 10ch;
+  }
+}
+
+@layer layout {
+  .runs { margin: 0 0 8px; color: var(--muted); }
+  .kinds { display: flex; flex-wrap: wrap; gap: 6px 10px; margin: 0 0 8px; }
+  .kind-link {
+    display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px;
+    border: 1px solid var(--line); border-radius: 999px;
+    color: inherit; text-decoration: none;
+    &::before { content: ""; inline-size: 0.8em; block-size: 0.8em; border-radius: 50%; background: var(--kind); }
+    &:hover { background: color-mix(in oklab, var(--kind) 15%, var(--bg)); }
+  }
+  .kind { --cols: [num] var(--num-w) [main] minmax(0, 1fr) [time] var(--time-w); margin: 0 0 16px; }
+  .kind.fail { --kind: var(--fail); }
+  .kind.skip { --kind: var(--skip); }
+  .kind > h2 {
+    position: sticky; inset-block-start: 0; z-index: 2;
+    margin: 0; padding: 6px 8px;
+    font-size: 1.05em; color: #fff;
+    background: var(--head);
+    border-inline-start: 6px solid var(--kind);
+    scroll-margin-block-start: 8px;
+  }
+  /* a message group: offscreen groups skip layout and paint */
+  .group {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 2.5em;
+    border-inline: 1px solid var(--line);
+    border-block-end: 1px solid var(--line);
+  }
+  :where(.group > summary, .row) {
+    display: grid;
+    grid-template-columns: var(--cols);
+  }
+}
+
+@layer cells {
+  .group > summary {
+    cursor: pointer;
+    list-style: none;
+    background: color-mix(in oklab, var(--kind) 12%, var(--bg));
+    &::-webkit-details-marker { display: none; }
+    &:hover { background: color-mix(in oklab, var(--kind) 22%, var(--bg)); }
+    & > * { padding: 4px; }
+  }
+  /* chevron in the # column, turned down when the group is open */
+  .chevron {
+    display: grid; place-items: center; color: var(--muted);
+    &::before {
+      content: ""; inline-size: 0.45em; block-size: 0.45em;
+      border-inline-end: 2px solid currentColor; border-block-end: 2px solid currentColor;
+      rotate: -45deg; transition: rotate 0.15s;
+    }
+  }
+  .group[open] .chevron::before { rotate: 45deg; }
+  .message { font-weight: bold; overflow-wrap: anywhere; white-space: pre-wrap; }
+  .count {
+    display: grid; place-items: center;
+    & span {
+      min-inline-size: 2.4em; padding: 0 6px; border-radius: 999px; text-align: center;
+      background: var(--kind); color: #fff; font-size: 0.85em;
+    }
+  }
+  .row > * {
+    padding: 2px 4px;
+    border-block-start: 1px solid color-mix(in oklab, var(--line) 60%, transparent);
+    min-inline-size: 0;
+  }
+  .row:hover > * { background: color-mix(in oklab, var(--fg) 6%, var(--bg)); }
+  .num { text-align: end; color: var(--muted); }
+  .test {
+    display: grid;
+    overflow-wrap: anywhere;
+    & .params { font-size: 0.8em; color: var(--muted); padding-inline-start: 1ch; }
+  }
+  .time { text-align: end; font-size: 0.85em; color: var(--muted); }
+  .time.slowest { font-weight: bold; color: var(--fg); }
+  .none { margin: 0; padding: 6px 8px; color: var(--muted); border: 1px solid var(--line); }
+}
+
+@layer filters {
+  form.filters {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0 0 10px;
+    & input[type="search"] { inline-size: min(320px, 100%); }
+    & button {
+      font: inherit; padding: 2px 10px; cursor: pointer;
+      color: var(--fg); background: var(--bg);
+      border: 1px solid var(--line); border-radius: 999px;
+      &:hover { background: color-mix(in oklab, var(--fg) 10%, var(--bg)); }
+    }
+    & .count { color: var(--muted); }
+  }
+  .row[hidden] { display: none; }
+  /* no script needed to hide a group whose tests are all filtered out */
+  .group:not(:has(.row:not([hidden]))) { display: none; }
+}
+
+@layer print {
+  @media print {
+    .group { content-visibility: visible; }
+    .kind > h2 { position: static; }
+    form.filters { display: none; }
+  }
+}
+{% endblock %}
+
+{% block body %}
+{% macro kind(css, title, groups) %}
+<section class="kind {{ css }}" id="{{ css }}s">
+  <h2>{{ title }}: {{ groups | length }}</h2>
+  {% for message, tests in groups.items() %}
+  <details class="group">
+    <summary>
+      <span class="chevron"></span>
+      <span class="message">{{ message }}</span>
+      <span class="count"><span title="Tests">{{ tests | length }}</span></span>
+    </summary>
+    {% for test in tests %}
+    <div class="row">
+      <div class="num">{{ loop.index }}</div>
+      <div class="test">
+        <span class="name">{{ test.test_class }}.{{ test.test_name }}{{ test.test_options }}</span>
+        {% if test.trace_details %}<span class="params">{{ test.trace_details }}</span>{% endif %}
+        {% if test.trace_additional %}<span class="params">{{ test.trace_additional }}</span>{% endif %}
+      </div>
+      <div class="time{% if test.slowest %} slowest{% endif %}">{{ format_seconds(test.time) }}</div>
+    </div>
+    {% endfor %}
+  </details>
+  {% else %}
+  <p class="none">None</p>
+  {% endfor %}
+</section>
+{% endmacro %}
+
+<p class="runs">
+{% for run in executions %}{{ run.filename }} &middot; {{ run.date_label }}{% if not loop.last %}; {% endif %}{% endfor %}
+</p>
+<nav class="kinds" aria-label="Sections">
+  <a class="kind-link" href="#fails" style="--kind: var(--fail)">Unique fails: {{ uniqie_fails | length }}</a>
+  <a class="kind-link" href="#skips" style="--kind: var(--skip)">Unique skips: {{ unique_skips | length }}</a>
+</nav>
+
+<!-- shown by the script at the end; without scripts the groups open and close on click -->
+<form id="filters" class="filters" hidden onsubmit="return false">
+  <input type="search" id="filter-text" placeholder="Filter by message or test name" aria-label="Filter by message or test name">
+  <button type="button" id="expand-all">Expand all</button>
+  <button type="button" id="collapse-all">Collapse all</button>
+  <span id="filter-count" class="count" aria-live="polite"></span>
+</form>
+
+{{ kind("fail", "Unique fails", uniqie_fails) }}
+{{ kind("skip", "Unique skips", unique_skips) }}
+
+<script>
+// Rows hide when they don't match every word (message or test name); groups with no
+// rows left hide through CSS :has(). While filtering, matching groups open.
+(function () {
+  var text = document.getElementById("filter-text");
+  var count = document.getElementById("filter-count");
+  var groups = document.querySelectorAll(".group");
+
+  function apply() {
+    var words = text.value.toLowerCase().split(/\s+/).filter(Boolean);
+    var shown = 0, total = 0;
+    groups.forEach(function (group) {
+      var message = group.querySelector(".message").textContent.toLowerCase();
+      var any = false;
+      group.querySelectorAll(".row").forEach(function (row) {
+        total++;
+        var name = message + " " + row.querySelector(".test").textContent.toLowerCase();
+        var show = words.every(function (word) { return name.indexOf(word) > -1; });
+        row.hidden = !show;
+        if (show) { shown++; any = true; }
+      });
+      if (words.length) { group.open = any; }
+    });
+    count.textContent = shown === total ? total + " tests" : shown + " of " + total + " tests";
+  }
+
+  function openAll(open) {
+    groups.forEach(function (group) { group.open = open; });
+  }
+
+  text.addEventListener("input", apply);
+  document.getElementById("expand-all").addEventListener("click", function () { openAll(true); });
+  document.getElementById("collapse-all").addEventListener("click", function () { openAll(false); });
+  document.getElementById("filters").hidden = false;
+  apply();
+}());
+</script>
+{% endblock %}

@@ -56,6 +56,43 @@ def test_formats_to_reports(tmp_path, args, name, tests):
     assert name in html.read_text()
 
 
+@pytest.mark.parametrize("layout, marker", [
+    (None, '<table class="report">'),
+    ("table", '<table class="report">'),
+    ("grid", 'role="table"'),
+])
+def test_html_layout(tmp_path, layout, marker):
+    html = tmp_path / "report.html"
+    args = ["--html-layout", layout] if layout else []
+    result = tparser(*args, "-r", html, os.path.join(DATA_DIR, "trending"))
+    assert result.returncode == 0, result.stdout + result.stderr
+    text = html.read_text(encoding="utf-8")
+    assert marker in text
+    assert "test_create_server_with_admin_password" in text
+
+
+@pytest.mark.parametrize("layout, marker", [
+    (None, '<table class="report">'),
+    ("grid", '<details class="group">'),
+])
+def test_errors_report_layout(tmp_path, layout, marker):
+    out = tmp_path / "errors.html"
+    args = ["--html-layout", layout] if layout else []
+    result = tparser(*args, "-e", out, os.path.join(DATA_DIR, "tempest.xml"))
+    assert result.returncode == 0, result.stdout + result.stderr
+    text = out.read_text(encoding="utf-8")
+    assert marker in text
+    assert "AssertionError" in text and "&lt;ports&gt;" in text
+
+
+def test_html_layout_unknown(tmp_path):
+    result = tparser("--html-layout", "cards", "-r", tmp_path / "r.html",
+                     os.path.join(DATA_DIR, "tempest.xml"))
+    assert result.returncode != 0
+    assert b"invalid choice" in result.stderr
+    assert not (tmp_path / "r.html").exists()
+
+
 def test_subunit_file_and_pipe(tmp_path):
     path = write_subunit(str(tmp_path / "run.subunit"))
     out = tmp_path / "out.csv"

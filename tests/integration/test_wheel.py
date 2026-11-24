@@ -47,6 +47,9 @@ def test_wheel_contents(installed):
     for path in ("tempest_parser/etc/tempest-parser.conf",
                  "tempest_parser/res/all_tests_tag_18.list",
                  "tempest_parser/templates/tempest_trending_report.html",
+                 "tempest_parser/templates/tempest_trending_grid.html",
+                 "tempest_parser/templates/tempest_errors_grid.html",
+                 "tempest_parser/templates/grid_base.html",
                  "tempest_parser/templates/tempest_errors_report.html",
                  "tempest_parser/py.typed"):
         assert path in names

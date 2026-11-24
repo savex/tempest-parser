@@ -107,3 +107,5 @@ ENV/
 !tests/data/*
 !tests/data/**/*.log
 !examples/*.html
+# package templates: the wheel takes only files git tracks
+!tempest_parser/templates/*.html

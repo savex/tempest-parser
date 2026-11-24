@@ -12,11 +12,21 @@ tparser -r examples/trending_report_brief.html tests/data/trending
 ```
 
 ```bash
+tparser -d -r examples/trending_report_grid.html --html-layout grid tests/data/trending
+```
+
+```bash
 tparser -e examples/errors_report_run_4.html tests/data/trending/run_4.log
+```
+
+```bash
+tparser -e examples/errors_report_run_4_grid.html --html-layout grid tests/data/trending/run_4.log
 ```
 
 - `trending_report.html`: all 4 runs side by side, with messages and traces (`-d`).
 - `trending_report_brief.html`: the same without messages and traces.
+- `trending_report_grid.html`: the detailed report in the CSS grid layout (`--html-layout grid`).
 - `errors_report_run_4.html`: unique errors and skips of run 4.
+- `errors_report_run_4_grid.html`: the same in the CSS grid layout.
 
 The `log` format has no run date, so the dates shown are the files' modification times.

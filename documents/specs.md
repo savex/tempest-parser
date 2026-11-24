@@ -25,6 +25,7 @@ tparser [options] [inputfile]
 |---|---|
 | `-f, --input-format FMT` | Input format (section 3). Detected from the file extension when not set; stdin defaults to `subunit`. |
 | `-r, --html-trending-filename F` | Write the trending report to `F`. |
+| `--html-layout L` | Layout of the HTML reports (trending and errors): `table` (default) or `grid` (section 6). |
 | `-e, --html-errors-filename F` | Write the errors report to `F`. Needs a single file as input, not a folder. |
 | `-c, --csv-file F` | Write the CSV report to `F`. |
 | `-j, --json-file F` | Write the JSON summary (section 6) to `F`. |
@@ -138,9 +139,34 @@ The baseline run is the execution named `required` (`const.REQUIRED_RUN`). Repor
 - Each result cell shows the test's time under its status (`1.50s`, `2m 05s`, `1h 02m`; nothing when the
   input has no time), in bold for the run's slowest tests. Class rows show each run's total time of the
   class's tests. The filter bar's **Times** box hides and shows the times.
+- **Trending, grid layout** (`--html-layout grid`, `templates/tempest_trending_grid.html`): the same
+  rows, cells, filters and times as the table, built from `<div>` elements with ARIA roles (`table`,
+  `rowgroup`, `row`, `columnheader`, `cell`). One column template (`--cols`, from the number of runs
+  `--runs`, fixed track sizes) is shared by every row, and each row is a grid of it; each class is a
+  `<section>` holding its class row and tests, with `content-visibility: auto`, so offscreen classes are
+  not laid out. (Rows as a `subgrid` of one grid were tried: seconds to lay out thousands of tests, and
+  `content-visibility` turns `subgrid` off.) The summary's label rows are a row `subgrid`. The column
+  header row and the class rows stick to the top and the number and name columns to the left while scrolling. CSS `:has()` hides the classes whose tests are all filtered
+  out and, with the **Times** box unticked, the times; the script only marks rows `hidden`. Colours follow
+  the system light or dark scheme (`light-dark()`), or the theme switch next to the title: three icon
+  radios (system, light, dark) that set `color-scheme` through CSS `:has()`, so they work without
+  scripts; a script remembers the choice in the browser's `localStorage` (key `tparser-theme`) and
+  restores it before the report is drawn. Needs a browser with `subgrid`, `:has()`, `light-dark()` and
+  CSS nesting (browsers from 2024 on). Printing drops the scrolling, the sticky parts and the switch, in
+  light colours.
 - **Errors** (`templates/tempest_errors_report.html`): `FAIL` and `SKIP` results from one run, grouped by main
   message. The main message is the result message; if there is none, it is the `Details:` line of the
   trace; failing that, the trace lines that don't start with whitespace or `Trace`.
+- **Errors, grid layout** (`--html-layout grid`, `templates/tempest_errors_grid.html`): the same groups.
+  Under the run's file name and date, links jump to the fails and skips sections, whose titles stick
+  to the top. Each message is a `<details>` group (closed at first) whose summary row shows the
+  message and its number of tests; open, it lists each test (class, name and options, the `Details:`
+  line and the other trace lines) with its time, in bold for the run's slowest tests. The groups
+  open and close without scripts; a script adds a filter by words in the message and test name
+  (matching groups open, groups with no match hide through CSS `:has()`) and **Expand all** /
+  **Collapse all** buttons. A section without groups says `None`. Groups are laid out with
+  `content-visibility: auto`. Colours, the theme switch and printing are those of the grid trending
+  report; both extend `templates/grid_base.html`.
 - **CSV** (`csv.writer`, quoted as needed): header `"", "class/test name"`, the required run's date or
   `Required vs Added`, then each run's date (plus its file name with `-d`). Each class has a
   `Class,<name>` row, followed by one row per test: number, name with options, `R`/`A` (or the required

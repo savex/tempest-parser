@@ -1,0 +1,267 @@
+{% extends "grid_base.html" %}
+{% block title %}Trending Report{% endblock %}
+{% block heading %}Trending report{% endblock %}
+{% block style %}
+@layer tokens {
+  :root {
+    /* layout */
+    /* fixed track sizes (none from content), so every row's own grid gets the same columns */
+    --num-w: 5ch;
+    --name-w: clamp(36ch, 30vw, 60ch);
+    --req-w: 8ch;
+    --run-w: 9ch;
+    --notes-w: clamp(24ch, 22vw, 44ch);
+    --head-h: 3.2em;
+  }
+}
+
+/* ---- the grid: one column template, every row a grid of it ----
+   Rows are not a subgrid of one big grid: sizing one grid of every cell takes seconds on
+   thousands of tests, and content-visibility (layout containment) turns subgrid off.
+   With fixed track sizes, separate row grids line up and offscreen classes are skipped. */
+@layer layout {
+  .scroller {
+    overflow: auto;
+    max-block-size: calc(100vh - 110px);
+    border: 1px solid var(--line);
+  }
+  .report {
+    inline-size: max-content;
+    --cols:
+      [num] var(--num-w) [name] var(--name-w) [req] var(--req-w)
+      repeat(var(--runs), [run] var(--run-w));
+    &.detailed {
+      --cols:
+        [num] var(--num-w) [name] var(--name-w) [req] var(--req-w)
+        repeat(var(--runs), [run] var(--run-w) [notes] var(--notes-w));
+    }
+  }
+  :where(.summary, .header, .class-head, .row) {
+    display: grid;
+    grid-template-columns: var(--cols);
+  }
+  /* a class = its header row + its tests; offscreen classes skip layout and paint */
+  .class {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 30em;
+  }
+  /* summary: 7 label rows shared by the label column and every run's totals */
+  .summary {
+    grid-template-rows: repeat(7, auto);
+    & > * { grid-row: 1 / -1; }
+    & > .totals { display: grid; grid-template-rows: subgrid; }
+  }
+  .header {
+    position: sticky; inset-block-start: 0; z-index: 3;
+    min-block-size: var(--head-h);
+  }
+  .class-head {
+    position: sticky; inset-block-start: var(--head-h); z-index: 2;
+  }
+  /* the # and name columns stay while scrolling sideways */
+  :is(.header, .row) > :nth-child(-n + 2), .class-head > .name {
+    position: sticky; inset-inline-start: 0; z-index: 1;
+  }
+  :is(.header, .row) > :nth-child(2) { inset-inline-start: var(--num-w); }
+  /* the class name also takes the Required column */
+  .class-head > .name { grid-column: num / run; overflow-wrap: anywhere; }
+}
+
+@layer cells {
+  [role="cell"], [role="columnheader"] {
+    border-inline-end: 1px solid var(--line);
+    border-block-end: 1px solid var(--line);
+    padding: 2px 4px;
+    background: var(--cell-bg, var(--bg));
+    min-inline-size: 0;
+  }
+  .header > * {
+    --cell-bg: var(--head);
+    color: #fff;
+    display: grid; place-items: center; text-align: center;
+    font-size: 0.85em;
+  }
+  .summary > .title { display: grid; place-items: center; }
+  .summary > .lead { grid-column: num / req; }
+  .totals > div {
+    font-size: 0.8em; text-align: center; padding: 1px 0;
+    background: var(--cell-bg, var(--bg));
+  }
+  .class-head > * {
+    --cell-bg: color-mix(in oklab, var(--head) 12%, var(--bg));
+    font-weight: bold;
+  }
+  .class-head > .classtime { font-weight: normal; font-size: 0.8em; text-align: center; color: var(--muted); }
+  .num { text-align: end; color: var(--muted); }
+  .testname {
+    display: grid;
+    grid-template-areas: "test" "params";
+    overflow-wrap: anywhere;
+    & .params { font-size: 0.8em; color: var(--muted); padding-inline-start: 1ch; }
+  }
+  .status {
+    display: grid; place-content: center; text-align: center;
+    font-size: 0.8em; color: #000;
+  }
+  .time { display: block; font-size: 0.9em; opacity: 0.8; }
+  .time.slowest { font-weight: bold; opacity: 1; }
+  :is(.ok, .pass)   { --cell-bg: var(--pass); }
+  .fail             { --cell-bg: var(--fail); color: #fff; }
+  .skip             { --cell-bg: var(--skip); }
+  .error            { --cell-bg: var(--error); }
+  .na               { --cell-bg: var(--na); color: #fff; }
+  .required         { --cell-bg: var(--required); }
+  .added            { --cell-bg: var(--added); }
+  .total            { --cell-bg: var(--bg); }
+  .tracemessage {
+    font-size: 0.75em;
+    color: light-dark(#550000, #f0a0a0);
+    & summary { cursor: pointer; }
+    & pre { margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  }
+  /* hover: darken every cell of the row, whatever its status colour */
+  .row:hover > * {
+    background: color-mix(in oklab, var(--cell-bg, var(--bg)) 82%, var(--fg));
+  }
+}
+
+@layer filters {
+  form.filters {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 0 0 8px;
+    & input[type="search"] { inline-size: min(320px, 100%); }
+    & .count { color: var(--muted); }
+  }
+  .row[hidden] { display: none; }
+  /* no script needed to hide a class whose tests are all filtered out */
+  .class:not(:has(.row:not([hidden]))) { display: none; }
+  /* nor to hide the times */
+  body:has(#filter-times:not(:checked)) .time { display: none; }
+}
+
+@layer print {
+  @media print {
+    .scroller { overflow: visible; max-block-size: none; border: 0; }
+    .class { content-visibility: visible; }
+    :is(.header, .class-head, .row > *) { position: static; }
+    form.filters { display: none; }
+  }
+}
+{% endblock %}
+{% block body %}
+<ul class="legend" aria-label="Legend">
+  <li style="--swatch: var(--pass)">Passed</li>
+  <li style="--swatch: var(--skip)">Skipped</li>
+  <li style="--swatch: var(--error)">Setup errors</li>
+  <li style="--swatch: var(--fail)">Failed</li>
+  <li style="--swatch: var(--na)">NA</li>
+  <li style="--swatch: var(--added)">Added</li>
+</ul>
+
+<form id="filters" class="filters" hidden onsubmit="return false">
+  <input type="search" id="filter-text" placeholder="Filter by class or test name" aria-label="Filter by class or test name">
+  <label><input type="radio" name="filter-kind" value="" checked> All</label>
+  <label><input type="radio" name="filter-kind" value="f"> Failed in any run</label>
+  <label><input type="radio" name="filter-kind" value="l"> Failed in the last run</label>
+  <label><input type="radio" name="filter-kind" value="c"> Status changed</label>
+  <label><input type="checkbox" id="filter-times" checked> Times</label>
+  <span id="filter-count" class="count" aria-live="polite"></span>
+</form>
+
+<div class="scroller">
+<div class="report{% if detailed %} detailed{% endif %}" role="table" aria-label="Test results by run"
+     style="--runs: {{ runs|length }}">
+
+  <div class="summary" role="row">
+    <div class="title lead" role="cell">Test results</div>
+    <div class="totals" role="cell">
+      <div class="total">total</div>
+      <div class="{{ Column.PASS.css }}">pass</div>
+      <div class="{{ Column.FAIL.css }}">fail</div>
+      <div class="{{ Column.ERROR.css }}">error</div>
+      <div class="{{ Column.SKIP.css }}">skip</div>
+      <div class="{{ Column.NA.css }}">n/a</div>
+      <div class="{{ Column.ADDED.css }}">added</div>
+    </div>
+  {% for run in runs %}
+    {% set counts = totals[run.name] %}
+    <div class="totals" role="cell">
+      <div class="total">{{ counts.total }}</div>
+      <div class="{{ Column.PASS.css }}">{{ counts[Column.PASS] }}</div>
+      <div class="{{ Column.FAIL.css }}">{{ counts[Column.FAIL] }}</div>
+      <div class="{{ Column.ERROR.css }}">{{ counts[Column.ERROR] }}</div>
+      <div class="{{ Column.SKIP.css }}">{{ counts[Column.SKIP] }}</div>
+      <div class="{{ Column.NA.css }}">{{ counts[Column.NA] }}</div>
+      <div class="{{ Column.ADDED.css }}">{{ counts[Column.ADDED] }}</div>
+    </div>
+    {% if detailed %}<div class="title" role="cell">Notes</div>{% endif %}
+  {% endfor %}
+  </div>
+
+  <div class="header" role="row">
+    <div role="columnheader">#</div>
+    <div role="columnheader">Test name and parameters</div>
+    <div role="columnheader">Required vs Added</div>
+  {% for run in runs %}
+    <div role="columnheader">{{ run.date_label }}</div>
+    {% if detailed %}<div role="columnheader">{{ run.filename }}</div>{% endif %}
+  {% endfor %}
+  </div>
+
+{% for class_name, class_times, rows in classes %}
+  <section class="class" role="rowgroup">
+    <div class="class-head" role="row">
+      <div class="name" role="cell">Class {{ class_name }}</div>
+    {% for time in class_times %}
+      <div class="classtime" role="cell"><span class="time">{{ time }}</span></div>
+      {% if detailed %}<div role="cell"></div>{% endif %}
+    {% endfor %}
+    </div>
+  {% for number, test, cells, flags in rows %}
+    <div class="row" role="row" data-flags="{{ flags }}">
+      <div class="num" role="cell">{{ number }}</div>
+      <div class="testname" role="cell">
+        <span class="test">{{ test.test_name }}</span>
+        <span class="params">{{ test.uuid }} {{ test.test_options }}</span>
+      </div>
+      {{ cells }}
+    </div>
+  {% endfor %}
+  </section>
+{% endfor %}
+</div>
+</div>
+
+<script>
+// Rows carry data-flags ("f" failed in a run, "l" failed in the last run, "c" status changed).
+// Class sections and the times hide through CSS :has(); the script only marks rows.
+(function () {
+  var text = document.getElementById("filter-text");
+  var kinds = document.getElementsByName("filter-kind");
+  var count = document.getElementById("filter-count");
+  var classes = document.querySelectorAll(".class");
+
+  function apply() {
+    var words = text.value.toLowerCase().split(/\s+/).filter(Boolean);
+    var flag = (document.querySelector('[name="filter-kind"]:checked') || {}).value || "";
+    var shown = 0, total = 0;
+    classes.forEach(function (cls) {
+      var className = cls.querySelector(".class-head .name").textContent.toLowerCase();
+      cls.querySelectorAll(".row").forEach(function (row) {
+        total++;
+        var name = className + " " + row.querySelector(".testname").textContent.toLowerCase();
+        var show = (!flag || row.dataset.flags.indexOf(flag) > -1) &&
+          words.every(function (word) { return name.indexOf(word) > -1; });
+        row.hidden = !show;
+        if (show) { shown++; }
+      });
+    });
+    count.textContent = shown === total ? total + " tests" : shown + " of " + total + " tests";
+  }
+
+  text.addEventListener("input", apply);
+  for (var i = 0; i < kinds.length; i++) { kinds[i].addEventListener("change", apply); }
+  document.getElementById("filters").hidden = false;
+  apply();
+}());
+</script>
+{% endblock %}
