@@ -1,11 +1,14 @@
 """Machine-readable summary of the runs, for CI pipelines (`--json-file`, `--fail-on`)."""
 import json
 from collections import Counter
+from collections.abc import Iterable
+from typing import Any
 
 from tempest_parser.const import REQUIRED_RUN
+from tempest_parser.manager.test_manager import TestsManager
 
 
-def status_counts(test_manager):
+def status_counts(test_manager: TestsManager) -> dict[str, Counter[str]]:
     """{run name: Counter(status: tests)} for every run except the required list."""
     counts: dict[str, Counter[str]] = {
         name: Counter() for name in test_manager.executions if name != REQUIRED_RUN}
@@ -17,7 +20,8 @@ def status_counts(test_manager):
     return counts
 
 
-def failing_results(test_manager, statuses):
+def failing_results(test_manager: TestsManager,
+                    statuses: Iterable[str]) -> list[tuple[str, str, str, str]]:
     """[(run name, class, test name, status)] of the results whose status is in `statuses`."""
     statuses = set(statuses)
     found = []
@@ -38,10 +42,10 @@ class JSONReporter:
                    "statuses": {"OK": 22, "FAIL": 2, "SKIP": 2}}]}
     """
 
-    def __init__(self, test_manager):
+    def __init__(self, test_manager: TestsManager) -> None:
         self.test_manager = test_manager
 
-    def summary(self):
+    def summary(self) -> dict[str, list[dict[str, Any]]]:
         tm = self.test_manager
         counts = status_counts(tm)
         summaries = tm.summarize(list(counts))
@@ -64,7 +68,7 @@ class JSONReporter:
             })
         return {"runs": runs}
 
-    def generate_to_file(self, path):
+    def generate_to_file(self, path: str) -> None:
         with open(path, "w", encoding="utf-8") as target:
             json.dump(self.summary(), target, indent=2, ensure_ascii=False)
             target.write("\n")

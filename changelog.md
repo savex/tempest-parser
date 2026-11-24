@@ -27,6 +27,10 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
 - An own CSV export imports every run, not only the first column: runs are dated from the header,
   named after their files (`-d` exports) and the baseline column comes back as the `required` run.
   Options are split back from the test name, and messages keep their quotes and commas.
+- Type annotations on the whole package, checked with `mypy --strict`; the wheel ships `py.typed`, so
+  code that imports `tempest_parser` gets the types.
+- Trending report: test times under each status (the run's slowest in bold) and each class's total
+  time per run in the class rows; a **Times** box hides them.
 - Trending report: a filter bar to search class and test names and to show only tests that failed in
   any run, failed in the last run, or changed status (inline script, no external files).
 - `-V, --version`: prints the installed version.
@@ -42,6 +46,8 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
   of a single file or stdin instead of the file name and modification time.
 
 ### Changed
+- Importers' `parse()` methods all return `None` (the XML importer returned `True`, the JSON and CSV
+  ones the number of tests); the HTML report base classes are merged into one `_HTMLReport`.
 - `setup.py`: requires Python 3.10+, classifiers for 3.10–3.13, `Apache-2.0` license expression, project
   URLs and a description that lists every input format; the empty `data_files` are gone.
 - `README.md`: CI badges, a status note and a Project status table; links are absolute for PyPI.
@@ -97,6 +103,8 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
   by 1000).
 
 ### Fixed
+- `k8s_slow_extract` (raw XML from k8s): a "not to have occurred" failure no longer raises `TypeError`
+  (the line was added as bytes); found by the type check.
 - Input files, piped text and the config file are read as UTF-8, and reports are written as UTF-8. With
   a non-UTF-8 locale (Windows before Python 3.15, an ASCII locale) a non-ASCII test name or message
   stopped the import with `UnicodeDecodeError`, or the report with `UnicodeEncodeError`. Console output

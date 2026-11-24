@@ -152,6 +152,12 @@
         form.filters label { margin-right: 10px; white-space: nowrap; }
         form.filters .count { color: #555; }
         tr[hidden] { display: none; }
+
+        /* test times under the status, class totals in the class rows */
+        span.time { display: block; font-size: xx-small; opacity: 0.8; }
+        span.time.slowest { font-weight: bold; }
+        td.classtime { font-size: xx-small; text-align: center; color: #555; }
+        body.no-times span.time { display: none; }
     </style>
 </head>
 <body>
@@ -186,6 +192,7 @@
     <label><input type="radio" name="filter-kind" value="f"> Failed in any run</label>
     <label><input type="radio" name="filter-kind" value="l"> Failed in the last run</label>
     <label><input type="radio" name="filter-kind" value="c"> Status changed</label>
+    <label><input type="checkbox" id="filter-times" checked> Times</label>
     <span id="filter-count" class="count" aria-live="polite"></span>
 </form>
 <table class="report">
@@ -274,7 +281,15 @@
 </tr>
     <tr class="group">
         <td colspan="2" class="name">Class tempest.api.compute.admin.test_quotas.QuotasAdminTestJSON</td>
-        <td colspan="9" class="blank"></td>
+        <td class="blank"></td>
+        <td class="classtime"><span class="time"></span></td>
+        <td class="blank"></td>
+        <td class="classtime"><span class="time"></span></td>
+        <td class="blank"></td>
+        <td class="classtime"><span class="time">20.74s</span></td>
+        <td class="blank"></td>
+        <td class="classtime"><span class="time">22.60s</span></td>
+        <td class="blank"></td>
     </tr>
     <tr class="test" data-flags="">
         <td>1</td>
@@ -282,7 +297,7 @@
             <div class="test_name">test_delete_quota</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK<span class="time">5.83s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">5.84s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="">
         <td>2</td>
@@ -290,7 +305,7 @@
             <div class="test_name">test_get_default_quotas</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK<span class="time">3.82s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">8.16s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="fc">
         <td>3</td>
@@ -298,12 +313,12 @@
             <div class="test_name">test_get_updated_quotas</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status fail">FAIL</td><td class="tracemessage">Details: 5120 != 51200<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
+        <td class="status added">A</td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status fail">FAIL<span class="time">0.66s</span></td><td class="tracemessage">Details: 5120 != 51200<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
   File &#34;tempest/api/compute/admin/test_quotas.py&#34;, line 88, in test_get_updated_quotas
     self.assertEqual(5120, quota_set[&#39;ram&#39;])
 MismatchError: 5120 != 51200
 Details: 5120 != 51200
-</pre></details></td><td class="status ok">OK</td><td class="tracemessage"></td>
+</pre></details></td><td class="status ok">OK<span class="time">6.22s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="">
         <td>4</td>
@@ -311,11 +326,19 @@ Details: 5120 != 51200
             <div class="test_name">test_update_all_quota_resources_for_tenant</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK<span class="time slowest">10.43s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">2.38s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="group">
         <td colspan="2" class="name">Class tempest.api.compute.servers.test_servers.ServersTestJSON</td>
-        <td colspan="9" class="blank"></td>
+        <td class="blank"></td>
+        <td class="classtime"><span class="time">36.26s</span></td>
+        <td class="blank"></td>
+        <td class="classtime"><span class="time">44.12s</span></td>
+        <td class="blank"></td>
+        <td class="classtime"><span class="time">30.44s</span></td>
+        <td class="blank"></td>
+        <td class="classtime"><span class="time">17.69s</span></td>
+        <td class="blank"></td>
     </tr>
     <tr class="test" data-flags="">
         <td>5</td>
@@ -323,7 +346,7 @@ Details: 5120 != 51200
             <div class="test_name">test_create_server_with_admin_password</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status ok">OK<span class="time">1.87s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time slowest">11.49s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">3.08s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">3.06s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="">
         <td>6</td>
@@ -331,7 +354,7 @@ Details: 5120 != 51200
             <div class="test_name">test_create_server_with_ipv6_addr_only</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status skip">SKIP</td><td class="tracemessage"></td><td class="status skip">SKIP</td><td class="tracemessage"></td><td class="status skip">SKIP</td><td class="tracemessage"></td><td class="status skip">SKIP</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status skip">SKIP<span class="time">0.00s</span></td><td class="tracemessage"></td><td class="status skip">SKIP<span class="time">0.00s</span></td><td class="tracemessage"></td><td class="status skip">SKIP<span class="time">0.00s</span></td><td class="tracemessage"></td><td class="status skip">SKIP<span class="time">0.00s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="">
         <td>7</td>
@@ -339,7 +362,7 @@ Details: 5120 != 51200
             <div class="test_name">test_create_specify_keypair</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status ok">OK<span class="time slowest">10.21s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time slowest">11.39s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">6.67s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">1.51s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="">
         <td>8</td>
@@ -347,7 +370,7 @@ Details: 5120 != 51200
             <div class="test_name">test_create_with_existing_server_name</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status ok">OK<span class="time">9.24s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">0.96s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">4.63s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">4.93s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="">
         <td>9</td>
@@ -355,7 +378,7 @@ Details: 5120 != 51200
             <div class="test_name">test_update_access_server_address</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status ok">OK<span class="time">3.28s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">1.29s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">7.37s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">2.11s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="">
         <td>10</td>
@@ -363,7 +386,7 @@ Details: 5120 != 51200
             <div class="test_name">test_update_server_name</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status ok">OK<span class="time">6.10s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time slowest">10.08s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">7.62s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">1.08s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="fc">
         <td>11</td>
@@ -371,21 +394,29 @@ Details: 5120 != 51200
             <div class="test_name">test_update_server_name_in_stop_state</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status fail">FAIL</td><td class="tracemessage">Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
+        <td class="status added">A</td><td class="status fail">FAIL<span class="time">5.56s</span></td><td class="tracemessage">Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
   File &#34;tempest/api/compute/servers/test_servers.py&#34;, line 118, in test_update_server_name_in_stop_state
     self.client.wait_for_server_status(server_id, &#39;SHUTOFF&#39;)
 TimeoutException: Request timed out
 Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s
-</pre></details></td><td class="status fail">FAIL</td><td class="tracemessage">Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
+</pre></details></td><td class="status fail">FAIL<span class="time">8.91s</span></td><td class="tracemessage">Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
   File &#34;tempest/api/compute/servers/test_servers.py&#34;, line 118, in test_update_server_name_in_stop_state
     self.client.wait_for_server_status(server_id, &#39;SHUTOFF&#39;)
 TimeoutException: Request timed out
 Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s
-</pre></details></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+</pre></details></td><td class="status ok">OK<span class="time">1.07s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">5.00s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="group">
         <td colspan="2" class="name">Class tempest.api.identity.admin.test_users.UsersTestJSON</td>
-        <td colspan="9" class="blank"></td>
+        <td class="blank"></td>
+        <td class="classtime"><span class="time">46.15s</span></td>
+        <td class="blank"></td>
+        <td class="classtime"><span class="time">22.69s</span></td>
+        <td class="blank"></td>
+        <td class="classtime"><span class="time">1m 09s</span></td>
+        <td class="blank"></td>
+        <td class="classtime"><span class="time">1m 12s</span></td>
+        <td class="blank"></td>
     </tr>
     <tr class="test" data-flags="">
         <td>12</td>
@@ -393,7 +424,7 @@ Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s
             <div class="test_name">test_authentication_request_without_token</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status ok">OK<span class="time slowest">11.36s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">6.67s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">7.78s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">9.74s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="">
         <td>13</td>
@@ -401,7 +432,7 @@ Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s
             <div class="test_name">test_create_user</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status ok">OK<span class="time slowest">10.85s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">5.50s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">2.06s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">9.67s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="">
         <td>14</td>
@@ -409,7 +440,7 @@ Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s
             <div class="test_name">test_create_user_with_enabled</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status ok">OK<span class="time">0.66s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">3.44s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">7.73s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">2.56s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="flc">
         <td>15</td>
@@ -417,7 +448,7 @@ Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s
             <div class="test_name">test_delete_user</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status fail">FAIL</td><td class="tracemessage">Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
+        <td class="status added">A</td><td class="status ok">OK<span class="time">0.60s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">0.72s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time slowest">10.46s</span></td><td class="tracemessage"></td><td class="status fail">FAIL<span class="time">3.93s</span></td><td class="tracemessage">Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
   File &#34;tempest/api/identity/admin/test_users.py&#34;, line 145, in test_delete_user
     self.client.delete_user(user[&#39;id&#39;])
 NotFound: Object not found
@@ -430,7 +461,7 @@ Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}
             <div class="test_name">test_get_users</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status ok">OK<span class="time">6.63s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">0.62s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">6.42s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">7.64s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="">
         <td>17</td>
@@ -438,7 +469,7 @@ Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}
             <div class="test_name">test_list_users_for_tenant</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status ok">OK<span class="time">4.76s</span></td><td class="tracemessage"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK<span class="time">8.16s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time slowest">10.30s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="c">
         <td>18</td>
@@ -446,7 +477,7 @@ Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}
             <div class="test_name">test_list_users_with_roles_for_tenant</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status skip">SKIP</td><td class="tracemessage"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status skip">SKIP<span class="time">0.00s</span></td><td class="tracemessage"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK<span class="time">1.05s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time slowest">10.60s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="">
         <td>19</td>
@@ -454,7 +485,7 @@ Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}
             <div class="test_name">test_update_user</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status ok">OK<span class="time slowest">11.29s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">5.74s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">8.97s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">8.86s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="">
         <td>20</td>
@@ -462,7 +493,7 @@ Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}
             <div class="test_name">test_update_user_password</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK<span class="time">9.17s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">1.31s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="">
         <td>21</td>
@@ -470,11 +501,19 @@ Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}
             <div class="test_name">test_user_authentication</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK<span class="time">7.22s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">7.39s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="group">
         <td colspan="2" class="name">Class tempest.api.network.test_networks.NetworksTestJSON</td>
-        <td colspan="9" class="blank"></td>
+        <td class="blank"></td>
+        <td class="classtime"><span class="time">1m 02s</span></td>
+        <td class="blank"></td>
+        <td class="classtime"><span class="time">1m 18s</span></td>
+        <td class="blank"></td>
+        <td class="classtime"><span class="time">50.63s</span></td>
+        <td class="blank"></td>
+        <td class="classtime"><span class="time">1m 11s</span></td>
+        <td class="blank"></td>
     </tr>
     <tr class="test" data-flags="">
         <td>22</td>
@@ -482,7 +521,7 @@ Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}
             <div class="test_name">test_create_delete_subnet_all_attributes</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status ok">OK<span class="time">7.92s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">8.14s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">0.45s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time slowest">11.04s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="flc">
         <td>23</td>
@@ -490,12 +529,12 @@ Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}
             <div class="test_name">test_create_delete_subnet_with_dhcp_enabled</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status fail">FAIL</td><td class="tracemessage">Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sample-subnet-2&#39;}<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
+        <td class="status added">A</td><td class="status ok">OK<span class="time">9.53s</span></td><td class="tracemessage"></td><td class="status fail">FAIL<span class="time">3.91s</span></td><td class="tracemessage">Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sample-subnet-2&#39;}<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
   File &#34;tempest/api/network/test_networks.py&#34;, line 233, in test_create_delete_subnet_with_dhcp_enabled
     self._create_verify_delete_subnet(enable_dhcp=True)
 Conflict: An object with that identifier already exists
 Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sample-subnet-2&#39;}
-</pre></details></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status fail">FAIL</td><td class="tracemessage">Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sample-subnet-2&#39;}<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
+</pre></details></td><td class="status ok">OK<span class="time slowest">10.10s</span></td><td class="tracemessage"></td><td class="status fail">FAIL<span class="time">9.67s</span></td><td class="tracemessage">Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sample-subnet-2&#39;}<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
   File &#34;tempest/api/network/test_networks.py&#34;, line 233, in test_create_delete_subnet_with_dhcp_enabled
     self._create_verify_delete_subnet(enable_dhcp=True)
 Conflict: An object with that identifier already exists
@@ -508,7 +547,7 @@ Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sampl
             <div class="test_name">test_create_delete_subnet_with_gw</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status ok">OK<span class="time">1.40s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">7.39s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">3.33s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">9.25s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="">
         <td>25</td>
@@ -516,7 +555,7 @@ Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sampl
             <div class="test_name">test_create_update_delete_network_subnet</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status ok">OK<span class="time">0.63s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">7.40s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">3.04s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">2.90s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="">
         <td>26</td>
@@ -524,7 +563,7 @@ Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sampl
             <div class="test_name">test_delete_network_with_subnet</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status ok">OK<span class="time slowest">10.08s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">7.10s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time slowest">11.95s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">6.58s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="">
         <td>27</td>
@@ -532,7 +571,7 @@ Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sampl
             <div class="test_name">test_list_networks</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status ok">OK<span class="time">5.36s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">2.15s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">5.80s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">3.54s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="">
         <td>28</td>
@@ -540,7 +579,7 @@ Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sampl
             <div class="test_name">test_list_subnets</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status ok">OK<span class="time">9.22s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">5.34s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time slowest">10.09s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">2.32s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="">
         <td>29</td>
@@ -548,7 +587,7 @@ Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sampl
             <div class="test_name">test_show_network</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status ok">OK<span class="time">0.32s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">4.90s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">5.87s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">1.54s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="">
         <td>30</td>
@@ -556,7 +595,7 @@ Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sampl
             <div class="test_name">test_show_subnet</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status ok">OK<span class="time">5.51s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time">8.76s</span></td><td class="tracemessage"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK<span class="time">2.81s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="">
         <td>31</td>
@@ -564,7 +603,7 @@ Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sampl
             <div class="test_name">test_show_subnet_fields</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+        <td class="status added">A</td><td class="status ok">OK<span class="time">8.74s</span></td><td class="tracemessage"></td><td class="status ok">OK<span class="time slowest">11.94s</span></td><td class="tracemessage"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK<span class="time slowest">11.15s</span></td><td class="tracemessage"></td>
     </tr>
     <tr class="test" data-flags="fc">
         <td>32</td>
@@ -572,12 +611,12 @@ Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sampl
             <div class="test_name">test_update_subnet_gw_dns_host_routes_dhcp</div>
             <div class="parameters"> </div>
         </td>
-        <td class="status added">A</td><td class="status fail">FAIL</td><td class="tracemessage">Details: &#39;10.0.0.254&#39; != &#39;10.0.0.1&#39;<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
+        <td class="status added">A</td><td class="status fail">FAIL<span class="time">2.98s</span></td><td class="tracemessage">Details: &#39;10.0.0.254&#39; != &#39;10.0.0.1&#39;<br /><details><summary>Trace</summary><pre>Traceback (most recent call last):
   File &#34;tempest/api/network/test_networks.py&#34;, line 301, in test_update_subnet_gw_dns_host_routes_dhcp
     self.assertEqual(new_gateway, updated_subnet[&#39;gateway_ip&#39;])
 MismatchError: &#39;10.0.0.254&#39; != &#39;10.0.0.1&#39;
 Details: &#39;10.0.0.254&#39; != &#39;10.0.0.1&#39;
-</pre></details></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td>
+</pre></details></td><td class="status ok">OK<span class="time slowest">11.41s</span></td><td class="tracemessage"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK<span class="time slowest">10.00s</span></td><td class="tracemessage"></td>
     </tr>
     </tbody>
 </table>
@@ -643,6 +682,10 @@ Details: &#39;10.0.0.254&#39; != &#39;10.0.0.1&#39;
         count.textContent = shown === total ? total + " tests" : shown + " of " + total + " tests";
     }
 
+    var times = document.getElementById("filter-times");
+    times.addEventListener("change", function () {
+        document.body.classList.toggle("no-times", !times.checked);
+    });
     text.addEventListener("input", apply);
     for (var i = 0; i < kinds.length; i++) { kinds[i].addEventListener("change", apply); }
     document.getElementById("filters").hidden = false;

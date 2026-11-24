@@ -8,7 +8,7 @@ import pytest
 from tempest_parser.const import REQUIRED_RUN
 from tempest_parser.manager import importers
 from tempest_parser.manager.importers import CSVImporter, JSONImporter, SubunitImporter, XMLImporter
-from tempest_parser.manager.models import file_date, parse_seconds
+from tempest_parser.manager.models import file_date, format_seconds, parse_seconds
 from tempest_parser.manager.test_manager import TestsManager
 from tempest_parser.parser.tempest_log_parser import TempestLogParser
 from tempest_parser.reports.csv_reporter import CSVReporter
@@ -114,6 +114,15 @@ def test_k8s_slow_extract():
     assert importers.k8s_slow_extract("plain text\nline") == ("", "plain text\nline")
 
 
+def test_k8s_slow_extract_not_to_have_occurred():
+    # the line before "not to have occurred" is the message (it was added as bytes and broke
+    # the join with a TypeError)
+    reason = "Expected error:\n    <*errors.StatusError | 0xc1>: pods not ready\n" \
+             "    not to have occurred\n"
+    message = "<*errors.StatusError | 0xc1>: pods not ready"
+    assert importers.k8s_slow_extract(reason) == (message, "")
+
+
 def test_remove_control_chars():
     assert importers.remove_control_chars("a\x00b\x1fc\x7fd\te") == "abcde"
 
@@ -134,6 +143,14 @@ def test_file_date(data_file):
 ])
 def test_parse_seconds(value, expected):
     assert parse_seconds(value) == expected
+
+
+@pytest.mark.parametrize("seconds, expected", [
+    (None, ""), (0.0, "0.00s"), (1.5, "1.50s"), (59.994, "59.99s"), (60.0, "1m 00s"),
+    (125.4, "2m 05s"), (3599.6, "1h 00m"), (3725.0, "1h 02m"),
+])
+def test_format_seconds(seconds, expected):
+    assert format_seconds(seconds) == expected
 
 
 # JSON (Rally)

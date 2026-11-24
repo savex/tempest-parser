@@ -29,7 +29,7 @@ class Column(Enum):
     ADDED = "Added"
 
     @property
-    def css(self):
+    def css(self) -> str:
         return self.value.lower()
 
 
@@ -43,16 +43,16 @@ class InputFormat(StrEnum):
     LOG = "log"
 
     @property
-    def label(self):
+    def label(self) -> str:
         """File extension without the dot, as shown in messages."""
         return "xml" if self in (InputFormat.XML_TEMPEST, InputFormat.XML_RAW) else self.value
 
     @property
-    def extension(self):
+    def extension(self) -> str:
         return "." + self.label
 
     @classmethod
-    def from_filename(cls, filename):
+    def from_filename(cls, filename: str) -> "InputFormat | None":
         """Format for a file name by its extension (`.xml` is tempest XML), or None."""
         extension = os.path.splitext(filename)[1]
         for fmt in (cls.SUBUNIT, cls.CSV, cls.RALLY_JSON, cls.XML_TEMPEST, cls.LOG):

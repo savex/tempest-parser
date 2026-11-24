@@ -73,7 +73,8 @@ tparser -f t_xml -r trending.html folder1
 ```
 
 The report has a filter bar: type words from a class or test name, or show only tests that failed in any
-run, failed in the last run, or changed status. Add messages and tracebacks to the report with `-d`
+run, failed in the last run, or changed status. Each result shows the test's time (the slowest in bold),
+and each class row the class's total time per run. Add messages and tracebacks to the report with `-d`
 (tracebacks are folded; click **Trace** to open one):
 
 ```bash

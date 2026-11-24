@@ -47,7 +47,8 @@ def test_wheel_contents(installed):
     for path in ("tempest_parser/etc/tempest-parser.conf",
                  "tempest_parser/res/all_tests_tag_18.list",
                  "tempest_parser/templates/tempest_trending_report.html",
-                 "tempest_parser/templates/tempest_errors_report.html"):
+                 "tempest_parser/templates/tempest_errors_report.html",
+                 "tempest_parser/py.typed"):
         assert path in names
     assert not [n for n in names if not n.startswith("tempest_parser")], \
         "only tempest_parser and its dist-info belong in the wheel"

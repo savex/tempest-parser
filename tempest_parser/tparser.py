@@ -2,8 +2,10 @@ import argparse
 import logging
 import os
 import sys
+from collections.abc import Iterable, Sequence
 from datetime import UTC, datetime
 from importlib import metadata
+from typing import IO, Any, NoReturn, Protocol
 
 from tempest_parser.const import InputFormat
 from tempest_parser.manager.importers import CSVImporter, JSONImporter, SubunitImporter, XMLImporter
@@ -21,12 +23,23 @@ log = logging.getLogger("tempest_parser")
 # exit code when --fail-on finds results with the given statuses
 EXIT_FAILED_TESTS = 3
 
+
 class CLIError(Exception):
     """Stops the run with an error message and exit code 1."""
 
 
+class Importer(Protocol):
+    """What every input format's importer provides."""
+
+    def parse(self) -> None: ...
+
+
+# (source: a path or an open stream, its format if known, the --force-single run name)
+Input = tuple[str | IO[Any], InputFormat | None, str | None]
+
+
 class MyParser(argparse.ArgumentParser):
-    def error(self, message):
+    def error(self, message: str) -> NoReturn:
         sys.stderr.write(f'Error: {message}\n\n')
         self.print_help()
         sys.exit(2)
@@ -35,7 +48,7 @@ class MyParser(argparse.ArgumentParser):
 class _Formatter(logging.Formatter):
     """Plain messages; errors and warnings get a prefix."""
 
-    def format(self, record):
+    def format(self, record: logging.LogRecord) -> str:
         message = super().format(record)
         if record.levelno >= logging.ERROR:
             return "Error: " + message
@@ -44,7 +57,7 @@ class _Formatter(logging.Formatter):
         return message
 
 
-def setup_logging(quiet=False):
+def setup_logging(quiet: bool = False) -> None:
     # test names and messages can hold any character; a console that can't show one
     # (Windows code pages, an ASCII locale) gets an escape instead of an error
     if hasattr(sys.stdout, "reconfigure"):
@@ -56,12 +69,12 @@ def setup_logging(quiet=False):
     log.propagate = False
 
 
-def detect_format_from_filename(filename):
+def detect_format_from_filename(filename: str) -> InputFormat | None:
     """Input format for a file name, or None when the extension is not known."""
     return InputFormat.from_filename(filename)
 
 
-def parse_run_date(value):
+def parse_run_date(value: str) -> datetime:
     """--run-date: an ISO 8601 date or date and time; without a time zone it is UTC."""
     try:
         date = datetime.fromisoformat(value)
@@ -73,9 +86,11 @@ def parse_run_date(value):
     return date.astimezone(UTC)
 
 
-def make_importer(fmt, tm, source, force_single=None, filters=None, run_name=None,
-                  run_date=None):
-    kw = {"status_filters": filters or [], "run_name": run_name, "run_date": run_date}
+def make_importer(fmt: InputFormat | None, tm: TestsManager, source: IO[Any],
+                  force_single: str | None = None, filters: Iterable[str] | None = None,
+                  run_name: str | None = None, run_date: datetime | None = None) -> Importer:
+    kw: dict[str, Any] = {
+        "status_filters": filters or [], "run_name": run_name, "run_date": run_date}
     if fmt == InputFormat.RALLY_JSON:
         return JSONImporter(tm, source, **kw)
     if fmt == InputFormat.CSV:
@@ -92,10 +107,11 @@ def make_importer(fmt, tm, source, force_single=None, filters=None, run_name=Non
     raise CLIError(f"Unknown input format: {fmt}")
 
 
-def do_parse_file(source, tm, fmt=None, force_single=None, filters=None, run_name=None,
-                  run_date=None):
+def do_parse_file(source: str | IO[Any], tm: TestsManager, fmt: InputFormat | None = None,
+                  force_single: str | None = None, filters: Iterable[str] | None = None,
+                  run_name: str | None = None, run_date: datetime | None = None) -> None:
     """Import one file (a path) or stream (an open file, e.g. stdin)."""
-    if hasattr(source, "read"):
+    if not isinstance(source, str):
         if fmt != InputFormat.SUBUNIT and hasattr(source, "reconfigure"):
             # text piped in is read as UTF-8 whatever the locale (subunit reads bytes)
             source.reconfigure(encoding="utf-8")
@@ -113,7 +129,7 @@ def do_parse_file(source, tm, fmt=None, force_single=None, filters=None, run_nam
     log.info("Imported %s", source)
 
 
-def package_version():
+def package_version() -> str:
     """The installed package's version (from the git tag at build time)."""
     try:
         return metadata.version("TempestParser")
@@ -121,7 +137,7 @@ def package_version():
         return "unknown (not installed)"
 
 
-def build_parser():
+def build_parser() -> MyParser:
     parser = MyParser(prog="Tempest CLI Parser")
     parser.add_argument(
         "-V", "--version", action="version", version=f"tparser {package_version()}")
@@ -172,12 +188,12 @@ def build_parser():
     return parser
 
 
-def load_config(args):
+def load_config(args: argparse.Namespace) -> ParserConfigFile:
     path = args.config_file or os.path.join(pkg_dir, 'etc', 'tempest-parser.conf')
     return ParserConfigFile(path)
 
 
-def collect_inputs(args, input_fmt):
+def collect_inputs(args: argparse.Namespace, input_fmt: InputFormat | None) -> list[Input]:
     """[(source, format, force_single)] to import, in order."""
     source = args.inputfile
     if hasattr(source, "name"):
@@ -216,7 +232,8 @@ def collect_inputs(args, input_fmt):
     return inputs
 
 
-def write_reports(args, tests_manager, detailed):
+def write_reports(args: argparse.Namespace, tests_manager: TestsManager,
+                  detailed: bool) -> None:
     if args.html_trending_filename:
         log.info("Generating HTML Trending report...")
         reporter.ReportToFile(reporter.HTMLTrendingReport(),
@@ -233,7 +250,7 @@ def write_reports(args, tests_manager, detailed):
         JSONReporter(tests_manager).generate_to_file(args.json_file)
 
 
-def check_fail_on(statuses, tests_manager):
+def check_fail_on(statuses: Iterable[str], tests_manager: TestsManager) -> int:
     """Exit code for --fail-on: EXIT_FAILED_TESTS when a result has one of the statuses."""
     found = failing_results(tests_manager, statuses)
     if not found:
@@ -244,7 +261,7 @@ def check_fail_on(statuses, tests_manager):
     return EXIT_FAILED_TESTS
 
 
-def run(args):
+def run(args: argparse.Namespace) -> int:
     config = load_config(args)
     detailed = args.detailed or config.get_detailed_column_default_value()
     input_fmt = InputFormat(args.input_format) if args.input_format else None
@@ -267,7 +284,7 @@ def run(args):
     return check_fail_on(args.fail_on, tests_manager) if args.fail_on else 0
 
 
-def tempest_cli_parser_main(argv=None):
+def tempest_cli_parser_main(argv: Sequence[str] | None = None) -> int:
     """Console entry point; returns the exit code."""
     args = build_parser().parse_args(argv)
     setup_logging(args.quiet)

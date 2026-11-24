@@ -10,7 +10,7 @@ class ParserConfigFile:
     _truth = ['true', '1', 't', 'y', 'yes', 'yeah', 'yup',
               'certainly', 'uh-huh']
 
-    def __init__(self, filepath):
+    def __init__(self, filepath: str) -> None:
         self.config_file_path = filepath
 
         self.section_name = 'ParserConfig'
@@ -18,7 +18,7 @@ class ParserConfigFile:
         self.config = configparser.ConfigParser()
         self.config.read(self.config_file_path, encoding="utf-8")
 
-    def get_all_tests_list_filepath(self):
+    def get_all_tests_list_filepath(self) -> str:
         # get path
         _path = self.config.get(self.section_name, 'default_test_list')
 
@@ -28,7 +28,7 @@ class ParserConfigFile:
         else:
             return _path
 
-    def get_detailed_column_default_value(self):
+    def get_detailed_column_default_value(self) -> bool:
         # value
         _value = self.config.get(self.section_name, 'default_detailed')
         # parse if

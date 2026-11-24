@@ -278,3 +278,21 @@ def test_trending_report_row_flags():
                        # missing from the last run: not failed there
                        "test_gone": "f", "test_stable": ""}
     assert 'id="filter-text"' in html
+
+
+def test_trending_report_times():
+    tm = TestsManager()
+    tm.add_execution("run1", DATE)
+    tm.add_execution("run2", datetime(2026, 1, 2, tzinfo=UTC))
+    tm.add_result_for_test("run1", SERVERS, "test_a", "", "", "OK", 1.5)
+    tm.add_result_for_test("run1", SERVERS, "test_b", "", "", "FAIL", 70.0)
+    tm.add_result_for_test("run2", SERVERS, "test_a", "", "", "OK", None)
+    tm.mark_slowest_test_in_execution_by_name("run1", SERVERS, "test_b", test_options="")
+    html = reporter.HTMLTrendingReport()(tm)
+    assert '<td class="status ok">OK<span class="time">1.50s</span></td>' in html
+    assert '<td class="status fail">FAIL<span class="time slowest">1m 10s</span></td>' in html
+    # no time: the status alone
+    assert '<td class="status ok">OK</td>' in html
+    # class totals per run
+    assert re.findall(r'<td class="classtime"><span class="time">([^<]*)</span>', html) == \
+        ["1m 12s", "0.00s"]

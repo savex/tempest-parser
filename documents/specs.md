@@ -135,6 +135,9 @@ The baseline run is the execution named `required` (`const.REQUIRED_RUN`). Repor
   failed (`FAIL`/`ERROR`) in any run, failed in the last run, or changed status between the runs they ran
   in. Rows carry these as `data-flags` letters `f`, `l`, `c`, computed in the reporter; class rows hide
   when none of their tests show. The totals stay those of all tests.
+- Each result cell shows the test's time under its status (`1.50s`, `2m 05s`, `1h 02m`; nothing when the
+  input has no time), in bold for the run's slowest tests. Class rows show each run's total time of the
+  class's tests. The filter bar's **Times** box hides and shows the times.
 - **Errors** (`templates/tempest_errors_report.html`): `FAIL` and `SKIP` results from one run, grouped by main
   message. The main message is the result message; if there is none, it is the `Details:` line of the
   trace; failing that, the trace lines that don't start with whitespace or `Trace`.

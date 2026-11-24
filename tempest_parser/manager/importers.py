@@ -2,8 +2,10 @@ import csv
 import json
 import logging
 import re
+from collections.abc import Iterable
 from datetime import UTC, datetime
-from xml.etree.ElementTree import parse
+from typing import IO, Any
+from xml.etree.ElementTree import Element, parse
 
 from subunit import make_stream_binary
 from subunit.filters import run_tests_from_stream
@@ -12,6 +14,7 @@ from testtools import StreamToExtendedDecorator
 
 from tempest_parser.const import REQUIRED_RUN, Status
 from tempest_parser.manager.models import file_date, parse_seconds
+from tempest_parser.manager.test_manager import TestsManager
 
 log = logging.getLogger(__name__)
 
@@ -24,12 +27,14 @@ _CONTROL_CHARS = ''.join(map(chr, [*range(0, 32), *range(127, 160)]))
 _CONTROL_CHARS_RE = re.compile(f'[{re.escape(_CONTROL_CHARS)}]')
 
 
-def remove_control_chars(s):
+def remove_control_chars(s: str) -> str:
     return _CONTROL_CHARS_RE.sub('', s)
 
 
-def k8s_slow_extract(_reason):
-    _tmp = []
+def k8s_slow_extract(_reason: str) -> tuple[str, str]:
+    """(message, trace) of a k8s failure: the Go error strings and "not to have occurred"
+    lines as the message, or the whole text as the trace when there are none."""
+    _tmp: list[str] = []
     _m = ""
     _t = ""
     _lines = _reason.splitlines()
@@ -38,14 +43,12 @@ def k8s_slow_extract(_reason):
         _next_line = _lines[idx+1].strip()
         if _line.startswith("<*errors.errorString") and \
                 _next_line.startswith("s: \""):
-            err = _next_line.split('"')[1]
-            err = err.encode('ascii', 'ignore')
-            if err.count(b"\\x00") > 1:
-                err = err.replace(b"\\x00", b"")
-            err = remove_control_chars(err.decode('utf-8'))
-            _tmp.append(err)
+            raw = _next_line.split('"')[1].encode('ascii', 'ignore')
+            if raw.count(b"\\x00") > 1:
+                raw = raw.replace(b"\\x00", b"")
+            _tmp.append(remove_control_chars(raw.decode('utf-8')))
         elif _next_line.startswith("not to have occurred"):
-            _tmp.append(_line.encode('ascii', 'ignore'))
+            _tmp.append(_line.encode('ascii', 'ignore').decode('ascii'))
     if len(_tmp) > 0:
         _m = "\n".join(_tmp)
     else:
@@ -56,30 +59,30 @@ def k8s_slow_extract(_reason):
 class ImporterBase:
     def __init__(
         self,
-        test_manager,
-        source,
-        use_raw_names=False,
-        status_filters=None,
-        force_single_execution=None,
-        run_name=None,
-        run_date=None,
-    ):
+        test_manager: TestsManager,
+        source: IO[Any],
+        use_raw_names: bool = False,
+        status_filters: Iterable[str] | None = None,
+        force_single_execution: str | None = None,
+        run_name: str | None = None,
+        run_date: datetime | None = None,
+    ) -> None:
         self.source = source
         self.tm = test_manager
         self.use_raw_names = use_raw_names
         self.forced_execution_name = force_single_execution
-        self.status_filters = status_filters or []
+        self.status_filters = list(status_filters or [])
         # --run-name / --run-date: replace the name and date taken from the file
         self.run_name = run_name
         self.run_date = run_date
 
-    def execution_name(self, default):
+    def execution_name(self, default: str) -> str:
         return self.run_name or default
 
-    def execution_date(self):
+    def execution_date(self) -> datetime:
         return self.run_date or file_date(self.source)
 
-    def add_execution(self, name, date):
+    def add_execution(self, name: str, date: datetime) -> None:
         self.tm.add_execution(name, date)
 
 
@@ -118,7 +121,7 @@ class XMLImporter(ImporterBase):
     time_scale = 1.0
 
     @staticmethod
-    def _detect_time_scale(root):
+    def _detect_time_scale(root: Element) -> float:
         """1.0 (seconds) when any testcase time has a decimal point, else 1000.0: a file
         of whole numbers only is read as milliseconds."""
         times = [tc.get('time', '') for tc in root.iter('testcase')]
@@ -126,12 +129,12 @@ class XMLImporter(ImporterBase):
             return 1.0
         return 1000.0
 
-    def _parse_duration(self, duration):
+    def _parse_duration(self, duration: str) -> float | None:
         seconds = parse_seconds(duration)
         return None if seconds is None else seconds / self.time_scale
 
     @staticmethod
-    def _parse_status(status):
+    def _parse_status(status: list[Element]) -> tuple[str, str, str]:
         # XML has one child node for status and text as a reason
         if not len(status):
             return Status.OK, "Test passed", ""
@@ -157,7 +160,7 @@ class XMLImporter(ImporterBase):
                 _reason = f"{_s.tag}:\n{_s.text}\n{_reason}"
             return _status, _reason, _sysout
 
-    def _is_k8s_error(self, reason):
+    def _is_k8s_error(self, reason: str) -> bool:
         _e1 = reason.count('errors.errorString')
         _e2 = reason.count('errors.StatusError')
         _k8s = reason.count('k8s.io')
@@ -168,11 +171,11 @@ class XMLImporter(ImporterBase):
         )
         return bool(_e1 or _e2 or _k8s or _m)
 
-    def _detect_pytest_errors(self, reason):
+    def _detect_pytest_errors(self, reason: str) -> list[str]:
         _lines = re.findall(r"^[E]\s+.*$", reason, re.MULTILINE)
         return _lines if len(_lines) > 0 else []
 
-    def _parse_pytest_error(self, lines):
+    def _parse_pytest_error(self, lines: list[str]) -> tuple[str, str]:
         # Extract message
         _msg = ""
         _trace = ""
@@ -187,7 +190,7 @@ class XMLImporter(ImporterBase):
                 _trace += line + '\n'
         return _msg, _trace
 
-    def parse(self):
+    def parse(self) -> None:
         tree = parse(self.source)
         root = tree.getroot()
 
@@ -221,7 +224,7 @@ class XMLImporter(ImporterBase):
                 if self.use_raw_names:
                     _options = ''
                     _uuid = ''
-                    _tags = ''
+                    _tags: list[str] = []
                 else:
                     _, _test_name, _uuid, _options, _tags = \
                         self.tm.split_test_name(
@@ -305,8 +308,6 @@ class XMLImporter(ImporterBase):
 
             self.add_execution(_execution_name, _execution_date)
 
-        return True
-
 
 # Rally and xunit CSV statuses
 _rally_status_map = {
@@ -320,10 +321,10 @@ _rally_status_map = {
 
 class JSONImporter(ImporterBase):
     @staticmethod
-    def _parse_status(status):
+    def _parse_status(status: str) -> str:
         return _rally_status_map[status]
 
-    def parse(self):
+    def parse(self) -> None:
         data = json.load(self.source)
 
         # Use filename as name for the execution
@@ -358,13 +359,12 @@ class JSONImporter(ImporterBase):
             )
 
         self.add_execution(_execution_name, _execution_date)
-        return _execution_name
 
 
 class CSVImporter(ImporterBase):
-    subtype = None
+    subtype: int | None = None
 
-    def __init__(self, test_manager, source, **kwargs):
+    def __init__(self, test_manager: TestsManager, source: IO[Any], **kwargs: Any) -> None:
         super().__init__(test_manager, source, **kwargs)
 
         # read all rows, then detect file sub-type
@@ -381,17 +381,17 @@ class CSVImporter(ImporterBase):
                 break
 
     @staticmethod
-    def _parse_status(status):
+    def _parse_status(status: str) -> str:
         return _rally_status_map[status]
 
-    def parse(self):
+    def parse(self) -> None:
         if self.subtype == CSV_OWN:
             self.parse_own_csv()
         elif self.subtype == CSV_XUNIT:
             self.parse_xunit_csv()
 
     @staticmethod
-    def _header_date(cell):
+    def _header_date(cell: str) -> datetime | None:
         """The run date of a CSV header cell ("dd\\nmm\\nYYYY\\nHH:MM\\nGMT"), or None."""
         try:
             date = datetime.strptime(" ".join(cell.split()), "%d %m %Y %H:%M GMT")
@@ -399,7 +399,8 @@ class CSVImporter(ImporterBase):
             return None
         return date.replace(tzinfo=UTC)
 
-    def _own_csv_runs(self, header, row):
+    def _own_csv_runs(self, header: list[str],
+                      row: list[str]) -> list[tuple[str, datetime, int, int | None]]:
         """[(name, date, column, details column or None)] for the run columns of an own CSV
         export, worked out from the header and the first test row."""
         # old exports without the required/added column: <number>,<test>,<status>,<message>
@@ -427,7 +428,7 @@ class CSVImporter(ImporterBase):
             runs.append((name, date, first + index, first + index + 1 if detailed else None))
         return runs
 
-    def parse_own_csv(self):
+    def parse_own_csv(self) -> None:
         """Every run of a CSV written by the CSV report, with the required list when the
         export had one (its date is in the header's third cell)."""
         header = self.rows[0]
@@ -463,9 +464,8 @@ class CSVImporter(ImporterBase):
             self.add_execution(REQUIRED_RUN, required_date)
         for name, date, _column, _details in runs or []:
             self.add_execution(name, date)
-        return [name for name, *_ in runs or []]
 
-    def parse_xunit_csv(self):
+    def parse_xunit_csv(self) -> None:
         _execution_name = self.execution_name(self.source.name)
         _execution_date = self.execution_date()
 
@@ -494,12 +494,12 @@ class CSVImporter(ImporterBase):
             )
 
         self.add_execution(_execution_name, _execution_date)
-        return _execution_name
 
 
-class TParserResult(TestByTestResult):
+# subunit has no type information, so its result class is Any to mypy
+class TParserResult(TestByTestResult):  # type: ignore[misc]
     @staticmethod
-    def _parse_status(status):
+    def _parse_status(status: str) -> str:
         return {
             'success': Status.OK,
             'failure': Status.FAIL,
@@ -509,14 +509,17 @@ class TParserResult(TestByTestResult):
             'uxsuccess': Status.X_OK
         }[status]
 
-    def __init__(self, name, tm, status_filters=None):
+    def __init__(self, name: str, tm: TestsManager,
+                 status_filters: Iterable[str] | None = None) -> None:
         super().__init__(self._on_test)
         self._execution_name = name
         self.tm = tm
-        self.status_filters = status_filters or []
+        self.status_filters = list(status_filters or [])
         self.counter = 0
 
-    def _on_test(self, test, status, start_time, stop_time, tags, details):
+    def _on_test(self, test: Any, status: str, start_time: datetime | None,
+                 stop_time: datetime | None, tags: Iterable[str] | None,
+                 details: dict[str, Any]) -> None:
         _test_name = "none"
         _uuid = ""
         _test_options = ""
@@ -562,11 +565,11 @@ class TParserResult(TestByTestResult):
 
 class SubunitImporter(ImporterBase):
 
-    def __init__(self, test_manager, source, **kwargs):
+    def __init__(self, test_manager: TestsManager, source: IO[Any], **kwargs: Any) -> None:
         super().__init__(test_manager, source, **kwargs)
         self.source = make_stream_binary(source)
 
-    def parse(self):
+    def parse(self) -> None:
         _execution_date = self.execution_date()
         _execution_name = self.execution_name(getattr(self.source, "name", "<stdin>"))
 

@@ -6,6 +6,7 @@ UTC datetimes; the reports format them.
 import os
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import IO, Any
 
 # how run dates are shown in reports and run names
 DATE_FORMAT = "%d/%m/%Y %H:%M GMT"
@@ -40,11 +41,11 @@ class Execution:
     date: datetime
 
     @property
-    def date_label(self):
+    def date_label(self) -> str:
         return self.date.strftime(DATE_FORMAT)
 
     @property
-    def filename(self):
+    def filename(self) -> str:
         return os.path.basename(self.name)
 
 
@@ -59,7 +60,7 @@ class Summary:
     time: float = 0.0
 
 
-def parse_seconds(value):
+def parse_seconds(value: str | float | None) -> float | None:
     """Seconds as a float from 1.5, "1.5", "1.5s" or "1.50 s"; None when empty or not a number."""
     if value is None or isinstance(value, float):
         return value
@@ -72,7 +73,21 @@ def parse_seconds(value):
         return None
 
 
-def file_date(source):
+def format_seconds(seconds: float | None) -> str:
+    """A time for reports: "1.50s" under a minute, "2m 05s" under an hour, else "1h 02m";
+    "" for None."""
+    if seconds is None:
+        return ""
+    if seconds < 60:
+        return f"{seconds:.2f}s"
+    minutes, secs = divmod(round(seconds), 60)
+    if minutes < 60:
+        return f"{minutes}m {secs:02d}s"
+    hours, minutes = divmod(minutes, 60)
+    return f"{hours}h {minutes:02d}m"
+
+
+def file_date(source: str | IO[Any]) -> datetime:
     """Modification time of a path or an open file, as a UTC datetime; now for streams
     without a file behind them (e.g. stdin)."""
     try:

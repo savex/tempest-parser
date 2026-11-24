@@ -34,6 +34,8 @@ matches tests across them and writes HTML trending / errors reports and CSV. Usa
   `uv run python scripts/check-test-tags.py`. Workflow changes must pass `uv run actionlint`. CI also
   checks that the smoke and functional tests together cover at least `fail_under` in `pyproject.toml`.
 - Open text files with `encoding="utf-8"`: before Python 3.15, Windows uses the locale's code page.
+- `tempest_parser` is fully annotated and checked with `mypy --strict` (it ships `py.typed`): annotate
+  new functions; avoid `Any` and `type: ignore` unless a dependency has no types (say why).
 - Every test has exactly one tag, given by its folder: `smoke` (the `tparser` command end to end, in a
   subprocess), `functional` (one module or class), `integration` (the built and installed wheel). No tests
   outside these folders.

@@ -47,8 +47,15 @@ named after the file. The log has no date, so the run is dated by the file's mod
 """
 import logging
 import re
+from collections.abc import Iterable
+from datetime import datetime
+from typing import IO
 
 from tempest_parser.manager.models import file_date, parse_seconds
+from tempest_parser.manager.test_manager import TestsManager
+
+# (class, test name, uuid, options)
+TestId = tuple[str, str, str, str]
 
 log = logging.getLogger(__name__)
 
@@ -85,11 +92,11 @@ _STATUS = {"ok": "OK", "success": "OK", "failed": "FAIL", "fail": "FAIL", "skipp
 FLOW, SLOWEST, SLOWEST_TABLE, FAIL_HEAD, FAIL_BODY = range(5)
 
 
-def _is_rule(line, char, length=20):
+def _is_rule(line: str, char: str, length: int = 20) -> bool:
     return len(line) >= length and line == char * len(line)
 
 
-def split_test_id(test_id):
+def split_test_id(test_id: str) -> TestId | None:
     """(class, test name, uuid, options) of "class.test_name[id-x,tags](options)" or
     "setUpClass (class)"; None when it isn't a test id."""
     setup = _SETUP_RE.match(test_id)
@@ -107,7 +114,7 @@ def split_test_id(test_id):
     return match.group("cls"), match.group("name"), uuid, match.group("options") or ""
 
 
-def _attachment_trace(lines):
+def _attachment_trace(lines: list[str]) -> list[str]:
     """The trace lines of a failure: the "Captured traceback:" attachment (stestr) without its
     indent when there is one, else the lines as they are."""
     sections: dict[str, list[str]] = {}
@@ -131,32 +138,34 @@ def _attachment_trace(lines):
 
 
 class TempestLogParser:
-    def __init__(self, test_manager, source, status_filters=None, run_name=None, run_date=None):
+    def __init__(self, test_manager: TestsManager, source: IO[str],
+                 status_filters: Iterable[str] | None = None, run_name: str | None = None,
+                 run_date: datetime | None = None) -> None:
         self.test_mgr = test_manager
         self.source = source
-        self.status_filters = status_filters or []
+        self.status_filters = list(status_filters or [])
         self.run_name = run_name or getattr(source, "name", "<stdin>").lower()
         self.run_date = run_date or file_date(source)
 
         self._state = FLOW
         self._class_name = ""
         # wrapped "setUpClass (prefix" line waiting for "ClassName) RESULT time"
-        self._setup_prefix = None
+        self._setup_prefix: tuple[str, str] | None = None
         # tests left out by the status filters: their slowest and failure entries are ignored
-        self._filtered = set()
+        self._filtered: set[tuple[str, str, str]] = set()
         # the failure being collected: its head (test id) and trace lines
         self._head: str | None = None
         self._trace: list[str] = []
         self._slowest_rows = False
 
-    def parse(self):
+    def parse(self) -> None:
         for line in self.source:
             self._feed(_PREFIX_RE.sub("", line.rstrip("\r\n")))
         self._end_failure()
         self.test_mgr.add_execution(self.run_name, self.run_date)
         self.test_mgr.log_summaries([self.run_name])
 
-    def _feed(self, line):
+    def _feed(self, line: str) -> None:
         stripped = line.strip()
         if _is_rule(stripped, "=", 6):
             self._end_failure()
@@ -208,7 +217,7 @@ class TempestLogParser:
 
     # results: testr layout
 
-    def _flow_line(self, line):
+    def _flow_line(self, line: str) -> None:
         setup = _SETUP_RE.match(line)
         if setup:
             self._class_name = ""
@@ -237,14 +246,15 @@ class TempestLogParser:
             return
         log.debug("Unknown text in line: %s", line)
 
-    def _setup_result(self, kind, class_name, rest):
+    def _setup_result(self, kind: str, class_name: str, rest: str) -> None:
         # "FAIL 0.00": the class setup or teardown failed
         parts = rest.split()
         if parts:
             self._add_result(kind, class_name, "", "", parts[0],
                              parts[1] if len(parts) > 1 else None)
 
-    def _add_result(self, class_name, test_name, uuid, options, result, time, message=""):
+    def _add_result(self, class_name: str, test_name: str, uuid: str, options: str, result: str,
+                    time: str | None, message: str = "") -> None:
         if result in self.status_filters:
             self._filtered.add((class_name, test_name, options))
             return
@@ -254,7 +264,7 @@ class TempestLogParser:
 
     # results: stestr layout
 
-    def _result_line(self, match):
+    def _result_line(self, match: re.Match[str]) -> None:
         test = split_test_id(match.group("id"))
         self._state = FLOW
         if test is None:
@@ -272,7 +282,7 @@ class TempestLogParser:
 
     # slowest tests
 
-    def _slowest_line(self, line):
+    def _slowest_line(self, line: str) -> None:
         if _CLASS_RE.match(line):
             self._class_name = line
             return
@@ -284,7 +294,7 @@ class TempestLogParser:
             return
         self._mark_slowest(self._class_name, test.group("name"), "", test.group("options") or "")
 
-    def _slowest_table_line(self, line):
+    def _slowest_table_line(self, line: str) -> None:
         row = _SLOWEST_TABLE_ROW_RE.match(line)
         test = split_test_id(row.group("id")) if row else None
         if test is not None:
@@ -293,7 +303,7 @@ class TempestLogParser:
         elif self._slowest_rows and not line:
             self._state = FLOW
 
-    def _mark_slowest(self, class_name, test_name, uuid, options):
+    def _mark_slowest(self, class_name: str, test_name: str, uuid: str, options: str) -> None:
         if (class_name, test_name, options) in self._filtered:
             return
         self.test_mgr.mark_slowest_test_in_execution_by_name(
@@ -301,7 +311,7 @@ class TempestLogParser:
 
     # failures
 
-    def _body_line(self, line, stripped):
+    def _body_line(self, line: str, stripped: str) -> None:
         if _is_rule(stripped, "-") and self._trace and not line.startswith(" "):
             # stestr's failure list: a test id over a line of dashes starts the next failure
             previous = self._trace[-1]
@@ -314,7 +324,7 @@ class TempestLogParser:
                 return
         self._trace.append(line)
 
-    def _end_failure(self):
+    def _end_failure(self) -> None:
         """Store the failure collected so far (head and trace) on its test."""
         head, lines = self._head, self._trace
         self._head, self._trace = None, []

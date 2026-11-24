@@ -152,6 +152,12 @@
         form.filters label { margin-right: 10px; white-space: nowrap; }
         form.filters .count { color: #555; }
         tr[hidden] { display: none; }
+
+        /* test times under the status, class totals in the class rows */
+        span.time { display: block; font-size: xx-small; opacity: 0.8; }
+        span.time.slowest { font-weight: bold; }
+        td.classtime { font-size: xx-small; text-align: center; color: #555; }
+        body.no-times span.time { display: none; }
     </style>
 </head>
 <body>
@@ -189,6 +195,7 @@
     <label><input type="radio" name="filter-kind" value="f"> Failed in any run</label>
     <label><input type="radio" name="filter-kind" value="l"> Failed in the last run</label>
     <label><input type="radio" name="filter-kind" value="c"> Status changed</label>
+    <label><input type="checkbox" id="filter-times" checked> Times</label>
     <span id="filter-count" class="count" aria-live="polite"></span>
 </form>
 <table class="report">
@@ -239,11 +246,16 @@
         {% endif %}
     {%- endfor -%}
     </tr>
-    {% set group_span = runs | length * (2 if detailed else 1) + 1 %}
-    {% for class_name, rows in classes %}
+    {% for class_name, class_times, rows in classes %}
     <tr class="group">
         <td colspan="2" class="name">Class {{ class_name }}</td>
-        <td colspan="{{ group_span }}" class="blank"></td>
+        <td class="blank"></td>
+        {% for time in class_times %}
+        <td class="classtime"><span class="time">{{ time }}</span></td>
+        {% if detailed %}
+        <td class="blank"></td>
+        {% endif %}
+        {% endfor %}
     </tr>
         {% for number, test, cells, flags in rows %}
     <tr class="test" data-flags="{{ flags }}">
@@ -300,6 +312,10 @@
         count.textContent = shown === total ? total + " tests" : shown + " of " + total + " tests";
     }
 
+    var times = document.getElementById("filter-times");
+    times.addEventListener("change", function () {
+        document.body.classList.toggle("no-times", !times.checked);
+    });
     text.addEventListener("input", apply);
     for (var i = 0; i < kinds.length; i++) { kinds[i].addEventListener("change", apply); }
     document.getElementById("filters").hidden = false;

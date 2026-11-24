@@ -69,7 +69,8 @@ include = ["tempest_parser", "tempest_parser.*"]
 namespaces = true
 
 [tool.setuptools.package-data]
-"*" = ["*.conf", "*.list", "*.html"]
+# py.typed: the package's annotations are for other code to use (PEP 561)
+"*" = ["*.conf", "*.list", "*.html", "py.typed"]
 
 [tool.setuptools_scm]
 
@@ -101,10 +102,8 @@ skip_covered = true
 [tool.mypy]
 files = ["tempest_parser"]
 python_version = "3.11"
-# most code has no annotations yet: check the bodies of unannotated functions too
-check_untyped_defs = true
-warn_unused_ignores = true
-warn_redundant_casts = true
+# every function is annotated; strict also checks generics, Any returns and unused ignores
+strict = true
 
 [[tool.mypy.overrides]]
 # no type information published
