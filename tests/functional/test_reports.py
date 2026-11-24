@@ -116,10 +116,13 @@ def test_config_defaults():
 
 def test_config_custom(tmp_path):
     conf = tmp_path / "c.conf"
-    conf.write_text("[ParserConfig]\ndefault_test_list=/abs/list\ndefault_detailed=yes\n")
+    # absolute on this platform (on Windows "/abs/list" has no drive, so it isn't)
+    test_list = str(tmp_path / "abs.list")
+    conf.write_text(f"[ParserConfig]\ndefault_test_list={test_list}\ndefault_detailed=yes\n",
+                    encoding="utf-8")
     config = ParserConfigFile(str(conf))
     assert config.get_detailed_column_default_value() is True
-    assert config.get_all_tests_list_filepath() == "/abs/list"
+    assert config.get_all_tests_list_filepath() == test_list
 
 
 def test_trending_report_with_baseline_orders_runs(data_file, data_dir):
