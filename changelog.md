@@ -11,6 +11,8 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-11-24
+
 ### Added
 - `--xml-time-unit s|ms`: the unit of XML test times, for files whose times are whole seconds (read as
   milliseconds by the guess) or milliseconds with a decimal point.
@@ -187,6 +189,7 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
 ### Fixed
 - Escaping in the trending report.
 
-[Unreleased]: https://github.com/savex/tempest-parser/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/savex/tempest-parser/compare/v3.0.0...HEAD
+[3.0.0]: https://github.com/savex/tempest-parser/releases/tag/v3.0.0
 [0.3.0]: https://github.com/savex/tempest-parser/releases/tag/v0.3.0
 [0.2.81]: https://github.com/savex/tempest-parser/releases/tag/v0.2.81
