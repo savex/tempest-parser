@@ -229,7 +229,7 @@ def test_trending_report_folds_traces():
 
 def test_trending_report_numbers_rows_across_classes(data_file):
     html = reporter.HTMLTrendingReport()(_manager(data_file("tempest.xml")))
-    numbers = [int(n) for n in re.findall(r"<tr>\s*<td>(\d+)</td>", html)]
+    numbers = [int(n) for n in re.findall(r'<tr class="test"[^>]*>\s*<td>(\d+)</td>', html)]
     assert numbers == [1, 2, 3, 4]
 
 
@@ -259,3 +259,22 @@ def test_failing_results():
     found = failing_results(tm, ["FAIL", "ERROR"])
     assert found == [(run, "pkg." + INJECTED, "test_fail" + INJECTED, "FAIL")]
     assert failing_results(tm, ["ERROR"]) == []
+
+
+def test_trending_report_row_flags():
+    tm = TestsManager()
+    tm.add_execution("run1", DATE)
+    tm.add_execution("run2", datetime(2026, 1, 2, tzinfo=UTC))
+    for test, first, last in (("test_fixed", "FAIL", "OK"), ("test_broken", "OK", "ERROR"),
+                              ("test_stable", "OK", "OK"), ("test_always", "FAIL", "FAIL")):
+        tm.add_result_for_test("run1", SERVERS, test, "", "", first, 1.0)
+        tm.add_result_for_test("run2", SERVERS, test, "", "", last, 1.0)
+    tm.add_result_for_test("run1", SERVERS, "test_gone", "", "", "FAIL", 1.0)
+    html = reporter.HTMLTrendingReport()(tm)
+    by_name = {name: flag for flag, name in re.findall(
+        r'<tr class="test" data-flags="(\w*)">.*?<div class="test_name">(\w+)</div>', html,
+        re.DOTALL)}
+    assert by_name == {"test_always": "fl", "test_broken": "flc", "test_fixed": "fc",
+                       # missing from the last run: not failed there
+                       "test_gone": "f", "test_stable": ""}
+    assert 'id="filter-text"' in html

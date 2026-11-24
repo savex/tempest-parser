@@ -72,7 +72,9 @@ or
 tparser -f t_xml -r trending.html folder1
 ```
 
-Add messages and tracebacks to the report with `-d` (tracebacks are folded; click **Trace** to open one):
+The report has a filter bar: type words from a class or test name, or show only tests that failed in any
+run, failed in the last run, or changed status. Add messages and tracebacks to the report with `-d`
+(tracebacks are folded; click **Trace** to open one):
 
 ```bash
 tparser -f t_xml -r trending.html -d folder1
@@ -146,10 +148,12 @@ stestr last --subunit | tparser -r trending.html -j summary.json --fail-on FAIL 
 ## Imported formats
 
 ### .log files
-Bare tempest output, captured with a redirect or by copying the numbered files from the `.testrepository`
-folder. The parser reads class lines, indented test lines, the `Slowest` block, failure blocks and the
-`Ran N tests` summary; remove leading environment variables and worker prefixes (`{0}`) first. The log
-has no date: give one with `--run-date`, or the file's modification time is used.
+Tempest console output, captured with a redirect (`tempest run ... | tee tempest.log`), from a CI job
+log, or from the numbered files in the `.testrepository` folder. Both the current stestr layout
+(`{0} tempest.api....test_x [1.2s] ... ok`, with `Captured traceback:` sections, the `Totals` summary
+and `stestr --slowest`) and the older testr layout (class lines with indented test lines) are read.
+CI timestamp prefixes such as `2026-01-01 10:00:00.123456 | ` are removed. The log has no date: give one
+with `--run-date`, or the file's modification time is used.
 
 ### .xml files
 jUnit XML files exported from subunit (`t_xml`, the default for `.xml`), or raw jUnit XML from k8s
@@ -163,7 +167,14 @@ rally verify results --json --output-file result1.json
 ```
 
 ### .csv files
-CSV files exported by tparser itself, or xunit CSV files.
+CSV files exported by tparser itself (`-c`), or xunit CSV files. An export with several runs imports
+back as the same runs, dated from its header and named after their files when it was written with `-d`;
+a baseline column (`-i`) comes back as the `required` run. So a CSV can stand in for the original files:
+
+```bash
+tparser -c all_runs.csv folder1
+tparser -r trending.html all_runs.csv
+```
 
 ### .subunit files
 Subunit v2 streams saved to a file.

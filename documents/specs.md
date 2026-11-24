@@ -54,7 +54,7 @@ one of its statuses.
 | `t_xml` | `.xml` | subunit/Tempest jUnit XML (v4 schema supported); names split into class, test, UUID and options | `XMLImporter` |
 | `r_xml` | — | Raw jUnit XML (k8s conformance, pytest); names used as is | `XMLImporter(use_raw_names=True)` |
 | `json` | `.json` | Rally JSON export | `JSONImporter` |
-| `csv` | `.csv` | Own CSV export (first column `Class`) or xunit CSV (rows starting with `tempest.`) | `CSVImporter` |
+| `csv` | `.csv` | Own CSV export (a `Class` row before the tests) or xunit CSV (rows starting with `tempest.`) | `CSVImporter` |
 | `subunit` | `.subunit` | Subunit v2 stream | `SubunitImporter` |
 
 - In a folder, files are read in name order. With `-f`, only files whose extension matches the format are
@@ -73,6 +73,22 @@ one of its statuses.
   `====` or `Ran N tests`) and the `Ran …` summary. The failure trace is stored as is; its `Details:` lines
   are the message. Other lines are ignored. Several runs in one log import as one run; a log without a
   `Ran` line is imported too.
+- It also reads the stestr / subunit-trace layout that `tempest run` prints, mixed with the above if need
+  be: `{N} class.test_name[tags](options) [1.5s] ... ok|FAILED|SKIPPED: reason` (`xfail` → `X_FAIL`,
+  `uxsuccess` → `X_OK`, other words upper-cased), the `Captured traceback:` attachments under a failed
+  test (the trace, without the 4-space indent; other attachments are dropped when there is a traceback),
+  the `Failed N tests - output below:` list, the `Totals` summary (`Ran: N tests in …`) and the
+  `Slowest Tests:` table of `stestr --slowest`. A skip reason becomes the message. Test ids are split
+  into class (everything before the last dotted name), name, UUID (`id-…` tag) and options.
+- A CI timestamp prefix on every line (`2026-01-01 10:00:00.123456 | `, with an optional `host | `, as in
+  Zuul job output) is removed first.
+- An own CSV export imports every run column. Each run is dated from its header cell (else the file's
+  modification time) and named after the file name column of a `-d` export, else after the CSV file
+  (`<csv> #N` when it holds several runs; a single run keeps the CSV's name). Repeated file names get
+  ` #N`. When the third header cell is a date, the `R` rows become the `required` run. Test names
+  `test_x(options)` are split back into name and options. The `-d` cell becomes the message (for `FAIL`
+  it is the message and the trace together). `--run-name` names a single-run CSV; `--run-date` dates
+  every run.
 - XML failures are recognised as k8s errors (Go error types, `k8s.io`, klog timestamps) or pytest errors
   (`E ` lines), and the main message is taken out of the traceback.
 
@@ -114,7 +130,11 @@ The baseline run is the execution named `required` (`const.REQUIRED_RUN`). Repor
   by date, with per-run totals. `-d` adds a notes column per run: the message, then the trace folded in a
   `<details>` element (`<pre>`, line breaks kept). The result cells of each row are built and escaped in
   the reporter (`markupsafe.escape`) and the page is written as it is rendered (`generate()`), so the
-  whole report is never held in memory.
+  whole report is never held in memory. A filter bar above the table (shown by an inline script; without
+  scripts every test is listed) narrows the rows by words in the class and test name, and to tests that
+  failed (`FAIL`/`ERROR`) in any run, failed in the last run, or changed status between the runs they ran
+  in. Rows carry these as `data-flags` letters `f`, `l`, `c`, computed in the reporter; class rows hide
+  when none of their tests show. The totals stay those of all tests.
 - **Errors** (`templates/tempest_errors_report.html`): `FAIL` and `SKIP` results from one run, grouped by main
   message. The main message is the result message; if there is none, it is the `Details:` line of the
   trace; failing that, the trace lines that don't start with whitespace or `Trace`.
@@ -141,10 +161,7 @@ The packaged resources are `res/*.list` (baseline lists) and `templates/*.html` 
 
 ## 8. Known limitations
 
-1. Importing an own CSV export reads only the first result column.
-2. The `log` parser needs indented test lines under a class line; logs with worker prefixes
-   (`{0} tempest.….test_x … ok`) or leading environment variables are not recognised.
-3. An XML file whose times are all whole numbers is read as milliseconds, even when they were seconds.
+1. An XML file whose times are all whole numbers is read as milliseconds, even when they were seconds.
 
 ## 9. Requirements
 

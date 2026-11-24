@@ -183,3 +183,88 @@ def test_log_run_name_and_date(tmp_path):
     tm, _ = _parse_text(tmp_path, NEW_LAYOUT_LOG, run_name="nightly", run_date=date)
     assert list(tm.get_executions()) == ["nightly"]
     assert tm.executions["nightly"].date == date
+
+
+def _all_results(tm, run):
+    return {(cls, t.test_name, t.test_options): t.results[run]
+            for cls, tests in tm.tests.items() for t in tests if run in t.results}
+
+
+def test_stestr_log(data_file):
+    path = data_file("stestr.log")
+    tm = _parse(path)
+    run = path.lower()
+    results = _all_results(tm, run)
+    assert {key: r.result for key, r in results.items()} == {
+        (SERVERS, "test_create_server", ""): "OK",
+        (SERVERS, "test_delete_server", ""): "FAIL",
+        (PORTS, "test_list_ports", ""): "SKIP",
+        (PORTS, "test_update_port", "(ipv6)"): "OK",
+        (PLUGIN, "test_create_trunk", ""): "OK",
+    }
+    assert results[(SERVERS, "test_create_server", "")].time == 1.5
+    assert results[(PORTS, "test_list_ports", "")].message == "ports are disabled"
+    fail = results[(SERVERS, "test_delete_server", "")]
+    # the "Captured traceback:" attachment without its indent; the other attachments left out
+    assert fail.trace.startswith("Traceback (most recent call last):\n  File ")
+    assert fail.trace.endswith("MismatchError: 1 != 2\nDetails: 1 != 2\n")
+    assert "rest_client" not in fail.trace
+    assert fail.message == "Details: 1 != 2\n"
+    # slowest table
+    assert fail.slowest and results[(SERVERS, "test_create_server", "")].slowest
+    assert not results[(PLUGIN, "test_create_trunk", "")].slowest
+    summary = tm.get_summary_for_execution(run)
+    assert (summary.total, summary.ok, summary.fail, summary.skip) == (5, 3, 1, 1)
+
+
+def test_stestr_log_with_ci_timestamps(data_file, tmp_path):
+    source = data_file("stestr.log")
+    with open(source, encoding="utf-8") as f:
+        lines = f.read().splitlines()
+    prefixed = tmp_path / "job-output.log"
+    prefixed.write_text("".join(f"2026-01-01 10:00:{i % 60:02d}.123456 | controller | {line}\n"
+                                for i, line in enumerate(lines)), encoding="utf-8")
+    plain, ci = _parse(source), _parse(str(prefixed))
+    assert _all_results(ci, str(prefixed).lower()) == _all_results(plain, source.lower())
+
+
+def test_stestr_failure_list(tmp_path):
+    """`subunit-trace -f` lists every failure at the end, one under the other."""
+    text = f"""\
+{{0}} {SERVERS}.test_delete_server [0.500000s] ... FAILED
+{{1}} {PORTS}.test_update_port(ipv6) [0.250000s] ... FAILED
+{{1}} {PLUGIN}.test_create_trunk [0.100000s] ... uxsuccess
+
+==============================
+Failed 2 tests - output below:
+==============================
+
+{SERVERS}.test_delete_server[id-2222]
+-------------------------------------
+
+Captured traceback:
+~~~~~~~~~~~~~~~~~~~
+    Traceback (most recent call last):
+    ValueError: server
+
+{PORTS}.test_update_port[id-4444](ipv6)
+---------------------------------------
+
+Captured traceback:
+~~~~~~~~~~~~~~~~~~~
+    Traceback (most recent call last):
+    ValueError: port
+
+
+======
+Totals
+======
+Ran: 3 tests in 0.8500 sec.
+"""
+    tm, run = _parse_text(tmp_path, text)
+    results = _all_results(tm, run)
+    assert results[(SERVERS, "test_delete_server", "")].trace == \
+        "Traceback (most recent call last):\nValueError: server\n"
+    assert results[(PORTS, "test_update_port", "(ipv6)")].trace == \
+        "Traceback (most recent call last):\nValueError: port\n"
+    assert results[(PLUGIN, "test_create_trunk", "")].result == "X_OK"

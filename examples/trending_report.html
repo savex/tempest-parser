@@ -142,6 +142,16 @@
 
         th.separator,
         td.separator { background: #777; }
+
+        form.filters {
+            font-family: Verdana, "Helvetica Neue", Arial, Helvetica, Geneva, sans-serif;
+            font-size: small;
+            margin: 10px 0;
+        }
+        form.filters input[type="search"] { width: 320px; margin-right: 10px; }
+        form.filters label { margin-right: 10px; white-space: nowrap; }
+        form.filters .count { color: #555; }
+        tr[hidden] { display: none; }
     </style>
 </head>
 <body>
@@ -169,6 +179,15 @@
     </tr>
     </tbody>
 </table>
+<!-- shown by the script at the end; without scripts every test is listed -->
+<form id="filters" class="filters" hidden onsubmit="return false">
+    <input type="search" id="filter-text" placeholder="Filter by class or test name" aria-label="Filter by class or test name">
+    <label><input type="radio" name="filter-kind" value="" checked> All</label>
+    <label><input type="radio" name="filter-kind" value="f"> Failed in any run</label>
+    <label><input type="radio" name="filter-kind" value="l"> Failed in the last run</label>
+    <label><input type="radio" name="filter-kind" value="c"> Status changed</label>
+    <span id="filter-count" class="count" aria-live="polite"></span>
+</form>
 <table class="report">
     <tbody>
     <tr>
@@ -257,7 +276,7 @@
         <td colspan="2" class="name">Class tempest.api.compute.admin.test_quotas.QuotasAdminTestJSON</td>
         <td colspan="9" class="blank"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>1</td>
         <td>
             <div class="test_name">test_delete_quota</div>
@@ -265,7 +284,7 @@
         </td>
         <td class="status added">A</td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>2</td>
         <td>
             <div class="test_name">test_get_default_quotas</div>
@@ -273,7 +292,7 @@
         </td>
         <td class="status added">A</td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="fc">
         <td>3</td>
         <td>
             <div class="test_name">test_get_updated_quotas</div>
@@ -286,7 +305,7 @@ MismatchError: 5120 != 51200
 Details: 5120 != 51200
 </pre></details></td><td class="status ok">OK</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>4</td>
         <td>
             <div class="test_name">test_update_all_quota_resources_for_tenant</div>
@@ -298,7 +317,7 @@ Details: 5120 != 51200
         <td colspan="2" class="name">Class tempest.api.compute.servers.test_servers.ServersTestJSON</td>
         <td colspan="9" class="blank"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>5</td>
         <td>
             <div class="test_name">test_create_server_with_admin_password</div>
@@ -306,7 +325,7 @@ Details: 5120 != 51200
         </td>
         <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>6</td>
         <td>
             <div class="test_name">test_create_server_with_ipv6_addr_only</div>
@@ -314,7 +333,7 @@ Details: 5120 != 51200
         </td>
         <td class="status added">A</td><td class="status skip">SKIP</td><td class="tracemessage"></td><td class="status skip">SKIP</td><td class="tracemessage"></td><td class="status skip">SKIP</td><td class="tracemessage"></td><td class="status skip">SKIP</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>7</td>
         <td>
             <div class="test_name">test_create_specify_keypair</div>
@@ -322,7 +341,7 @@ Details: 5120 != 51200
         </td>
         <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>8</td>
         <td>
             <div class="test_name">test_create_with_existing_server_name</div>
@@ -330,7 +349,7 @@ Details: 5120 != 51200
         </td>
         <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>9</td>
         <td>
             <div class="test_name">test_update_access_server_address</div>
@@ -338,7 +357,7 @@ Details: 5120 != 51200
         </td>
         <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>10</td>
         <td>
             <div class="test_name">test_update_server_name</div>
@@ -346,7 +365,7 @@ Details: 5120 != 51200
         </td>
         <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="fc">
         <td>11</td>
         <td>
             <div class="test_name">test_update_server_name_in_stop_state</div>
@@ -368,7 +387,7 @@ Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s
         <td colspan="2" class="name">Class tempest.api.identity.admin.test_users.UsersTestJSON</td>
         <td colspan="9" class="blank"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>12</td>
         <td>
             <div class="test_name">test_authentication_request_without_token</div>
@@ -376,7 +395,7 @@ Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s
         </td>
         <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>13</td>
         <td>
             <div class="test_name">test_create_user</div>
@@ -384,7 +403,7 @@ Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s
         </td>
         <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>14</td>
         <td>
             <div class="test_name">test_create_user_with_enabled</div>
@@ -392,7 +411,7 @@ Details: Server sample-server-1 failed to reach SHUTOFF status within 196 s
         </td>
         <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="flc">
         <td>15</td>
         <td>
             <div class="test_name">test_delete_user</div>
@@ -405,7 +424,7 @@ NotFound: Object not found
 Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}
 </pre></details></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>16</td>
         <td>
             <div class="test_name">test_get_users</div>
@@ -413,7 +432,7 @@ Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}
         </td>
         <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>17</td>
         <td>
             <div class="test_name">test_list_users_for_tenant</div>
@@ -421,7 +440,7 @@ Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}
         </td>
         <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="c">
         <td>18</td>
         <td>
             <div class="test_name">test_list_users_with_roles_for_tenant</div>
@@ -429,7 +448,7 @@ Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}
         </td>
         <td class="status added">A</td><td class="status skip">SKIP</td><td class="tracemessage"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>19</td>
         <td>
             <div class="test_name">test_update_user</div>
@@ -437,7 +456,7 @@ Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}
         </td>
         <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>20</td>
         <td>
             <div class="test_name">test_update_user_password</div>
@@ -445,7 +464,7 @@ Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}
         </td>
         <td class="status added">A</td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>21</td>
         <td>
             <div class="test_name">test_user_authentication</div>
@@ -457,7 +476,7 @@ Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}
         <td colspan="2" class="name">Class tempest.api.network.test_networks.NetworksTestJSON</td>
         <td colspan="9" class="blank"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>22</td>
         <td>
             <div class="test_name">test_create_delete_subnet_all_attributes</div>
@@ -465,7 +484,7 @@ Details: {u&#39;message&#39;: u&#39;Could not find user: sample-user-4&#39;}
         </td>
         <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="flc">
         <td>23</td>
         <td>
             <div class="test_name">test_create_delete_subnet_with_dhcp_enabled</div>
@@ -483,7 +502,7 @@ Conflict: An object with that identifier already exists
 Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sample-subnet-2&#39;}
 </pre></details></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>24</td>
         <td>
             <div class="test_name">test_create_delete_subnet_with_gw</div>
@@ -491,7 +510,7 @@ Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sampl
         </td>
         <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>25</td>
         <td>
             <div class="test_name">test_create_update_delete_network_subnet</div>
@@ -499,7 +518,7 @@ Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sampl
         </td>
         <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>26</td>
         <td>
             <div class="test_name">test_delete_network_with_subnet</div>
@@ -507,7 +526,7 @@ Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sampl
         </td>
         <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>27</td>
         <td>
             <div class="test_name">test_list_networks</div>
@@ -515,7 +534,7 @@ Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sampl
         </td>
         <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>28</td>
         <td>
             <div class="test_name">test_list_subnets</div>
@@ -523,7 +542,7 @@ Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sampl
         </td>
         <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>29</td>
         <td>
             <div class="test_name">test_show_network</div>
@@ -531,7 +550,7 @@ Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sampl
         </td>
         <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>30</td>
         <td>
             <div class="test_name">test_show_subnet</div>
@@ -539,7 +558,7 @@ Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sampl
         </td>
         <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="">
         <td>31</td>
         <td>
             <div class="test_name">test_show_subnet_fields</div>
@@ -547,7 +566,7 @@ Details: {u&#39;message&#39;: u&#39;Unable to complete operation on subnet sampl
         </td>
         <td class="status added">A</td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status ok">OK</td><td class="tracemessage"></td><td class="status blank"></td><td class="status blank"></td><td class="status ok">OK</td><td class="tracemessage"></td>
     </tr>
-    <tr>
+    <tr class="test" data-flags="fc">
         <td>32</td>
         <td>
             <div class="test_name">test_update_subnet_gw_dns_host_routes_dhcp</div>
@@ -584,5 +603,51 @@ Details: &#39;10.0.0.254&#39; != &#39;10.0.0.1&#39;
     </tbody>
 </table>
 
+<script>
+// Filters: rows carry data-flags ("f" failed in a run, "l" failed in the last run,
+// "c" status changed); a class header shows while one of its tests does.
+(function () {
+    var text = document.getElementById("filter-text");
+    var kinds = document.getElementsByName("filter-kind");
+    var count = document.getElementById("filter-count");
+    var rows = document.querySelectorAll("tr.group, tr.test");
+
+    function kind() {
+        for (var i = 0; i < kinds.length; i++) {
+            if (kinds[i].checked) { return kinds[i].value; }
+        }
+        return "";
+    }
+
+    function apply() {
+        var words = text.value.toLowerCase().split(/\s+/).filter(Boolean);
+        var flag = kind();
+        var group = null, groupName = "", groupShown = false, shown = 0, total = 0;
+        function closeGroup() { if (group) { group.hidden = !groupShown; } }
+        for (var i = 0; i < rows.length; i++) {
+            var row = rows[i];
+            if (row.className === "group") {
+                closeGroup();
+                group = row; groupShown = false;
+                groupName = row.cells[0].textContent.toLowerCase();
+                continue;
+            }
+            total++;
+            var name = groupName + " " + row.cells[1].textContent.toLowerCase();
+            var show = (!flag || row.getAttribute("data-flags").indexOf(flag) > -1) &&
+                words.every(function (word) { return name.indexOf(word) > -1; });
+            row.hidden = !show;
+            if (show) { shown++; groupShown = true; }
+        }
+        closeGroup();
+        count.textContent = shown === total ? total + " tests" : shown + " of " + total + " tests";
+    }
+
+    text.addEventListener("input", apply);
+    for (var i = 0; i < kinds.length; i++) { kinds[i].addEventListener("change", apply); }
+    document.getElementById("filters").hidden = false;
+    apply();
+}());
+</script>
 </body>
 </html>

@@ -20,6 +20,15 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
 - `examples/`: trending reports of those four runs (detailed and brief) and an errors report of run 4,
   made with `tparser`.
 - Dependabot (`.github/dependabot.yml`): weekly grouped updates for GitHub Actions and `uv.lock`.
+- The `log` format reads the stestr / subunit-trace console layout of `tempest run`
+  (`{0} tempest....test_x [1.5s] ... ok`): statuses, times, skip reasons, `Captured traceback:` sections,
+  the `-f` failure list, `Totals` and the `stestr --slowest` table. CI timestamp prefixes
+  (`2026-01-01 10:00:00.123456 | host | `) are removed from every line. Sample: `tests/data/stestr.log`.
+- An own CSV export imports every run, not only the first column: runs are dated from the header,
+  named after their files (`-d` exports) and the baseline column comes back as the `required` run.
+  Options are split back from the test name, and messages keep their quotes and commas.
+- Trending report: a filter bar to search class and test names and to show only tests that failed in
+  any run, failed in the last run, or changed status (inline script, no external files).
 - `-V, --version`: prints the installed version.
 - CI runs the tests on Windows too (Python 3.11–3.15), so the "OS Independent" classifier is checked.
 - Checks: ruff import order, bugbear and simplify rules (`I`, `B`, `SIM`); mypy on `tempest_parser`

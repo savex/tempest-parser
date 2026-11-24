@@ -2,6 +2,7 @@ import csv
 import json
 import logging
 import re
+from datetime import UTC, datetime
 from xml.etree.ElementTree import parse
 
 from subunit import make_stream_binary
@@ -9,7 +10,7 @@ from subunit.filters import run_tests_from_stream
 from subunit.test_results import TestByTestResult
 from testtools import StreamToExtendedDecorator
 
-from tempest_parser.const import Status
+from tempest_parser.const import REQUIRED_RUN, Status
 from tempest_parser.manager.models import file_date, parse_seconds
 
 log = logging.getLogger(__name__)
@@ -363,12 +364,6 @@ class JSONImporter(ImporterBase):
 class CSVImporter(ImporterBase):
     subtype = None
 
-    @staticmethod
-    def _fix_message(string):
-        _string = string.replace('"', '\'')
-        _string = _string.replace(',', ' ')
-        return _string
-
     def __init__(self, test_manager, source, **kwargs):
         super().__init__(test_manager, source, **kwargs)
 
@@ -395,54 +390,80 @@ class CSVImporter(ImporterBase):
         elif self.subtype == CSV_XUNIT:
             self.parse_xunit_csv()
 
+    @staticmethod
+    def _header_date(cell):
+        """The run date of a CSV header cell ("dd\\nmm\\nYYYY\\nHH:MM\\nGMT"), or None."""
+        try:
+            date = datetime.strptime(" ".join(cell.split()), "%d %m %Y %H:%M GMT")
+        except ValueError:
+            return None
+        return date.replace(tzinfo=UTC)
+
+    def _own_csv_runs(self, header, row):
+        """[(name, date, column, details column or None)] for the run columns of an own CSV
+        export, worked out from the header and the first test row."""
+        # old exports without the required/added column: <number>,<test>,<status>,<message>
+        first = 3 if row[2] in (Status.REQUIRED, Status.ADDED, "") else 2
+        count = len(row) - first
+        cells = header[len(header) - count:] if count else []
+        # -d adds a file name column after each run's date column
+        detailed = count >= 2 and count % 2 == 0 and self._header_date(cells[1]) is None
+        step = 2 if detailed else 1
+        base = self.execution_name(self.source.name)
+        names: dict[str, int] = {}
+        runs = []
+        for number, index in enumerate(range(0, count, step), start=1):
+            date = self.run_date or self._header_date(cells[index]) or self.execution_date()
+            if count // step == 1:
+                name = base
+            elif detailed and cells[index + 1]:
+                name = cells[index + 1]
+            else:
+                name = f"{base} #{number}"
+            # two runs from files with the same name stay apart
+            names[name] = names.get(name, 0) + 1
+            if names[name] > 1:
+                name = f"{name} #{names[name]}"
+            runs.append((name, date, first + index, first + index + 1 if detailed else None))
+        return runs
+
     def parse_own_csv(self):
-        _execution_name = self.execution_name(self.source.name)
-        _execution_date = self.execution_date()
-
+        """Every run of a CSV written by the CSV report, with the required list when the
+        export had one (its date is in the header's third cell)."""
+        header = self.rows[0]
+        runs = None
+        required_date = self._header_date(header[2]) if len(header) > 2 else None
         _class_name = ''
-
-        _status_index = 2
-        for _row_index, row in enumerate(self.rows):
-            # parse the data, first row is the header
-            if _row_index == 0:
-                continue
-            elif row[0].lower() == 'class':
+        for row in self.rows[1:]:
+            if row[0].lower() == 'class':
                 _class_name = row[1]
                 continue
-            elif int(row[0].lower()) > 0:
-                _test_name = row[1]
-                if row[2] in (Status.REQUIRED, Status.ADDED):
-                    _status_index = 3
-                _status = row[_status_index]
-                _message = self._fix_message(
-                    row[_status_index + 1] if len(row) > _status_index + 1
-                    else '')
-                if _status in self.status_filters:
-                    continue
+            if not row[0].isdigit():
+                raise ValueError(
+                    "Invalid CSV structure. Please, follow format:\n"
+                    "\tClass,<class name>,,\n"
+                    "\t<number>,<test_name>,<R or A>,<status>,<message>")
+            if runs is None:
+                runs = self._own_csv_runs(header, row)
+            # options were written after the name: test_name(options)
+            options_match = re.fullmatch(r"(test_\w*)(\(.*\))", row[1])
+            _test_name, _options = options_match.groups() if options_match else (row[1], '')
+            if required_date is not None and row[2] == Status.REQUIRED:
                 self.tm.add_result_for_test(
-                    _execution_name,
-                    _class_name,
-                    _test_name,
-                    '',
-                    '',
-                    _status,
-                    None,
-                    message=_message,
-                    test_name_bare=True,
-                )
+                    REQUIRED_RUN, _class_name, _test_name, '', _options, Status.REQUIRED, 0.0)
+            for name, _date, column, details in runs:
+                _status = row[column] if column < len(row) else ''
+                if not _status or _status in self.status_filters:
+                    continue
+                _message = row[details] if details is not None and details < len(row) else ''
+                self.tm.add_result_for_test(
+                    name, _class_name, _test_name, '', _options, _status, None, message=_message)
 
-                continue
-            else:
-                raise (
-                    Exception(
-                        "ERROR: Invalid CSV structure. \n"
-                        "\tPlease, follow format:\n"
-                        "\t\tClass,<class name>,,"
-                        "\t\t<number>,<test_name>,<status>,<message>")
-                )
-
-        self.add_execution(_execution_name, _execution_date)
-        return _execution_name
+        if required_date is not None:
+            self.add_execution(REQUIRED_RUN, required_date)
+        for name, date, _column, _details in runs or []:
+            self.add_execution(name, date)
+        return [name for name, *_ in runs or []]
 
     def parse_xunit_csv(self):
         _execution_name = self.execution_name(self.source.name)

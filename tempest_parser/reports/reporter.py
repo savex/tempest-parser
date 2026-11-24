@@ -21,6 +21,7 @@ def line_breaks(text):
 # Cells are built as plain strings from escaped values and joined per row into one Markup:
 # much faster than rendering each cell through the template or Markup.format().
 _BLANK = '<td class="status blank"></td>'
+_FAILED = {Status.FAIL, Status.ERROR}
 
 
 def _status_cell(result):
@@ -129,7 +130,11 @@ class HTMLTrendingReport(_TMPLBase):
     def _classes(tests, runs, detailed):
         """(class name, rows) for each class, sorted; rows are made as the template reads
         them. Each row's result cells are escaped here into one Markup string, which keeps
-        the per-cell work out of the template."""
+        the per-cell work out of the template.
+
+        A row is (number, test, cells, flags); flags are the letters the report's filters
+        look for: "f" failed (FAIL or ERROR) in some run, "l" failed in the last run (runs are
+        ordered by date), "c" the status differs between the runs the test ran in."""
         blank = _BLANK + _BLANK if detailed else _BLANK
         number = 0
 
@@ -142,15 +147,21 @@ class HTMLTrendingReport(_TMPLBase):
                     cells = ['<td class="status added">A</td>']
                 else:
                     cells = [f'<td class="status required">{escape(required.result)}</td>']
+                statuses = set()
+                result = None
                 for run in runs:
                     result = case.results.get(run)
                     if result is None:
                         cells.append(blank)
                         continue
+                    statuses.add(result.result)
                     cells.append(_status_cell(result.result))
                     if detailed:
                         cells.append(_notes_cell(result))
-                yield number, case, Markup("".join(cells))
+                flags = ("f" if statuses & _FAILED else "") + \
+                    ("l" if result is not None and result.result in _FAILED else "") + \
+                    ("c" if len(statuses) > 1 else "")
+                yield number, case, Markup("".join(cells)), flags
 
         for class_name in sorted(tests):
             yield class_name, rows(tests[class_name])

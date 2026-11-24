@@ -44,6 +44,7 @@ def test_help():
     ([], "rally.json", 3),
     ([], "xunit.csv", 3),
     ([], "tempest.log", 3),
+    ([], "stestr.log", 5),
 ])
 def test_formats_to_reports(tmp_path, args, name, tests):
     source = tmp_path / name

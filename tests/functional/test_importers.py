@@ -1,16 +1,19 @@
 import io
 import os
+import shutil
 from datetime import UTC, datetime
 
 import pytest
 
+from tempest_parser.const import REQUIRED_RUN
 from tempest_parser.manager import importers
 from tempest_parser.manager.importers import CSVImporter, JSONImporter, SubunitImporter, XMLImporter
 from tempest_parser.manager.models import file_date, parse_seconds
 from tempest_parser.manager.test_manager import TestsManager
+from tempest_parser.parser.tempest_log_parser import TempestLogParser
 from tempest_parser.reports.csv_reporter import CSVReporter
 
-from ..conftest import PORTS, SERVERS
+from ..conftest import DATA_DIR, PORTS, SERVERS
 
 
 def _import(cls, path, mode="rt", **kw):
@@ -234,3 +237,70 @@ def test_subunit_run_name_and_date(subunit_file):
 ])
 def test_subunit_status_map(status, expected):
     assert importers.TParserResult._parse_status(status) == expected
+
+
+def _trending(tmp_path, required=None):
+    """The four trending sample runs (and a baseline list) in one TestsManager."""
+    tm = TestsManager()
+    if required:
+        tm.add_required(required)
+    for number in range(1, 5):
+        target = tmp_path / f"run_{number}.log"
+        shutil.copy(os.path.join(DATA_DIR, "trending", f"run_{number}.log"), target)
+        os.utime(target, (0, 86400 * number))
+        with open(target, encoding="utf-8") as source:
+            TempestLogParser(tm, source).parse()
+    return tm
+
+
+def _by_file_name(tm):
+    """{(file name, class, test, options): (status, message)}, plus each run's date."""
+    results = {(os.path.basename(run), cls, t.test_name, t.test_options): (r.result, r.message)
+               for cls, tests in tm.tests.items() for t in tests
+               for run, r in t.results.items()}
+    dates = {os.path.basename(e.name): e.date for e in tm.executions.values()}
+    return results, dates
+
+
+@pytest.mark.parametrize("detailed", [False, True])
+def test_csv_own_all_runs(tmp_path, detailed):
+    tm = _trending(tmp_path)
+    exported = str(tmp_path / "export.csv")
+    CSVReporter(tm).generate_to_file(exported, detailed=detailed)
+    imported = _import(CSVImporter, exported)
+
+    names = [e.name for e in imported.get_sorted_executions()]
+    if detailed:
+        # the file name column names the runs
+        assert names == ["run_1.log", "run_2.log", "run_3.log", "run_4.log"]
+    else:
+        assert names == [f"{exported} #{n}" for n in range(1, 5)]
+    # dates come from the header
+    assert [e.date for e in imported.get_sorted_executions()] == \
+        [e.date for e in tm.get_sorted_executions()]
+    assert [imported.get_summary_for_execution(n).total for n in names] == [26, 24, 29, 32]
+    if detailed:
+        expected, _ = _by_file_name(tm)
+        got, _ = _by_file_name(imported)
+        # messages of failures also hold the trace; statuses match exactly
+        assert {k: v[0] for k, v in got.items()} == {k: v[0] for k, v in expected.items()}
+        skips = {k: v[1] for k, v in expected.items() if v[0] == "SKIP"}
+        assert skips and all(got[k][1] == m for k, m in skips.items())
+
+
+def test_csv_own_required_and_options(tmp_path, data_dir):
+    tm = _trending(tmp_path, required=os.path.join(data_dir, "baseline.list"))
+    tm.add_result_for_test(tm.get_sorted_executions()[1].name, SERVERS, "test_resize", "",
+                           "(flavor)", "FAIL", 1.0, message='said "no", twice')
+    exported = str(tmp_path / "export.csv")
+    CSVReporter(tm).generate_to_file(exported, detailed=True)
+    imported = _import(CSVImporter, exported)
+
+    assert REQUIRED_RUN in imported.executions
+    required = {(cls, t.test_name) for cls, tests in imported.tests.items() for t in tests
+                if REQUIRED_RUN in t.results}
+    assert required == {(SERVERS, "test_create_server"), (SERVERS, "test_delete_server"),
+                        (PORTS, "test_list_ports"), (PORTS, "test_not_run")}
+    resize = next(t for t in imported.tests[SERVERS] if t.test_name == "test_resize")
+    assert resize.test_options == "(flavor)"
+    assert next(iter(resize.results.values())).message.startswith('said "no", twice')

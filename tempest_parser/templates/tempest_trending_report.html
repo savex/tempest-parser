@@ -142,6 +142,16 @@
 
         th.separator,
         td.separator { background: #777; }
+
+        form.filters {
+            font-family: Verdana, "Helvetica Neue", Arial, Helvetica, Geneva, sans-serif;
+            font-size: small;
+            margin: 10px 0;
+        }
+        form.filters input[type="search"] { width: 320px; margin-right: 10px; }
+        form.filters label { margin-right: 10px; white-space: nowrap; }
+        form.filters .count { color: #555; }
+        tr[hidden] { display: none; }
     </style>
 </head>
 <body>
@@ -172,6 +182,15 @@
 
 
 {{ cells_legend() }}
+<!-- shown by the script at the end; without scripts every test is listed -->
+<form id="filters" class="filters" hidden onsubmit="return false">
+    <input type="search" id="filter-text" placeholder="Filter by class or test name" aria-label="Filter by class or test name">
+    <label><input type="radio" name="filter-kind" value="" checked> All</label>
+    <label><input type="radio" name="filter-kind" value="f"> Failed in any run</label>
+    <label><input type="radio" name="filter-kind" value="l"> Failed in the last run</label>
+    <label><input type="radio" name="filter-kind" value="c"> Status changed</label>
+    <span id="filter-count" class="count" aria-live="polite"></span>
+</form>
 <table class="report">
     <tbody>
     <tr>
@@ -226,8 +245,8 @@
         <td colspan="2" class="name">Class {{ class_name }}</td>
         <td colspan="{{ group_span }}" class="blank"></td>
     </tr>
-        {% for number, test, cells in rows %}
-    <tr>
+        {% for number, test, cells, flags in rows %}
+    <tr class="test" data-flags="{{ flags }}">
         <td>{{ number }}</td>
         <td>
             <div class="test_name">{{ test.test_name }}</div>
@@ -241,5 +260,51 @@
 </table>
 {{ cells_legend() }}
 
+<script>
+// Filters: rows carry data-flags ("f" failed in a run, "l" failed in the last run,
+// "c" status changed); a class header shows while one of its tests does.
+(function () {
+    var text = document.getElementById("filter-text");
+    var kinds = document.getElementsByName("filter-kind");
+    var count = document.getElementById("filter-count");
+    var rows = document.querySelectorAll("tr.group, tr.test");
+
+    function kind() {
+        for (var i = 0; i < kinds.length; i++) {
+            if (kinds[i].checked) { return kinds[i].value; }
+        }
+        return "";
+    }
+
+    function apply() {
+        var words = text.value.toLowerCase().split(/\s+/).filter(Boolean);
+        var flag = kind();
+        var group = null, groupName = "", groupShown = false, shown = 0, total = 0;
+        function closeGroup() { if (group) { group.hidden = !groupShown; } }
+        for (var i = 0; i < rows.length; i++) {
+            var row = rows[i];
+            if (row.className === "group") {
+                closeGroup();
+                group = row; groupShown = false;
+                groupName = row.cells[0].textContent.toLowerCase();
+                continue;
+            }
+            total++;
+            var name = groupName + " " + row.cells[1].textContent.toLowerCase();
+            var show = (!flag || row.getAttribute("data-flags").indexOf(flag) > -1) &&
+                words.every(function (word) { return name.indexOf(word) > -1; });
+            row.hidden = !show;
+            if (show) { shown++; groupShown = true; }
+        }
+        closeGroup();
+        count.textContent = shown === total ? total + " tests" : shown + " of " + total + " tests";
+    }
+
+    text.addEventListener("input", apply);
+    for (var i = 0; i < kinds.length; i++) { kinds[i].addEventListener("change", apply); }
+    document.getElementById("filters").hidden = false;
+    apply();
+}());
+</script>
 </body>
 </html>
