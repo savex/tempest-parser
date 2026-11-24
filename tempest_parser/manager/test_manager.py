@@ -36,10 +36,10 @@ class TestsManager:
     # and mark which ones was executed, we have list of all tests
     # It produced by ./tempest run --list-tests >all_tests_tag_<N>.list
     def _all_tests_file_preload(self, resource_file, use_raw_names=False):
-        _tests = {}
+        _tests: dict[str, list[Case]] = {}
 
         # load all tests file
-        with open(resource_file) as tests_file:
+        with open(resource_file, encoding="utf-8") as tests_file:
             for line in tests_file:
                 _class_name, _test_name, _uuid, _test_options, _tags = \
                     self.split_test_name(
@@ -67,9 +67,8 @@ class TestsManager:
 
         def _dig_options(raw_options):
             __options = raw_options.split(']')[1:]
-            if len(__options) >= 2:
-                if len(__options[1]) > 0:
-                    return __options[1]
+            if len(__options) >= 2 and len(__options[1]) > 0:
+                return __options[1]
             return "".join(__options)
 
         _first_name = full_test_name.split('.', 1)[0]
@@ -118,7 +117,8 @@ class TestsManager:
             return None
         cached = self._index.get(class_name)
         if cached is None or cached[0] is not tests or cached[1] != len(tests):
-            by_key, by_name = {}, {}
+            by_key: dict[tuple[str, str], list[int]] = {}
+            by_name: dict[str, int] = {}
             for position, test in enumerate(tests):
                 by_key.setdefault((test.test_name, test.test_options), []).append(position)
                 by_name.setdefault(test.test_name, position)

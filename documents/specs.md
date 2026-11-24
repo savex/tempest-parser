@@ -37,6 +37,7 @@ tparser [options] [inputfile]
 | `--run-date DATE` | Date the run `DATE` (ISO 8601, e.g. `2026-11-23` or `2026-11-23T14:30+02:00`; UTC when no offset is given) instead of by the file's modification time. Single file or stdin only. |
 | `--config-file F` | Use config file `F` (absolute path) instead of the packaged one. |
 | `-q, --quiet` | Print errors only. |
+| `-V, --version` | Print `tparser <version>` (the installed package's version) and exit. |
 
 Progress goes to stdout through `logging`; errors start with `Error:`.
 
@@ -147,7 +148,9 @@ The packaged resources are `res/*.list` (baseline lists) and `templates/*.html` 
 
 ## 9. Requirements
 
-- Python 3.11 or newer (`requires-python`); CI tests 3.11–3.15 on Linux and macOS.
+- Python 3.11 or newer (`requires-python`); CI tests 3.11–3.15 on Linux, macOS and Windows.
+- Input files, piped text (every format but subunit) and the config file are read as UTF-8, and reports
+  are written as UTF-8, whatever the locale. Console output escapes characters the console can't show.
 - Runtime dependencies (`pyproject.toml`): `jinja2>=3.1`, `markupsafe>=2.1`, `python-subunit>=1.4`,
   `testtools>=2.5`.
 - Entry point: `tparser = tempest_parser.tparser:tempest_cli_parser_main`.

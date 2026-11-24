@@ -23,15 +23,17 @@ matches tests across them and writes HTML trending / errors reports and CSV. Usa
 ## Rules
 
 - Python 3.11+ (`requires-python` in `pyproject.toml`, ruff `target-version`); CI tests 3.11–3.15 on
-  ubuntu and macOS, and builds and releases on the newest. The minimum is the oldest CPython still supported upstream:
+  ubuntu, macOS and Windows, and builds and releases on the newest. The minimum is the oldest CPython still supported upstream:
   raise it when that version reaches end of life (or earlier if a dependency needs it), add each new
   release to CI and the classifiers, and say why in the changelog.
 - Every commit that changes behaviour, configuration, interfaces, tooling or documents adds a line to
   `changelog.md` under **Unreleased**, in the right section (Added, Changed, Fixed, ...).
 - Dependencies live in `pyproject.toml` only. After changing them, run `uv lock` and commit `uv.lock`;
   CI installs with `uv sync --locked`.
-- Before committing: `uv run ruff check .`, `uv run pytest`, `uv run python scripts/check-test-tags.py`.
-  Workflow changes must pass `uv run actionlint`.
+- Before committing: `uv run ruff check .`, `uv run mypy`, `uv run pytest`,
+  `uv run python scripts/check-test-tags.py`. Workflow changes must pass `uv run actionlint`. CI also
+  checks that the smoke and functional tests together cover at least `fail_under` in `pyproject.toml`.
+- Open text files with `encoding="utf-8"`: before Python 3.15, Windows uses the locale's code page.
 - Every test has exactly one tag, given by its folder: `smoke` (the `tparser` command end to end, in a
   subprocess), `functional` (one module or class), `integration` (the built and installed wheel). No tests
   outside these folders.

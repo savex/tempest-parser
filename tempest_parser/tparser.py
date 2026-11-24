@@ -3,10 +3,10 @@ import logging
 import os
 import sys
 from datetime import UTC, datetime
+from importlib import metadata
 
 from tempest_parser.const import InputFormat
-from tempest_parser.manager.importers import (
-    CSVImporter, JSONImporter, SubunitImporter, XMLImporter)
+from tempest_parser.manager.importers import CSVImporter, JSONImporter, SubunitImporter, XMLImporter
 from tempest_parser.manager.test_manager import TestsManager
 from tempest_parser.parser.tempest_log_parser import TempestLogParser
 from tempest_parser.reports import reporter
@@ -45,6 +45,10 @@ class _Formatter(logging.Formatter):
 
 
 def setup_logging(quiet=False):
+    # test names and messages can hold any character; a console that can't show one
+    # (Windows code pages, an ASCII locale) gets an escape instead of an error
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="backslashreplace")
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(_Formatter("%(message)s"))
     log.handlers[:] = [handler]
@@ -92,6 +96,9 @@ def do_parse_file(source, tm, fmt=None, force_single=None, filters=None, run_nam
                   run_date=None):
     """Import one file (a path) or stream (an open file, e.g. stdin)."""
     if hasattr(source, "read"):
+        if fmt != InputFormat.SUBUNIT and hasattr(source, "reconfigure"):
+            # text piped in is read as UTF-8 whatever the locale (subunit reads bytes)
+            source.reconfigure(encoding="utf-8")
         make_importer(fmt, tm, source, force_single, filters, run_name, run_date).parse()
         log.info("Imported %s", getattr(source, "name", "unknown/stdin"))
         return
@@ -100,13 +107,24 @@ def do_parse_file(source, tm, fmt=None, force_single=None, filters=None, run_nam
         if fmt is None:
             raise CLIError(
                 f"Input filename's extension is not supported: '{source}'")
-    with open(source) as stream:
+    # input files are UTF-8 (not the locale's code page, as on Windows before Python 3.15)
+    with open(source, encoding="utf-8") as stream:
         make_importer(fmt, tm, stream, force_single, filters, run_name, run_date).parse()
     log.info("Imported %s", source)
 
 
+def package_version():
+    """The installed package's version (from the git tag at build time)."""
+    try:
+        return metadata.version("TempestParser")
+    except metadata.PackageNotFoundError:
+        return "unknown (not installed)"
+
+
 def build_parser():
     parser = MyParser(prog="Tempest CLI Parser")
+    parser.add_argument(
+        "-V", "--version", action="version", version=f"tparser {package_version()}")
     parser.add_argument(
         "inputfile", nargs="?", default=sys.stdin,
         help="File with test results or a folder of them; stdin when omitted")

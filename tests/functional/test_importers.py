@@ -5,8 +5,7 @@ from datetime import UTC, datetime
 import pytest
 
 from tempest_parser.manager import importers
-from tempest_parser.manager.importers import (
-    CSVImporter, JSONImporter, SubunitImporter, XMLImporter)
+from tempest_parser.manager.importers import CSVImporter, JSONImporter, SubunitImporter, XMLImporter
 from tempest_parser.manager.models import file_date, parse_seconds
 from tempest_parser.manager.test_manager import TestsManager
 from tempest_parser.reports.csv_reporter import CSVReporter

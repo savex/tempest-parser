@@ -5,8 +5,8 @@ import re
 from xml.etree.ElementTree import parse
 
 from subunit import make_stream_binary
-from subunit.test_results import TestByTestResult
 from subunit.filters import run_tests_from_stream
+from subunit.test_results import TestByTestResult
 from testtools import StreamToExtendedDecorator
 
 from tempest_parser.const import Status
@@ -165,12 +165,7 @@ class XMLImporter(ImporterBase):
             reason,
             re.MULTILINE
         )
-        if _e1 or _e2 or _k8s:
-            return True
-        elif _m:
-            return True
-        else:
-            return False
+        return bool(_e1 or _e2 or _k8s or _m)
 
     def _detect_pytest_errors(self, reason):
         _lines = re.findall(r"^[E]\s+.*$", reason, re.MULTILINE)
@@ -343,12 +338,8 @@ class JSONImporter(ImporterBase):
             _test_value_results = _test_value['by_verification'][verification]
             _status = self._parse_status(_test_value_results['status'])
             _duration = parse_seconds(_test_value_results['duration'])
-            if 'details' in _test_value_results:
-                _message = _test_value_results['details']
-            else:
-                _message = ''
-            _trace = _test_value_results[
-                'traceback'] if 'traceback' in _test_value_results else ''
+            _message = _test_value_results.get('details', '')
+            _trace = _test_value_results.get('traceback', '')
             if _status in self.status_filters:
                 continue
 

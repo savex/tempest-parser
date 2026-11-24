@@ -83,3 +83,14 @@ def test_installed_package_runs(installed, tmp_path):
         cwd=str(tmp_path), env=env, capture_output=True, timeout=120)
     assert result.returncode == 0, result.stdout + result.stderr
     assert "AssertionError" in errors.read_text()
+
+
+def test_installed_version(installed, tmp_path):
+    _, target = installed
+    env = dict(os.environ, PYTHONPATH=target)
+    code = ("import sys; from tempest_parser.tparser import tempest_cli_parser_main as m; "
+            "sys.argv = ['tparser', '--version']; m()")
+    result = subprocess.run([sys.executable, "-c", code], cwd=str(tmp_path), env=env,
+                            capture_output=True, text=True, timeout=120)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == f"tparser {VERSION}"

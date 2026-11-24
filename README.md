@@ -5,7 +5,7 @@
 [![Version tracking](https://github.com/savex/tempest-parser/actions/workflows/version.yml/badge.svg)](https://github.com/savex/tempest-parser/actions/workflows/version.yml)
 [![PyPI](https://img.shields.io/pypi/v/TempestParser.svg)](https://pypi.org/project/TempestParser/)
 ![Python 3.11–3.15](https://img.shields.io/badge/python-3.11%E2%80%933.15-blue.svg)
-![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20macOS-blue.svg)
+![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20macOS%20%7C%20Windows-blue.svg)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](https://github.com/savex/tempest-parser/blob/master/LICENSE)
 
 Imports test results from many runs, matches the tests by class, name and options, and builds HTML and CSV
@@ -137,6 +137,7 @@ stestr last --subunit | tparser -r trending.html -j summary.json --fail-on FAIL 
 | `-i, --include-required` | Add the baseline test list from the config as the first column. |
 | `--omit-status` | Leave tests with this status (`OK`, `FAIL`, `ERROR`, `SKIP`, ...) out. Repeatable. |
 | `-q, --quiet` | Print errors only. |
+| `-V, --version` | Print the version and exit. |
 | `--force-single` | Treat all files in a folder as a single run. |
 | `--run-name` | Name of the run in the reports instead of the file name (single file or stdin). |
 | `--run-date` | Date of the run, ISO 8601 (`2026-11-23T14:30`, UTC unless an offset is given), instead of the file's modification time (single file or stdin). |
@@ -173,7 +174,7 @@ Subunit v2 streams saved to a file.
 |---|---|
 | Input: Tempest log, subunit, jUnit XML (Tempest and raw / k8s), Rally JSON, CSV | Done |
 | Reports: HTML trending, HTML unique errors, CSV | Done |
-| Tests (smoke, functional, integration) and CI on Linux and macOS, Python 3.11–3.15 | Done |
+| Tests (smoke, functional, integration) and CI on Linux, macOS and Windows, Python 3.11–3.15 | Done |
 | Tag-based versioning, Bump version and Release workflows | Done; 0.3.0 was released through them |
 | Upload to PyPI from CI | Planned (off until PyPI trusts the Release workflow) |
 | Project rules for contributors ([CLAUDE.md](https://github.com/savex/tempest-parser/blob/master/CLAUDE.md)) | Done |
@@ -198,6 +199,10 @@ uv run ruff check .
 ```
 
 ```bash
+uv run mypy
+```
+
+```bash
 uv run python scripts/check-test-tags.py
 ```
 
@@ -215,8 +220,9 @@ after a tag build as `X.Y.Z.devN`. `scripts/version.sh versions` shows the lates
 `changelog.md` release, and whether they agree; see the script's header for the other commands.
 
 CI (`.github/workflows`):
-- **Tests** runs on pull requests and pushes to `master`: ruff, actionlint, package build and `twine check`,
-  version and test-tag checks, then the tests on ubuntu and macOS with Python 3.11–3.15.
+- **Tests** runs on pull requests and pushes to `master`: ruff, mypy, actionlint, package build and
+  `twine check`, version and test-tag checks, then the tests on ubuntu, macOS and Windows with Python
+  3.11–3.15, with a minimum coverage (`fail_under` in `pyproject.toml`).
 - **Version tracking** reports the version on every push to `master`.
 - **Bump version** (manual) picks the next version, updates `changelog.md`, commits
   `Release vX.Y.Z`, tags it and starts **Release**.

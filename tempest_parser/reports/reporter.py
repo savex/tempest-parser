@@ -161,8 +161,8 @@ class HTMLErrorsReport(_TMPLBase):
 
     def _extend_data(self, data):
         # list with unique messages
-        skipped_messages = {}
-        failed_messages = {}
+        skipped_messages: dict[str, list[dict]] = {}
+        failed_messages: dict[str, list[dict]] = {}
 
         # Reverse source list and get unique errors
         for item in data['executions']:
@@ -236,7 +236,7 @@ class ReportToFile:
         """Write the report to a path or an open file as it is rendered."""
         pieces = self.report.generate(tests_manager, detailed)
         if isinstance(self.target, str):
-            with open(self.target, "w") as target:
+            with open(self.target, "w", encoding="utf-8") as target:
                 target.writelines(pieces)
         else:
             self.target.writelines(pieces)

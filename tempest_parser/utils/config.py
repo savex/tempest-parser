@@ -16,7 +16,7 @@ class ParserConfigFile:
         self.section_name = 'ParserConfig'
 
         self.config = configparser.ConfigParser()
-        self.config.read(self.config_file_path)
+        self.config.read(self.config_file_path, encoding="utf-8")
 
     def get_all_tests_list_filepath(self):
         # get path
@@ -32,7 +32,4 @@ class ParserConfigFile:
         # value
         _value = self.config.get(self.section_name, 'default_detailed')
         # parse if
-        if _value.lower() in self._truth:
-            return True
-        else:
-            return False
+        return _value.lower() in self._truth

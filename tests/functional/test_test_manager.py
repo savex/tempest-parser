@@ -145,9 +145,9 @@ def test_class_has_errors():
 def _linear_lookup(tests, test_name, uuid, test_options):
     """The lookup rule as a plain scan, to check the index against."""
     for position, test in enumerate(tests):
-        if test.test_name == test_name and test.test_options == test_options:
-            if uuid == '' or test.uuid == '' or test.uuid == uuid:
-                return position
+        same_name = test.test_name == test_name and test.test_options == test_options
+        if same_name and (uuid == '' or test.uuid == '' or test.uuid == uuid):
+            return position
     return -1
 
 

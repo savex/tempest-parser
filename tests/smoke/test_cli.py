@@ -2,6 +2,7 @@
 import csv
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -23,6 +24,12 @@ def tparser(*args, stdin=None):
 def _rows(path):
     with open(path) as f:
         return [r for r in csv.reader(f) if r and r[0].isdigit()]
+
+
+def test_version():
+    result = tparser("--version")
+    assert result.returncode == 0
+    assert re.fullmatch(rb"tparser \d+\.\d+\S*\r?\n", result.stdout), result.stdout
 
 
 def test_help():
@@ -196,3 +203,32 @@ def test_json_summary_and_fail_on(tmp_path):
     assert tparser("--fail-on", "ERROR", source).returncode == 0
     # left out with --omit-status, so not counted
     assert tparser("--omit-status", "FAIL", "--fail-on", "FAIL", source).returncode == 0
+
+
+# Windows before Python 3.15 opens files in the locale's code page unless told otherwise;
+# an ASCII locale without UTF-8 mode stands in for it on Linux and macOS
+ASCII_LOCALE = {"PYTHONUTF8": "0", "PYTHONCOERCECLOCALE": "0", "LC_ALL": "C", "LANG": "C"}
+
+
+@pytest.mark.parametrize("args, name", [([], "unicode.log"), (["-f", "log"], None)])
+def test_non_ascii_results_without_utf8_locale(tmp_path, args, name):
+    log = (f"{SERVERS}\n"
+           "    test_naïve_ünïcode[id-1111]                   FAIL  0.50\n"
+           "\n" + "=" * 70 + "\n"
+           f"{SERVERS}.test_naïve_ünïcode[id-1111]\n" + "-" * 70 + "\n"
+           "Details: ожидалось 1 → получено 2\n")
+    html, out, js = tmp_path / "r.html", tmp_path / "out.csv", tmp_path / "s.json"
+    command = CLI + args + ["-d", "-r", str(html), "-c", str(out), "-j", str(js),
+                            "--fail-on", "FAIL"]
+    if name:
+        source = tmp_path / name
+        source.write_text(log, encoding="utf-8")
+        command.append(str(source))
+    result = subprocess.run(command, input=None if name else log.encode(),
+                            env=dict(os.environ, **ASCII_LOCALE), capture_output=True,
+                            timeout=60)
+    assert result.returncode == 3, result.stdout + result.stderr
+    assert b"Traceback" not in result.stderr
+    assert "ожидалось 1 → получено 2" in html.read_text(encoding="utf-8")
+    assert "test_naïve_ünïcode" in out.read_text(encoding="utf-8")
+    assert json.loads(js.read_text(encoding="utf-8"))["runs"][0]["fail"] == 1

@@ -66,8 +66,8 @@ class TempestLogParser:
         self._setup_prefix = None
         # tests left out by the status filters: their slowest and failure entries are ignored
         self._filtered = set()
-        self._head = None
-        self._trace = []
+        self._head: str | None = None
+        self._trace: list[str] = []
 
     def parse(self):
         for line in self.source:
@@ -174,15 +174,15 @@ class TempestLogParser:
 
     def _end_failure(self):
         """Store the failure collected so far (head and trace) on its test."""
-        head, trace = self._head, self._trace
+        head, lines = self._head, self._trace
         self._head, self._trace = None, []
         if head is None:
             return
-        while trace and not trace[-1].strip():
-            trace.pop()
-        message = "".join(line.lstrip() + "\n" for line in trace
+        while lines and not lines[-1].strip():
+            lines.pop()
+        message = "".join(line.lstrip() + "\n" for line in lines
                           if line.lstrip().startswith("Details: "))
-        trace = "".join(line + "\n" for line in trace)
+        trace = "".join(line + "\n" for line in lines)
 
         setup = _SETUP_RE.match(head)
         if setup and setup.group("rest").startswith(")"):

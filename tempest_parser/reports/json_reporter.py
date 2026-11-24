@@ -7,7 +7,8 @@ from tempest_parser.const import REQUIRED_RUN
 
 def status_counts(test_manager):
     """{run name: Counter(status: tests)} for every run except the required list."""
-    counts = {name: Counter() for name in test_manager.executions if name != REQUIRED_RUN}
+    counts: dict[str, Counter[str]] = {
+        name: Counter() for name in test_manager.executions if name != REQUIRED_RUN}
     for tests in test_manager.tests.values():
         for test in tests:
             for name, result in test.results.items():
@@ -64,6 +65,6 @@ class JSONReporter:
         return {"runs": runs}
 
     def generate_to_file(self, path):
-        with open(path, "w") as target:
-            json.dump(self.summary(), target, indent=2)
+        with open(path, "w", encoding="utf-8") as target:
+            json.dump(self.summary(), target, indent=2, ensure_ascii=False)
             target.write("\n")

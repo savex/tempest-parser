@@ -2,9 +2,8 @@ import csv
 import io
 import json
 import os
-from datetime import UTC, datetime
-
 import re
+from datetime import UTC, datetime
 
 import pytest
 
@@ -89,7 +88,7 @@ def test_csv_report(data_file, data_dir, tmp_path):
     CSVReporter(tm).generate_to_file(target)
     with open(target) as f:
         rows = list(csv.reader(f))
-    assert ["Class", SERVERS] == rows[1][:2]
+    assert rows[1][:2] == ["Class", SERVERS]
     rows = [r for r in rows if r[0].isdigit()]
     by_name = {r[1]: r for r in rows}
     assert by_name["test_create_server"][2:4] == ["R", "OK"]

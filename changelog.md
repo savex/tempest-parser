@@ -20,6 +20,11 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
 - `examples/`: trending reports of those four runs (detailed and brief) and an errors report of run 4,
   made with `tparser`.
 - Dependabot (`.github/dependabot.yml`): weekly grouped updates for GitHub Actions and `uv.lock`.
+- `-V, --version`: prints the installed version.
+- CI runs the tests on Windows too (Python 3.11–3.15), so the "OS Independent" classifier is checked.
+- Checks: ruff import order, bugbear and simplify rules (`I`, `B`, `SIM`); mypy on `tempest_parser`
+  (`uv run mypy`, in the lint job); coverage of the smoke and functional tests together, failing CI
+  under 90% (`pytest-cov`, `fail_under` in `pyproject.toml`).
 - `-j, --json-file`: a JSON summary of the runs (name, file, ISO date, counts per status, time) for CI
   pipelines.
 - `--fail-on STATUS` (repeatable): exit with code 3 when any run has a test with that status, after the
@@ -83,6 +88,10 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
   by 1000).
 
 ### Fixed
+- Input files, piped text and the config file are read as UTF-8, and reports are written as UTF-8. With
+  a non-UTF-8 locale (Windows before Python 3.15, an ASCII locale) a non-ASCII test name or message
+  stopped the import with `UnicodeDecodeError`, or the report with `UnicodeEncodeError`. Console output
+  escapes characters the console can't show instead of failing.
 - A subunit run is named after its file (`<stdin>` for a pipe); the date was appended to the name
   without a separator, so the detailed reports showed only the date's tail as the file name.
 - `log`: a failure trace line starting with `tempest.` (an exception name) no longer starts a new failure

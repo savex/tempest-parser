@@ -12,7 +12,7 @@ on:
       os:
         description: "Operating systems for the test matrix"
         type: choice
-        options: [all, ubuntu, macos]
+        options: [all, ubuntu, macos, windows]
         default: all
 
 permissions:
@@ -43,6 +43,8 @@ jobs:
         run: uv sync --locked
       - name: Ruff
         run: uv run ruff check --output-format=github .
+      - name: Type check (mypy)
+        run: uv run mypy
       - name: actionlint
         run: uv run actionlint
       - name: Build and check the package
@@ -59,10 +61,14 @@ jobs:
   test:
     name: Test (${{ matrix.os }}, Python ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        # Git Bash on Windows, so every OS runs the same commands
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ fromJSON((github.event_name != 'workflow_dispatch' || inputs.os == 'all') && '["ubuntu-latest","macos-latest"]' || format('["{0}-latest"]', inputs.os)) }}
+        os: ${{ fromJSON((github.event_name != 'workflow_dispatch' || inputs.os == 'all') && '["ubuntu-latest","macos-latest","windows-latest"]' || format('["{0}-latest"]', inputs.os)) }}
         python: ["3.11", "3.12", "3.13", "3.14", "3.15"]
     steps:
       - uses: actions/checkout@v7
@@ -76,10 +82,13 @@ jobs:
           enable-cache: true
       - name: Install (locked)
         run: uv sync --locked --python "${{ matrix.python }}"
+      # coverage of both steps together is checked against fail_under in pyproject.toml
       - name: Smoke tests
-        run: uv run pytest -m smoke --junitxml=junit-smoke.xml
+        run: uv run pytest -m smoke --junitxml=junit-smoke.xml --cov --cov-report= --cov-fail-under=0
       - name: Functional tests
-        run: uv run pytest -m functional --junitxml=junit-functional.xml
+        run: uv run pytest -m functional --junitxml=junit-functional.xml --cov --cov-append --cov-report= --cov-fail-under=0
+      - name: Coverage
+        run: uv run coverage report
       - uses: actions/upload-artifact@v7
         if: always()
         with:

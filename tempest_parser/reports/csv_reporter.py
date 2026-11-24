@@ -61,7 +61,7 @@ class CSVReporter:
     def generate_to_file(self, filename, detailed=False):
         header = self._header(detailed)
         tests = self.test_manager.tests
-        with open(filename, 'w', newline='') as target:
+        with open(filename, 'w', newline='', encoding='utf-8') as target:
             writer = csv.writer(target, lineterminator='\n')
             writer.writerow(header)
             number = 0
