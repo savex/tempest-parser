@@ -54,8 +54,8 @@ matches tests across them and writes HTML trending / errors reports and CSV. Usa
   entry and a check in `tests/integration/test_wheel.py`.
 - Versions come from `v*` git tags through setuptools-scm; there is no version in the source. Release with
   the **Bump version** workflow (it updates `changelog.md`, tags and starts **Release**), not by tagging
-  by hand. Releases come from `master` only. PyPI upload runs only when the repository variable
-  `PYPI_PUBLISH` is `true`.
+  by hand. Releases come from `master` only. Uploads go through the GitHub environments `stage`
+  (TestPyPI) and then `prod` (PyPI), each only when its own environment variable `PUBLISH` is `true`.
 - Scripts in `scripts/` run on the bash 3.2 that ships with macOS.
 - `README.md` is also the PyPI page: use absolute links in it.
 - Work on a branch and fast-forward `master`; `master` is the default branch.

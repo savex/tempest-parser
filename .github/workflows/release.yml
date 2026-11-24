@@ -1,8 +1,10 @@
 # Automatic: builds and publishes a GitHub Release for every pushed version tag.
 # Also dispatched by "Bump version" (pushes made with GITHUB_TOKEN don't trigger tag events),
 # and can be re-run by hand for an existing tag.
-# Uploading to PyPI is off until the repository variable PYPI_PUBLISH is "true" and PyPI has a
-# trusted publisher for this repository, workflow release.yml and environment "pypi".
+# Uploads go through two GitHub environments, each with a trusted publisher for this repository and
+# workflow release.yml: "stage" uploads to TestPyPI, then "prod" to PyPI. Each upload runs only when
+# that environment's own variable PUBLISH is "true" (otherwise the job passes and says it skipped),
+# and the environments only deploy v* tags and master, so a run elsewhere can't publish.
 name: Release
 
 on:
@@ -151,19 +153,57 @@ jobs:
           echo "### Released tempest-parser $VERSION" >> "$GITHUB_STEP_SUMMARY"
           echo "https://github.com/$GH_REPO/releases/tag/$TAG" >> "$GITHUB_STEP_SUMMARY"
 
-  pypi:
-    name: Upload to PyPI
-    needs: [verify, publish]
-    if: ${{ vars.PYPI_PUBLISH == 'true' }}
+  stage:
+    name: Upload to TestPyPI (stage)
+    needs: [verify, build]
     runs-on: ubuntu-latest
     environment:
-      name: pypi
+      name: stage
+      url: https://test.pypi.org/project/TempestParser/${{ needs.verify.outputs.version }}/
+    permissions:
+      id-token: write
+    steps:
+      - name: Check the stage switch
+        if: ${{ vars.PUBLISH != 'true' }}
+        run: echo "::notice title=TestPyPI upload skipped::set the variable PUBLISH to true in the stage environment to upload"
+
+      - uses: actions/download-artifact@v8
+        if: ${{ vars.PUBLISH == 'true' }}
+        with:
+          name: dist
+          path: dist
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        if: ${{ vars.PUBLISH == 'true' }}
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          # a re-run after a failed prod upload finds the files already there
+          skip-existing: true
+
+  prod:
+    name: Upload to PyPI (prod)
+    # only after the stage upload (or its skip) and the GitHub release went through
+    needs: [verify, stage, publish]
+    runs-on: ubuntu-latest
+    environment:
+      name: prod
       url: https://pypi.org/project/TempestParser/${{ needs.verify.outputs.version }}/
     permissions:
       id-token: write
     steps:
+      - name: Check the prod switch
+        if: ${{ vars.PUBLISH != 'true' }}
+        run: echo "::notice title=PyPI upload skipped::set the variable PUBLISH to true in the prod environment to upload"
+
       - uses: actions/download-artifact@v8
+        if: ${{ vars.PUBLISH == 'true' }}
         with:
           name: dist
           path: dist
+
       - uses: pypa/gh-action-pypi-publish@release/v1
+        if: ${{ vars.PUBLISH == 'true' }}
+
+      - name: Summary
+        if: ${{ vars.PUBLISH == 'true' }}
+        run: echo "Uploaded to https://pypi.org/project/TempestParser/${{ needs.verify.outputs.version }}/" >> "$GITHUB_STEP_SUMMARY"

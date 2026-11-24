@@ -281,8 +281,9 @@ CI (`.github/workflows`):
 - **Bump version** (manual) picks the next version, updates `changelog.md`, commits
   `Release vX.Y.Z`, tags it and starts **Release**.
 - **Release** builds the sdist and wheel, smoke-tests them and publishes a GitHub release with the
-  changelog section as notes. PyPI upload runs only when the repository variable `PYPI_PUBLISH` is
-  `true`.
+  changelog section as notes. It then uploads to TestPyPI through the GitHub environment `stage` and,
+  after that, to PyPI through `prod` (trusted publishing). Each upload runs only when its environment's
+  variable `PUBLISH` is `true`, and both environments accept only `v*` tags and `master`.
 
 ## Credits
 

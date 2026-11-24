@@ -118,9 +118,8 @@ Bugs and risks found by reading the code (not yet confirmed by running it):
 ## 4. Open decisions
 
 1. ~~**When tests run**~~: done as recommended, on pull requests, pushes to `master` and by hand.
-2. **PyPI (still open):** the Release workflow has an upload job, off until the repository variable
-   `PYPI_PUBLISH` is `true` and PyPI has a trusted publisher for `release.yml`, environment `pypi`.
-   PyPI still has 0.2.81.
+2. ~~**PyPI**~~: done in 3.0.0. PyPI trusts `release.yml` in the GitHub environment `prod`; TestPyPI
+   uploads go through `stage`. Each environment's variable `PUBLISH` turns its upload on.
 3. ~~**Starting version**~~: decided, `v0.2.81` back-filled; the next release is 0.3.0.
 4. ~~**Python versions**~~: decided, 3.10–3.13 (`python_requires=">=3.10"`); since moved to 3.11–3.15,
    see `changelog.md`.

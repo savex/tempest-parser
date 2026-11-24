@@ -11,6 +11,12 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
 
 ## [Unreleased]
 
+### Changed
+- Release: uploads go through two GitHub environments with trusted publishing, `stage` (TestPyPI) and
+  then `prod` (PyPI, the publisher PyPI now has); each upload runs only when its environment's
+  variable `PUBLISH` is `true`, and both accept only `v*` tags and `master`. The repository variable
+  `PYPI_PUBLISH` and the environment `pypi` are no longer used.
+
 ## [3.0.0] - 2026-11-24
 
 ### Added
