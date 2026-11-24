@@ -29,4 +29,7 @@ tparser -e examples/errors_report_run_4_grid.html --html-layout grid tests/data/
 - `errors_report_run_4.html`: unique errors and skips of run 4.
 - `errors_report_run_4_grid.html`: the same in the CSS grid layout.
 
+`screenshots/`: PNG pictures of the trending reports and the grid errors report for the project README,
+taken with headless Chrome at 1280 px wide (the errors one with its groups open, in light colours).
+
 The `log` format has no run date, so the dates shown are the files' modification times.

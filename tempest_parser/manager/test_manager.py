@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from collections.abc import Iterable, KeysView
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -27,6 +28,15 @@ class _ClassIndex:
 
 # (class, test name, uuid, options, tags)
 SplitName = tuple[str, str, str, str, list[str]]
+
+# a test id: "setUpClass (class)", or an optional unittest2 prefix of three parts, then
+# class.test_name[tags](options) where the class is in a tempest, cvp_checks or tempest plugin
+# package; the test name is the last dotted part before the first "[".
+_TEST_ID_RE = re.compile(
+    r"^(?:(?:setUpClass|tearDownClass)\s*\((?P<setup>[^)]*)\)"
+    r"|(?:unittest2(?:\.[^.]+){2}\.)?"
+    r"(?P<cls>(?:(?:tempest|cvp_checks)[^.\[]*|[^.\[]*_tempest_(?:plugin|tests))(?:\.[^.\[]+)*)"
+    r"\.(?P<test>(?P<name>[^.\[]+)(?:\[(?P<tags>[^\]]*)\](?P<options>.*))?))$")
 
 
 class TestsManager:
@@ -72,57 +82,26 @@ class TestsManager:
 
     @staticmethod
     def split_test_name(full_test_name: str, raw_names: bool = False) -> SplitName:
-        def _dig_guid(raw_trailing: str) -> tuple[str, list[str]]:
-            _all_items = raw_trailing.split(']')[0].split(",")
-            __guid = ""
-            __tags: list[str] = []
-            for _tag in _all_items:
-                if _tag.startswith("id-"):
-                    __guid = _tag
-                else:
-                    __tags.append(_tag)
-            return __guid, __tags
-
-        def _dig_options(raw_options: str) -> str:
-            __options = raw_options.split(']')[1:]
-            if len(__options) >= 2 and len(__options[1]) > 0:
-                return __options[1]
-            return "".join(__options)
-
-        _first_name = full_test_name.split('.', 1)[0]
-        _class = ""
-        _test = ""
-        _guid = ""
-        _tags: list[str] = []
-        _options = ""
-        if full_test_name.startswith("setUpClass") or \
-                full_test_name.startswith("tearDownClass"):
-            _class = full_test_name.split("(")[1][:-1]
-        elif _first_name.startswith("unittest2"):
-            # parse unittest fail
-            _name = full_test_name.split(".", 3)[3].rsplit(".", 1)
-            _tmp = _name[1]
-            _class = _name[0]
-            _test = _tmp.split('[')[0]
-            if ']' in _tmp:
-                _guid, _tags = _dig_guid(_tmp.split('[', 1)[1])
-                _options = _dig_options(_tmp)
-        elif _first_name.startswith("tempest") or \
-                _first_name.startswith("cvp_checks") or \
-                _first_name.endswith("_tempest_plugin") or \
-                _first_name.endswith("_tempest_tests"):
-            _class = full_test_name.rsplit(".", 1)[0]
-            _raw_test = full_test_name.rsplit(".", 1)[1]
-            if not raw_names:
-                _test = _raw_test.split('[')[0]
-                if '[' in _raw_test:
-                    _trailing = _raw_test.split('[')[1]
-                    _guid, _tags = _dig_guid(_trailing)
-                    _options = _dig_options(_trailing)
-            else:
-                _test = _raw_test
-
-        return _class, _test, _guid, _options, _tags
+        """(class, test name, uuid, options, tags) of a test id:
+        "package.module.Class.test_name[id-x,tag](options)", "setUpClass (class)" or a unittest2
+        failure id ("unittest2.a.b." then a test id). Only tempest, cvp_checks and tempest
+        plugin packages are known; anything else gives empty parts. With `raw_names` the test
+        name keeps its brackets and options, and no uuid, options or tags are split off."""
+        match = _TEST_ID_RE.match(full_test_name)
+        if match is None:
+            return "", "", "", "", []
+        if match.group("setup") is not None:
+            return match.group("setup"), "", "", "", []
+        if raw_names:
+            return match.group("cls"), match.group("test"), "", "", []
+        uuid = ""
+        tags = []
+        for tag in (match.group("tags") or "").split(","):
+            if tag.startswith("id-"):
+                uuid = tag
+            elif tag:
+                tags.append(tag)
+        return match.group("cls"), match.group("name"), uuid, match.group("options") or "", tags
 
     def _class_index(self, class_name: str) -> _ClassIndex | None:
         """Lookup indexes for one class's tests, or None if the class is unknown.

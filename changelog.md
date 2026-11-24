@@ -12,6 +12,8 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
 ## [Unreleased]
 
 ### Added
+- `--xml-time-unit s|ms`: the unit of XML test times, for files whose times are whole seconds (read as
+  milliseconds by the guess) or milliseconds with a decimal point.
 - `CLAUDE.md` with the project layout and rules (changelog, checks before committing, test tags and
   data, specs, packaging, versioning).
 - `-q, --quiet`: print errors only.
@@ -58,6 +60,10 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
   of a single file or stdin instead of the file name and modification time.
 
 ### Changed
+- README: an **Example reports** section with screenshots (`examples/screenshots/`) and links to view
+  each example report; PyPI upload is on from 3.0.0 (repository variable `PYPI_PUBLISH`).
+- `TestsManager.split_test_name` is one regular expression instead of a branch per name style
+  (tempest, plugins, cvp_checks, unittest2, setUpClass); every baseline test name splits as before.
 - Importers' `parse()` methods all return `None` (the XML importer returned `True`, the JSON and CSV
   ones the number of tests); the HTML report base classes are merged into one `_HTMLReport`.
 - `setup.py`: requires Python 3.10+, classifiers for 3.10–3.13, `Apache-2.0` license expression, project
@@ -115,6 +121,9 @@ Sections: **Added**, **Changed**, **Deprecated**, **Removed**, **Fixed**, **Secu
   by 1000).
 
 ### Fixed
+- Test ids: dots inside the options (`test_x[id-1](1.5)`) no longer cut the class name there; `[]` gives
+  no tags instead of one empty tag; a bare `tempest` id no longer raises `IndexError`; unittest2 ids
+  follow `raw_names` (`r_xml`).
 - `k8s_slow_extract` (raw XML from k8s): a "not to have occurred" failure no longer raises `TypeError`
   (the line was added as bytes); found by the type check.
 - Input files, piped text and the config file are read as UTF-8, and reports are written as UTF-8. With

@@ -70,14 +70,39 @@ def test_xml_status_filter(data_file):
     (("1500", "2000"), 1.5),
 ])
 def test_xml_time_unit(tmp_path, times, expected):
+    path = _times_xml(tmp_path, times)
+    tm = _import(XMLImporter, path)
+    assert _results(tm, path)[(SERVERS, "test_create_server")].time == expected
+
+
+def _times_xml(tmp_path, times):
     path = tmp_path / "times.xml"
     path.write_text(
         '<testsuite>'
         f'<testcase classname="{SERVERS}" name="test_create_server" time="{times[0]}"/>'
         f'<testcase classname="{SERVERS}" name="test_delete_server" time="{times[1]}"/>'
-        '</testsuite>')
-    tm = _import(XMLImporter, str(path))
-    assert _results(tm, str(path))[(SERVERS, "test_create_server")].time == expected
+        '</testsuite>', encoding="utf-8")
+    return str(path)
+
+
+@pytest.mark.parametrize("times, unit, expected", [
+    # whole seconds, which the guess would read as milliseconds
+    (("3", "2"), "s", 3.0),
+    (("1500", "2000"), "ms", 1.5),
+    # a decimal point, which the guess would read as seconds
+    (("1500.0", "2000"), "ms", 1.5),
+    (("1.5", "2"), "s", 1.5),
+])
+def test_xml_time_unit_given(tmp_path, times, unit, expected):
+    path = _times_xml(tmp_path, times)
+    tm = _import(XMLImporter, path, time_unit=unit)
+    assert _results(tm, path)[(SERVERS, "test_create_server")].time == expected
+
+
+def test_xml_time_unit_unknown(data_file):
+    with pytest.raises(ValueError, match="Unknown XML time unit"), \
+            open(data_file("tempest.xml"), encoding="utf-8") as source:
+        XMLImporter(TestsManager(), source, time_unit="min")
 
 
 def test_xml_run_name_and_date(data_file):

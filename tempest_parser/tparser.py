@@ -8,7 +8,13 @@ from importlib import metadata
 from typing import IO, Any, NoReturn, Protocol
 
 from tempest_parser.const import InputFormat
-from tempest_parser.manager.importers import CSVImporter, JSONImporter, SubunitImporter, XMLImporter
+from tempest_parser.manager.importers import (
+    XML_TIME_UNITS,
+    CSVImporter,
+    JSONImporter,
+    SubunitImporter,
+    XMLImporter,
+)
 from tempest_parser.manager.test_manager import TestsManager
 from tempest_parser.parser.tempest_log_parser import TempestLogParser
 from tempest_parser.reports import reporter
@@ -88,7 +94,8 @@ def parse_run_date(value: str) -> datetime:
 
 def make_importer(fmt: InputFormat | None, tm: TestsManager, source: IO[Any],
                   force_single: str | None = None, filters: Iterable[str] | None = None,
-                  run_name: str | None = None, run_date: datetime | None = None) -> Importer:
+                  run_name: str | None = None, run_date: datetime | None = None,
+                  xml_time_unit: str | None = None) -> Importer:
     kw: dict[str, Any] = {
         "status_filters": filters or [], "run_name": run_name, "run_date": run_date}
     if fmt == InputFormat.RALLY_JSON:
@@ -99,7 +106,8 @@ def make_importer(fmt: InputFormat | None, tm: TestsManager, source: IO[Any],
         # raw XML keeps the test names as they are
         return XMLImporter(tm, source,
                            use_raw_names=fmt == InputFormat.XML_RAW,
-                           force_single_execution=force_single, **kw)
+                           force_single_execution=force_single, time_unit=xml_time_unit,
+                           **kw)
     if fmt == InputFormat.LOG:
         return TempestLogParser(tm, source, **kw)
     if fmt == InputFormat.SUBUNIT:
@@ -109,13 +117,15 @@ def make_importer(fmt: InputFormat | None, tm: TestsManager, source: IO[Any],
 
 def do_parse_file(source: str | IO[Any], tm: TestsManager, fmt: InputFormat | None = None,
                   force_single: str | None = None, filters: Iterable[str] | None = None,
-                  run_name: str | None = None, run_date: datetime | None = None) -> None:
+                  run_name: str | None = None, run_date: datetime | None = None,
+                  xml_time_unit: str | None = None) -> None:
     """Import one file (a path) or stream (an open file, e.g. stdin)."""
     if not isinstance(source, str):
         if fmt != InputFormat.SUBUNIT and hasattr(source, "reconfigure"):
             # text piped in is read as UTF-8 whatever the locale (subunit reads bytes)
             source.reconfigure(encoding="utf-8")
-        make_importer(fmt, tm, source, force_single, filters, run_name, run_date).parse()
+        make_importer(fmt, tm, source, force_single, filters, run_name, run_date,
+                      xml_time_unit).parse()
         log.info("Imported %s", getattr(source, "name", "unknown/stdin"))
         return
     if fmt is None:
@@ -125,7 +135,8 @@ def do_parse_file(source: str | IO[Any], tm: TestsManager, fmt: InputFormat | No
                 f"Input filename's extension is not supported: '{source}'")
     # input files are UTF-8 (not the locale's code page, as on Windows before Python 3.15)
     with open(source, encoding="utf-8") as stream:
-        make_importer(fmt, tm, stream, force_single, filters, run_name, run_date).parse()
+        make_importer(fmt, tm, stream, force_single, filters, run_name, run_date,
+                      xml_time_unit).parse()
     log.info("Imported %s", source)
 
 
@@ -186,6 +197,10 @@ def build_parser() -> MyParser:
         "--run-date", metavar="DATE", type=parse_run_date,
         help="Date of the run, ISO 8601 (2026-11-23 or 2026-11-23T14:30, UTC unless an "
              "offset is given), instead of the file's modification time (single input only)")
+    parser.add_argument(
+        "--xml-time-unit", choices=sorted(XML_TIME_UNITS),
+        help="Unit of the XML time attributes: s or ms. Default: seconds when any time in the "
+             "file has a decimal point, else milliseconds")
     parser.add_argument(
         "-r", "--html-trending-filename", help="Write the HTML trending report")
     parser.add_argument(
@@ -291,7 +306,7 @@ def run(args: argparse.Namespace) -> int:
     for source, fmt, force_single in inputs:
         do_parse_file(source, tests_manager, fmt=fmt, force_single=force_single,
                       filters=args.omit_status, run_name=args.run_name,
-                      run_date=args.run_date)
+                      run_date=args.run_date, xml_time_unit=args.xml_time_unit)
 
     write_reports(args, tests_manager, detailed)
     return check_fail_on(args.fail_on, tests_manager) if args.fail_on else 0

@@ -12,8 +12,8 @@ Imports test results from many runs, matches the tests by class, name and option
 reports to track their statuses over time.
 
 > **Status: maintained.** All six input formats and the three reports work and are covered by tests in CI.
-> The latest release is [0.3.0](https://github.com/savex/tempest-parser/releases/tag/v0.3.0); PyPI still has 0.2.81.
-> See [Project status](#project-status).
+> The latest release is [3.0.0](https://github.com/savex/tempest-parser/releases/tag/v3.0.0), on
+> [PyPI](https://pypi.org/project/TempestParser/). See [Project status](#project-status).
 
 ## Foreword
 
@@ -30,6 +30,36 @@ So, there is a need to:
 - match tests by class, test name and options
 - produce a report to work with test statuses and track them over time
 - have error messages added to the report
+
+## Example reports
+
+Made by `tparser` from four made-up runs in
+[tests/data/trending](https://github.com/savex/tempest-parser/tree/master/tests/data/trending); the commands are in
+[examples/README.md](https://github.com/savex/tempest-parser/blob/master/examples/README.md). Open a report in the browser with **view**, or download it
+with **source**.
+
+| Report | Command | Files |
+|---|---|---|
+| Trending, table | `tparser -d -r trending.html runs/` | [view](https://htmlpreview.github.io/?https://github.com/savex/tempest-parser/blob/master/examples/trending_report.html) · [source](https://github.com/savex/tempest-parser/blob/master/examples/trending_report.html) |
+| Trending, table, without messages | `tparser -r trending.html runs/` | [view](https://htmlpreview.github.io/?https://github.com/savex/tempest-parser/blob/master/examples/trending_report_brief.html) · [source](https://github.com/savex/tempest-parser/blob/master/examples/trending_report_brief.html) |
+| Trending, grid | `tparser -d -r trending.html --html-layout grid runs/` | [view](https://htmlpreview.github.io/?https://github.com/savex/tempest-parser/blob/master/examples/trending_report_grid.html) · [source](https://github.com/savex/tempest-parser/blob/master/examples/trending_report_grid.html) |
+| Unique errors, table | `tparser -e errors.html run_4.log` | [view](https://htmlpreview.github.io/?https://github.com/savex/tempest-parser/blob/master/examples/errors_report_run_4.html) · [source](https://github.com/savex/tempest-parser/blob/master/examples/errors_report_run_4.html) |
+| Unique errors, grid | `tparser -e errors.html --html-layout grid run_4.log` | [view](https://htmlpreview.github.io/?https://github.com/savex/tempest-parser/blob/master/examples/errors_report_run_4_grid.html) · [source](https://github.com/savex/tempest-parser/blob/master/examples/errors_report_run_4_grid.html) |
+
+**Trending report** (`-r`, table layout): one row per test, one column per run, with each run's totals,
+times under the statuses (the slowest in bold) and a filter bar.
+
+![Trending report, table layout](https://raw.githubusercontent.com/savex/tempest-parser/master/examples/screenshots/trending_table.png)
+
+**Trending report, grid layout** (`--html-layout grid`) in dark mode: the header and test names stay in
+view while scrolling; the icons at the top right switch between system, light and dark colours.
+
+![Trending report, grid layout, dark](https://raw.githubusercontent.com/savex/tempest-parser/master/examples/screenshots/trending_grid_dark.png)
+
+**Unique errors report, grid layout** (`-e --html-layout grid`): failures and skips grouped by message,
+each group opening to its tests and times.
+
+![Unique errors report, grid layout](https://raw.githubusercontent.com/savex/tempest-parser/master/examples/screenshots/errors_grid.png)
 
 ## Installing
 
@@ -142,6 +172,7 @@ stestr last --subunit | tparser -r trending.html -j summary.json --fail-on FAIL 
 |---|---|
 | `-f, --input-format` | `log`, `t_xml`, `r_xml`, `json`, `csv` or `subunit`. Detected from the extension when omitted; stdin defaults to `subunit`. |
 | `-r, --html-trending-filename` | Write the HTML trending report. |
+| `--xml-time-unit` | Unit of XML test times, `s` or `ms`. Without it, a file with whole numbers only is read as milliseconds. |
 | `--html-layout` | HTML report layout (`-r` and `-e`): `table` (default) or `grid` (CSS grid, sticky headers, light / dark switch). |
 | `-e, --html-errors-filename` | Write the HTML unique errors report (single file input only). |
 | `-c, --csv-file` | Write the CSV report. |
@@ -198,8 +229,8 @@ Subunit v2 streams saved to a file.
 | Input: Tempest log, subunit, jUnit XML (Tempest and raw / k8s), Rally JSON, CSV | Done |
 | Reports: HTML trending, HTML unique errors, CSV | Done |
 | Tests (smoke, functional, integration) and CI on Linux, macOS and Windows, Python 3.11–3.15 | Done |
-| Tag-based versioning, Bump version and Release workflows | Done; 0.3.0 was released through them |
-| Upload to PyPI from CI | Planned (off until PyPI trusts the Release workflow) |
+| Tag-based versioning, Bump version and Release workflows | Done; 0.3.0 and 3.0.0 were released through them |
+| Upload to PyPI from CI | Done (on from 3.0.0) |
 | Project rules for contributors ([CLAUDE.md](https://github.com/savex/tempest-parser/blob/master/CLAUDE.md)) | Done |
 
 The plan is in [documents/plan.md](https://github.com/savex/tempest-parser/blob/master/documents/plan.md), the specification in

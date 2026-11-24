@@ -116,9 +116,22 @@ _error_status_map = {
 }
 
 
+# --xml-time-unit: divisor from the file's time attributes to seconds
+XML_TIME_UNITS = {"s": 1.0, "ms": 1000.0}
+
+
 class XMLImporter(ImporterBase):
     # time attributes are seconds in jUnit XML, but some tools write whole milliseconds
     time_scale = 1.0
+
+    def __init__(self, test_manager: TestsManager, source: IO[Any],
+                 time_unit: str | None = None, **kwargs: Any) -> None:
+        """`time_unit` "s" or "ms" sets the unit of the time attributes; None guesses it
+        from the file (see _detect_time_scale)."""
+        super().__init__(test_manager, source, **kwargs)
+        if time_unit is not None and time_unit not in XML_TIME_UNITS:
+            raise ValueError(f"Unknown XML time unit: {time_unit!r}")
+        self.time_unit = time_unit
 
     @staticmethod
     def _detect_time_scale(root: Element) -> float:
@@ -195,7 +208,8 @@ class XMLImporter(ImporterBase):
         root = tree.getroot()
 
         _execution_date = self.execution_date()
-        self.time_scale = self._detect_time_scale(root)
+        self.time_scale = (self._detect_time_scale(root) if self.time_unit is None
+                           else XML_TIME_UNITS[self.time_unit])
         _all_testsuites = []
         # We should be ready for multiple test suites in one xml
         if root.tag == 'testsuite':

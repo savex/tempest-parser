@@ -85,6 +85,18 @@ def test_errors_report_layout(tmp_path, layout, marker):
     assert "AssertionError" in text and "&lt;ports&gt;" in text
 
 
+@pytest.mark.parametrize("args, seconds", [([], 0.003), (["--xml-time-unit", "s"], 3.0)])
+def test_xml_time_unit(tmp_path, args, seconds):
+    source = tmp_path / "whole.xml"
+    source.write_text(f'<testsuite><testcase classname="{SERVERS}" name="test_a" time="3"/>'
+                      '</testsuite>', encoding="utf-8")
+    js = tmp_path / "summary.json"
+    result = tparser(*args, "-j", js, source)
+    assert result.returncode == 0, result.stdout + result.stderr
+    (run,) = json.loads(js.read_text(encoding="utf-8"))["runs"]
+    assert run["time"] == seconds
+
+
 def test_html_layout_unknown(tmp_path):
     result = tparser("--html-layout", "cards", "-r", tmp_path / "r.html",
                      os.path.join(DATA_DIR, "tempest.xml"))

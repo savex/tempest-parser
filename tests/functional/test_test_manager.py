@@ -23,9 +23,32 @@ from ..conftest import PORTS, SERVERS
     ("cvp_checks.tests.test_mtu.test_mtu",
      ("cvp_checks.tests.test_mtu", "test_mtu", "", "", [])),
     ("other.module.Class.test_x", ("", "", "", "", [])),
+    ("tearDownClass (" + SERVERS + ")", (SERVERS, "", "", "", [])),
+    (SERVERS + ".test_tags[smoke,id-4444,negative]",
+     (SERVERS, "test_tags", "id-4444", "", ["smoke", "negative"])),
+    ("unittest2.loader.ModuleImportFailure." + SERVERS + ".test_x[id-5555]",
+     (SERVERS, "test_x", "id-5555", "", [])),
+    ("neutron_tempest_plugin.api.test_trunk.TrunkTestJSON.test_create_trunk",
+     ("neutron_tempest_plugin.api.test_trunk.TrunkTestJSON", "test_create_trunk", "", "", [])),
+    ("sample_tempest_tests.api.SampleTest.test_y",
+     ("sample_tempest_tests.api.SampleTest", "test_y", "", "", [])),
+    # fixed: dots in the options no longer split the class there
+    (SERVERS + ".test_mtu[id-6666](1.5)", (SERVERS, "test_mtu", "id-6666", "(1.5)", [])),
+    # fixed: an empty tag list gives no tags, not [""]
+    (SERVERS + ".test_empty[]", (SERVERS, "test_empty", "", "", [])),
+    # fixed: raised IndexError
+    ("tempest", ("", "", "", "", [])),
+    ("tempest_plugin_x", ("", "", "", "", [])),
 ])
 def test_split_test_name(name, expected):
     assert TestsManager.split_test_name(name) == expected
+
+
+@pytest.mark.parametrize("prefix", ["", "unittest2.loader.ModuleImportFailure."])
+def test_split_test_name_raw_keeps_dotted_options(prefix):
+    # fixed: the unittest2 form ignored raw_names, dots in options split the class
+    assert TestsManager.split_test_name(prefix + SERVERS + ".test_x[id-1](1.5)", raw_names=True) \
+        == (SERVERS, "test_x[id-1](1.5)", "", "", [])
 
 
 def test_split_test_name_raw_keeps_brackets():

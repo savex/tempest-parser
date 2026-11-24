@@ -25,6 +25,7 @@ tparser [options] [inputfile]
 |---|---|
 | `-f, --input-format FMT` | Input format (section 3). Detected from the file extension when not set; stdin defaults to `subunit`. |
 | `-r, --html-trending-filename F` | Write the trending report to `F`. |
+| `--xml-time-unit U` | Unit of XML `time` attributes, `s` or `ms`, instead of the guess (section 3). |
 | `--html-layout L` | Layout of the HTML reports (trending and errors): `table` (default) or `grid` (section 6). |
 | `-e, --html-errors-filename F` | Write the errors report to `F`. Needs a single file as input, not a folder. |
 | `-c, --csv-file F` | Write the CSV report to `F`. |
@@ -65,7 +66,8 @@ one of its statuses.
   (`required` run) are dated the same way; a stream without a file is dated now. `--run-name` and
   `--run-date` replace both for a single input.
 - XML `time` attributes are seconds when any test case's time in the file has a decimal point; a file with
-  whole numbers only is read as milliseconds.
+  whole numbers only is read as milliseconds. `--xml-time-unit s` or `ms` sets the unit instead of this
+  guess, for every XML input.
 - The `log` parser reads the console log line by line (`parser/tempest_log_parser.py`): a dotted class name
   on its own line (`tempest.…`, plugin and other packages too), indented test lines
   `test_name[id-…,tags](options)  RESULT  time` with any upper-case status, `setUpClass (Class) RESULT`
@@ -190,7 +192,8 @@ The packaged resources are `res/*.list` (baseline lists) and `templates/*.html` 
 
 ## 8. Known limitations
 
-1. An XML file whose times are all whole numbers is read as milliseconds, even when they were seconds.
+None known. (Until 3.0.0: an XML file whose times were all whole numbers was always read as
+milliseconds; `--xml-time-unit` now sets the unit.)
 
 ## 9. Requirements
 
